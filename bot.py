@@ -168,31 +168,3 @@ if __name__ == '__main__':
         
         print("🤖 Claudette Bot iniciado y escuchando...")
         application.run_polling()
-
----
-
-## ✅ QUÉ HACER AHORA:
-
-1. **Selecciona TODO el código de arriba** (desde `import logging` hasta el final)
-2. **Copia** (Ctrl+C o Cmd+C)
-3. **Ve a Replit**, abre el archivo `bot.py`
-4. **Selecciona TODO** el contenido actual (Ctrl+A o Cmd+A)
-5. **Pega** el nuevo código (Ctrl+V o Cmd+V)
-6. **Guarda** (Ctrl+S o Cmd+S)
-7. **Stop** el bot si está corriendo
-8. **Run** de nuevo
-
----
-
-## 📱 PRUEBA EN TELEGRAM:
-
-Escribe:
-```
-/start
-```
-
-Ahora debería presentarse como **Claudette** con un mensaje personalizado. 
-
-Luego prueba algo como:
-```
-Claudette, analiza si debería invertir ahora en el proyecto Feline Canopy o esperar 3 meses por el clima económico
