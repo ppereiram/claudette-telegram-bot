@@ -128,8 +128,15 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         bot_reply = message.content[0].text
         
-        # Send reply
-        await context.bot.send_message(chat_id=chat_id, text=bot_reply)
+        # Split long messages (Telegram limit: 4096 chars)
+        max_length = 4000  # Leave some margin
+        if len(bot_reply) <= max_length:
+            await context.bot.send_message(chat_id=chat_id, text=bot_reply)
+        else:
+            # Split into chunks
+            chunks = [bot_reply[i:i+max_length] for i in range(0, len(bot_reply), max_length)]
+            for chunk in chunks:
+                await context.bot.send_message(chat_id=chat_id, text=chunk)
         
         # Log bot reply
         log_to_db(chat_id, 'bot', bot_reply, 'text')
