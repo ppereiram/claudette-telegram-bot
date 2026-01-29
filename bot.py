@@ -115,52 +115,42 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
     chat_id = update.effective_chat.id
     
-    # Log user message
     log_to_db(chat_id, 'user', user_text, 'text')
     
     try:
-        # Call Claude API (Sonnet 4) con system prompt de Claudette
         message = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=2048,
             system=SYSTEM_PROMPT,
-            messages=[
-                {"role": "user", "content": user_text}
-            ]
+            messages=[{"role": "user", "content": user_text}]
         )
         bot_reply = message.content[0].text
         
-        # Split long messages (Telegram limit: 4096 chars)
         max_length = 4000
         if len(bot_reply) <= max_length:
             await context.bot.send_message(chat_id=chat_id, text=bot_reply)
         else:
-            # Split into chunks
             chunks = [bot_reply[i:i+max_length] for i in range(0, len(bot_reply), max_length)]
             for chunk in chunks:
                 await context.bot.send_message(chat_id=chat_id, text=chunk)
         
-        # Log bot reply
         log_to_db(chat_id, 'bot', bot_reply, 'text')
         
     except Exception as e:
-        logging.error(f"Error calling Claude or sending message: {e}")
+        logging.error(f"Error: {e}")
         await context.bot.send_message(chat_id=chat_id, text="Lo siento Pablo, encontré un error. Intenta de nuevo.")
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     
     try:
-        # Get voice file
         voice = await update.message.voice.get_file()
         voice_bytes = await voice.download_as_bytearray()
         
-        # Save temporarily as OGG file (Telegram format)
         with tempfile.NamedTemporaryFile(suffix='.ogg', delete=False) as temp_audio:
             temp_audio.write(voice_bytes)
             temp_audio_path = temp_audio.name
         
-        # Transcribe with Whisper
         with open(temp_audio_path, 'rb') as audio_file:
             transcript = openai_client.audio.transcriptions.create(
                 model="whisper-1",
@@ -169,9 +159,48 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         
         user_text = transcript.text
-        
-        # Log transcription
         log_to_db(chat_id, 'user', f'[Voice: {user_text}]', 'voice')
         
-        # Send to Claude (reuse handle_text logic)
         message = anthropic_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2048,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": user_text}]
+        )
+        bot_reply = message.content[0].text
+        
+        max_length = 4000
+        if len(bot_reply) <= max_length:
+            await context.bot.send_message(chat_id=chat_id, text=f"🎤 Escuché: \"{user_text}\"\n\n{bot_reply}")
+        else:
+            await context.bot.send_message(chat_id=chat_id, text=f"🎤 Escuché: \"{user_text}\"")
+            chunks = [bot_reply[i:i+max_length] for i in range(0, len(bot_reply), max_length)]
+            for chunk in chunks:
+                await context.bot.send_message(chat_id=chat_id, text=chunk)
+        
+        log_to_db(chat_id, 'bot', bot_reply, 'text')
+        os.unlink(temp_audio_path)
+        
+    except Exception as e:
+        logging.error(f"Error processing voice: {e}")
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="Lo siento Pablo, tuve un problema procesando tu nota de voz. ¿Puedes intentar de nuevo?"
+        )
+
+if __name__ == '__main__':
+    if not TELEGRAM_TOKEN:
+        print("Error: TELEGRAM_TOKEN not found.")
+    else:
+        application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+        
+        start_handler = CommandHandler('start', start)
+        text_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text)
+        voice_handler = MessageHandler(filters.VOICE, handle_voice)
+        
+        application.add_handler(start_handler)
+        application.add_handler(text_handler)
+        application.add_handler(voice_handler)
+        
+        print("🤖 Claudette Bot iniciado y escuchando...")
+        application.run_polling()
