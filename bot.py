@@ -1,9 +1,10 @@
 import logging
 import os
-import asyncio
+import tempfile
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 from anthropic import Anthropic
+from openai import OpenAI
 import psycopg2
 from datetime import datetime
 
@@ -16,14 +17,15 @@ logging.basicConfig(
 # Environment variables
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not TELEGRAM_TOKEN or not CLAUDE_API_KEY:
     logging.error("TELEGRAM_TOKEN or CLAUDE_API_KEY is missing!")
-    # We won't exit, just log error, but bot won't work well.
 
-# Initialize Anthropic client
+# Initialize clients
 anthropic_client = Anthropic(api_key=CLAUDE_API_KEY)
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 # System prompt para Claudette
 SYSTEM_PROMPT = """Eres Claudette, asistente ejecutiva IA de Pablo con acceso a sus 216 modelos mentales universales.
@@ -129,7 +131,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot_reply = message.content[0].text
         
         # Split long messages (Telegram limit: 4096 chars)
-        max_length = 4000  # Leave some margin
+        max_length = 4000
         if len(bot_reply) <= max_length:
             await context.bot.send_message(chat_id=chat_id, text=bot_reply)
         else:
@@ -143,35 +145,33 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     except Exception as e:
         logging.error(f"Error calling Claude or sending message: {e}")
-        await context.bot.send_message(chat_id=chat_id, text="Lo siento Pablo, encontré un error al procesar tu solicitud. Por favor intenta de nuevo.")
+        await context.bot.send_message(chat_id=chat_id, text="Lo siento Pablo, encontré un error. Intenta de nuevo.")
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     
-    # Log voice receipt
-    log_to_db(chat_id, 'user', '[Voice Note Received]', 'voice')
-    
-    await context.bot.send_message(
-        chat_id=chat_id, 
-        text="📝 Recibí tu nota de voz, Pablo. Por ahora procesar audio requiere configurar OpenAI Whisper API. ¿Prefieres que configuremos eso o seguimos con mensajes de texto?"
-    )
-    
-    # Log bot reply
-    log_to_db(chat_id, 'bot', 'Voice note acknowledgment', 'text')
-
-if __name__ == '__main__':
-    if not TELEGRAM_TOKEN:
-        print("Error: TELEGRAM_TOKEN not found.")
-    else:
-        application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    try:
+        # Get voice file
+        voice = await update.message.voice.get_file()
+        voice_bytes = await voice.download_as_bytearray()
         
-        start_handler = CommandHandler('start', start)
-        text_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text)
-        voice_handler = MessageHandler(filters.VOICE, handle_voice)
+        # Save temporarily as OGG file (Telegram format)
+        with tempfile.NamedTemporaryFile(suffix='.ogg', delete=False) as temp_audio:
+            temp_audio.write(voice_bytes)
+            temp_audio_path = temp_audio.name
         
-        application.add_handler(start_handler)
-        application.add_handler(text_handler)
-        application.add_handler(voice_handler)
+        # Transcribe with Whisper
+        with open(temp_audio_path, 'rb') as audio_file:
+            transcript = openai_client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file,
+                language="es"
+            )
         
-        print("🤖 Claudette Bot iniciado y escuchando...")
-        application.run_polling()
+        user_text = transcript.text
+        
+        # Log transcription
+        log_to_db(chat_id, 'user', f'[Voice: {user_text}]', 'voice')
+        
+        # Send to Claude (reuse handle_text logic)
+        message = anthropic_client.messages.create(
