@@ -168,7 +168,6 @@ if __name__ == '__main__':
         
         print("🤖 Claudette Bot iniciado y escuchando...")
         application.run_polling()
-```
 
 ---
 
