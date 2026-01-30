@@ -6,6 +6,7 @@ services:
     plan: starter
     buildCommand: pip install -r requirements.txt
     startCommand: python bot.py
+    healthCheckPath: null
     envVars:
       - key: TELEGRAM_TOKEN
         sync: false
@@ -18,5 +19,12 @@ services:
       - key: ELEVENLABS_VOICE_ID
         sync: false
       - key: DATABASE_URL
-        sync: false
-    healthCheckPath: null
+        fromDatabase:
+          name: claudette-db
+          property: connectionString
+
+databases:
+  - name: claudette-db
+    databaseName: claudette
+    user: claudette
+    plan: free
