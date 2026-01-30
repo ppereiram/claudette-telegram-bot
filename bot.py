@@ -8,7 +8,7 @@ from openai import OpenAI
 from elevenlabs import ElevenLabs, VoiceSettings
 import google_calendar
 import psycopg2
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Logging setup
 logging.basicConfig(
@@ -48,10 +48,11 @@ PERSONALIDAD:
 
 CALENDARIO & PRODUCTIVIDAD:
 - Tienes acceso al Google Calendar de Pablo
-- Cuando Pablo pregunte sobre su agenda, eventos, reuniones o citas, consulta el calendario automáticamente
-- Puedes ver eventos de hoy, mañana, esta semana
-- Frases clave: "agenda", "calendario", "qué tengo hoy", "reuniones", "eventos", "citas"
-- Responde de forma natural integrando la información del calendario
+- Cuando Pablo pregunte sobre su agenda, eventos, reuniones o citas, USA LA TOOL get_calendar_events
+- Cuando Pablo pida crear una reunión, cita o evento, USA LA TOOL create_calendar_event
+- Cuando Pablo pida un recordatorio, USA LA TOOL create_reminder
+- SÉ PROACTIVA: Si Pablo dice "crea reunión con X mañana 4pm", CRÉALA inmediatamente con la tool
+- NO preguntes si debe crear el evento, CRÉALO directamente
 
 PROTOCOLO DE APLICACIÓN DE MODELOS MENTALES:
 
@@ -114,7 +115,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_message = """🎯 Hola Pablo, soy Claudette, tu asistente ejecutiva con acceso a tus 216 modelos mentales y tu Google Calendar.
 
 Puedo ayudarte con:
-- Ver tu agenda y eventos
+- Ver tu agenda y crear eventos
 - Análisis de decisiones estratégicas
 - Evaluación de oportunidades de negocio
 - Aplicación de frameworks filosóficos y de pensamiento sistémico
@@ -224,7 +225,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             result = "No hay eventos hoy"
                     
                     elif tool_name == "create_calendar_event":
-                        from datetime import datetime, timedelta
                         start_dt = datetime.fromisoformat(tool_input['start_time'])
                         end_dt = start_dt + timedelta(hours=tool_input['duration_hours'])
                         
@@ -242,7 +242,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             result = "❌ Error al crear el evento"
                     
                     elif tool_name == "create_reminder":
-                        from datetime import datetime, timedelta
                         reminder_dt = datetime.fromisoformat(tool_input['reminder_time'])
                         
                         # Create 15-minute reminder event
@@ -299,54 +298,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         import traceback
         traceback.print_exc()
         await context.bot.send_message(chat_id=chat_id, text="Lo siento Pablo, encontré un error. Intenta de nuevo.")
-```
 
----
-
-## ✅ ACTUALIZA bot.py
-
-1. GitHub → bot.py → Edit
-2. **Reemplaza SOLO la función `handle_text`** (línea ~130) con el código de arriba
-3. Commit changes
-
----
-
-## 🎯 QUÉ CAMBIA:
-
-**ANTES:**
-```
-Tú: "Crea reunión con Liliana mañana 4pm"
-Claudette: "Claro, necesito más detalles..."
-[No hace nada]
-```
-
-**AHORA:**
-```
-Tú: "Crea reunión con Liliana mañana 4pm"
-Claudette: [USA TOOL] → Crea el evento
-"✅ Evento creado: Reunión con Liliana - 31/01/2026 4:00 PM"
-```
-
-**Y RECORDATORIOS:**
-```
-Tú: "Recuérdame 4 horas antes"
-Claudette: [USA TOOL] → Crea recordatorio
-"✅ Recordatorio creado: Reunión con Liliana - 31/01/2026 12:00 PM"
-```
-
----
-
-## 📋 PRÓXIMO PASO (MEMORIA):
-
-Después de esto, agregamos **memoria persistente** para que recuerde contexto entre conversaciones.
-
----
-
-**Actualiza bot.py con esa función y commit.** 
-
-Después del deploy (~3 min) prueba:
-```
-"Claudette, crea reunión Feline Canopy mañana 3pm, 1 hora"
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     
     try:
