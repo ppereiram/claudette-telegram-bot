@@ -46,6 +46,13 @@ PERSONALIDAD:
 - Acento español neutro
 - Respuestas naturales y fluidas
 
+CALENDARIO & PRODUCTIVIDAD:
+- Tienes acceso al Google Calendar de Pablo
+- Cuando Pablo pregunte sobre su agenda, eventos, reuniones o citas, consulta el calendario automáticamente
+- Puedes ver eventos de hoy, mañana, esta semana
+- Frases clave: "agenda", "calendario", "qué tengo hoy", "reuniones", "eventos", "citas"
+- Responde de forma natural integrando la información del calendario
+
 PROTOCOLO DE APLICACIÓN DE MODELOS MENTALES:
 
 1. Identifica el tipo de conversación:
@@ -104,9 +111,10 @@ def log_to_db(chat_id, sender, content, msg_type='text'):
         logging.error(f"DB Error: {e}")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    welcome_message = """🎯 Hola Pablo, soy Claudette, tu asistente ejecutiva con acceso a tus 216 modelos mentales.
+    welcome_message = """🎯 Hola Pablo, soy Claudette, tu asistente ejecutiva con acceso a tus 216 modelos mentales y tu Google Calendar.
 
 Puedo ayudarte con:
+- Ver tu agenda y eventos
 - Análisis de decisiones estratégicas
 - Evaluación de oportunidades de negocio
 - Aplicación de frameworks filosóficos y de pensamiento sistémico
@@ -123,11 +131,25 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log_to_db(chat_id, 'user', user_text, 'text')
     
     try:
+        # Check if question is calendar-related
+        calendar_keywords = ['agenda', 'calendario', 'reunión', 'evento', 'cita', 'meeting', 
+                            'qué tengo', 'cuándo', 'hoy', 'mañana', 'semana']
+        
+        calendar_context = ""
+        if any(keyword in user_text.lower() for keyword in calendar_keywords):
+            # Get calendar events
+            events = google_calendar.get_today_events()
+            if events:
+                calendar_context = "\n\n" + google_calendar.format_events_for_context(events)
+        
+        # Build enhanced prompt
+        enhanced_prompt = user_text + calendar_context
+        
         message = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=2048,
             system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_text}]
+            messages=[{"role": "user", "content": enhanced_prompt}]
         )
         bot_reply = message.content[0].text
         
