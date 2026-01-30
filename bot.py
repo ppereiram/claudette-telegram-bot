@@ -131,49 +131,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log_to_db(chat_id, 'user', user_text, 'text')
     
     try:
-        # Check if question is calendar-related
-        calendar_keywords = ['agenda', 'calendario', 'reunión', 'evento', 'cita', 'meeting', 
-                            'qué tengo', 'cuándo', 'hoy', 'mañana', 'semana']
-        
-        calendar_context = ""
-        if any(keyword in user_text.lower() for keyword in calendar_keywords):
-            # Get calendar events
-            events = google_calendar.get_today_events()
-            if events:
-                calendar_context = "\n\n" + google_calendar.format_events_for_context(events)
-        
-        # Build enhanced prompt
-        enhanced_prompt = user_text + calendar_context
-        
-        message = anthropic_client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=2048,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": enhanced_prompt}]
-        )
-        bot_reply = message.content[0].text
-        
-        max_length = 4000
-        if len(bot_reply) <= max_length:
-            await context.bot.send_message(chat_id=chat_id, text=bot_reply)
-        else:
-            chunks = [bot_reply[i:i+max_length] for i in range(0, len(bot_reply), max_length)]
-            for chunk in chunks:
-                await context.bot.send_message(chat_id=chat_id, text=chunk)
-        
-        log_to_db(chat_id, 'bot', bot_reply, 'text')
-        
-    except Exception as e:
-        logging.error(f"Error: {e}")
-        await context.bot.send_message(chat_id=chat_id, text="Lo siento Pablo, encontré un error. Intenta de nuevo.")
-
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_text = update.message.text
-    chat_id = update.effective_chat.id
-    
-    log_to_db(chat_id, 'user', user_text, 'text')
-    
-    try:
         # Define tools for Claude
         tools = [
             {
