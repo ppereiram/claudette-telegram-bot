@@ -40,6 +40,7 @@ IDENTIDAD:
 - Tu nombre es Claudette (NO Claude)
 - Eres su asistente ejecutiva personal
 - Tienes acceso completo a sus 216 modelos mentales
+- Tienes MEMORIA PERSISTENTE: Puedes guardar y recordar información importante
 
 PERSONALIDAD:
 - Profesional pero cálida (asistente ejecutiva sofisticada)
@@ -54,6 +55,12 @@ CALENDARIO & PRODUCTIVIDAD:
 - Cuando Pablo pida un recordatorio, USA LA TOOL create_reminder
 - SÉ PROACTIVA: Si Pablo dice "crea reunión con X mañana 4pm", CRÉALA inmediatamente con la tool
 - NO preguntes si debe crear el evento, CRÉALO directamente
+
+MEMORIA PERSISTENTE:
+- Cuando Pablo te diga información importante (IDs, fechas, preferencias, datos de familia), USA save_user_fact para guardarla
+- Cuando Pablo pregunte por información que guardaste, USA get_user_fact para buscarla
+- SÉ PROACTIVA: Si Pablo dice "guarda que el pasaporte de Sofia es X", guárdalo automáticamente
+- Categorías: 'familia', 'salud', 'trabajo', 'finanzas', 'general'
 
 PROTOCOLO DE APLICACIÓN DE MODELOS MENTALES:
 
@@ -113,14 +120,10 @@ def log_to_db(chat_id, sender, content, msg_type='text'):
         logging.error(f"DB Error: {e}")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    welcome_message = """🎯 Hola Pablo, soy Claudette, tu asistente ejecutiva con acceso a tus 216 modelos mentales y tu Google Calendar.
-
-Puedo ayudarte con:
-- Ver tu agenda y crear eventos
-- Análisis de decisiones estratégicas
-- Evaluación de oportunidades de negocio
-- Aplicación de frameworks filosóficos y de pensamiento sistémico
-- Cualquier consulta donde necesites perspectivas multidimensionales
+    welcome_message = """🎯 Hola Pablo, soy Claudette, tu asistente ejecutiva con:
+- 📅 Acceso a tu Google Calendar
+- 💾 Memoria persistente (puedo guardar y recordar información)
+- 🧠 216 modelos mentales para análisis profundo
 
 ¿En qué puedo ayudarte hoy?"""
     
@@ -137,7 +140,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tools = [
             {
                 "name": "get_calendar_events",
-                "description": "Obtiene los eventos del calendario de Pablo para hoy o días específicos. Úsala cuando Pablo pregunte sobre su agenda, reuniones o eventos.",
+                "description": "Obtiene los eventos del calendario de Pablo para hoy o días específicos.",
                 "input_schema": {
                     "type": "object",
                     "properties": {
@@ -151,47 +154,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             },
             {
                 "name": "create_calendar_event",
-                elif tool_name == "save_user_fact":
-    success = memory_manager.save_user_fact(
-        user_id=chat_id,
-        key=tool_input['key'],
-        value=tool_input['value'],
-        category=tool_input.get('category', 'general')
-    )
-    
-    if success:
-        result = f"✅ Guardado: {tool_input['key']} = {tool_input['value']}"
-    else:
-        result = "❌ Error al guardar"
-
-elif tool_name == "get_user_fact":
-    fact = memory_manager.get_user_fact(
-        user_id=chat_id,
-        query=tool_input['query']
-    )
-    
-    if fact:
-        result = f"📋 Encontré: {fact}"
-    else:
-        result = "❌ No encontré esa información"
-
-elif tool_name == "get_all_user_facts":
-    facts = memory_manager.get_all_user_facts(
-        user_id=chat_id,
-        category=tool_input.get('category')
-    )
-    
-    if facts:
-        result = "📋 TU INFORMACIÓN GUARDADA:\n\n"
-        current_category = None
-        for key, value, category in facts:
-            if category != current_category:
-                result += f"\n**{category.upper()}**\n"
-                current_category = category
-            result += f"• {key}: {value}\n"
-    else:
-        result = "No hay información guardada aún"
-                "description": "Crea un nuevo evento en el calendario de Pablo. Úsala cuando Pablo pida crear una reunión, cita o evento.",
+                "description": "Crea un nuevo evento en el calendario de Pablo.",
                 "input_schema": {
                     "type": "object",
                     "properties": {
@@ -221,58 +184,7 @@ elif tool_name == "get_all_user_facts":
             },
             {
                 "name": "create_reminder",
-                # En la sección de tools, después de create_reminder, agrega:
-
-{
-    "name": "save_user_fact",
-    "description": "Guarda un dato importante en la memoria permanente de Pablo. Úsala cuando Pablo te diga información que debe recordarse (IDs, fechas importantes, preferencias, datos de familia, etc.)",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "key": {
-                "type": "string",
-                "description": "Identificador único para el dato (ej: 'pasaporte_sofia', 'cumpleaños_liliana')"
-            },
-            "value": {
-                "type": "string",
-                "description": "El dato a guardar"
-            },
-            "category": {
-                "type": "string",
-                "description": "Categoría: 'familia', 'salud', 'trabajo', 'finanzas', 'general'"
-            }
-        },
-        "required": ["key", "value", "category"]
-    }
-},
-{
-    "name": "get_user_fact",
-    "description": "Busca información en la memoria permanente de Pablo. Úsala cuando Pablo pregunte por datos que le hayas guardado previamente.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "query": {
-                "type": "string",
-                "description": "Término de búsqueda (ej: 'pasaporte sofia', 'cumpleaños')"
-            }
-        },
-        "required": ["query"]
-    }
-},
-{
-    "name": "get_all_user_facts",
-    "description": "Obtiene todos los datos guardados de Pablo, opcionalmente filtrados por categoría.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "category": {
-                "type": "string",
-                "description": "Categoría opcional: 'familia', 'salud', 'trabajo', 'finanzas', 'general'"
-            }
-        }
-    }
-}
-                "description": "Crea un recordatorio en el calendario de Pablo. Úsala cuando Pablo pida que le recuerdes algo.",
+                "description": "Crea un recordatorio en el calendario de Pablo.",
                 "input_schema": {
                     "type": "object",
                     "properties": {
@@ -287,196 +199,29 @@ elif tool_name == "get_all_user_facts":
                     },
                     "required": ["title", "reminder_time"]
                 }
-            }
-        ]
-        
-        # First message to Claude
-        message = anthropic_client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=2048,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_text}],
-            tools=tools
-        )
-        
-        # Check if Claude wants to use tools
-        while message.stop_reason == "tool_use":
-            tool_results = []
-            
-            for content_block in message.content:
-                if content_block.type == "tool_use":
-                    tool_name = content_block.name
-                    tool_input = content_block.input
-                    
-                    # Execute the tool
-                    if tool_name == "get_calendar_events":
-                        events = google_calendar.get_today_events()
-                        if events:
-                            result = google_calendar.format_events_for_context(events)
-                        else:
-                            result = "No hay eventos hoy"
-                    
-                    elif tool_name == "create_calendar_event":
-                        start_dt = datetime.fromisoformat(tool_input['start_time'])
-                        end_dt = start_dt + timedelta(hours=tool_input['duration_hours'])
-                        
-                        event = google_calendar.create_event(
-                            summary=tool_input['title'],
-                            start_time=start_dt,
-                            end_time=end_dt,
-                            description=tool_input.get('description'),
-                            location=tool_input.get('location')
-                        )
-                        
-                        if event:
-                            result = f"✅ Evento creado: {tool_input['title']} - {start_dt.strftime('%d/%m/%Y %I:%M %p')}"
-                        else:
-                            result = "❌ Error al crear el evento"
-                    
-                    elif tool_name == "create_reminder":
-                        reminder_dt = datetime.fromisoformat(tool_input['reminder_time'])
-                        
-                        # Create 15-minute reminder event
-                        event = google_calendar.create_event(
-                            summary=f"🔔 RECORDATORIO: {tool_input['title']}",
-                            start_time=reminder_dt,
-                            end_time=reminder_dt + timedelta(minutes=15),
-                            description=f"Recordatorio: {tool_input['title']}"
-                        )
-                        
-                        if event:
-                            result = f"✅ Recordatorio creado: {tool_input['title']} - {reminder_dt.strftime('%d/%m/%Y %I:%M %p')}"
-                        else:
-                            result = "❌ Error al crear el recordatorio"
-                    
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": content_block.id,
-                        "content": result
-                    })
-            
-            # Continue conversation with tool results
-            message = anthropic_client.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=2048,
-                system=SYSTEM_PROMPT,
-                messages=[
-                    {"role": "user", "content": user_text},
-                    {"role": "assistant", "content": message.content},
-                    {"role": "user", "content": tool_results}
-                ],
-                tools=tools
-            )
-        
-        # Extract final text response
-        bot_reply = ""
-        for content_block in message.content:
-            if hasattr(content_block, 'text'):
-                bot_reply += content_block.text
-        
-        # Send response
-        max_length = 4000
-        if len(bot_reply) <= max_length:
-            await context.bot.send_message(chat_id=chat_id, text=bot_reply)
-        else:
-            chunks = [bot_reply[i:i+max_length] for i in range(0, len(bot_reply), max_length)]
-            for chunk in chunks:
-                await context.bot.send_message(chat_id=chat_id, text=chunk)
-        
-        log_to_db(chat_id, 'bot', bot_reply, 'text')
-        
-    except Exception as e:
-        logging.error(f"Error: {e}")
-        import traceback
-        traceback.print_exc()
-        await context.bot.send_message(chat_id=chat_id, text="Lo siento Pablo, encontré un error. Intenta de nuevo.")
-
-async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    
-    try:
-        # Get voice file
-        voice = await update.message.voice.get_file()
-        voice_bytes = await voice.download_as_bytearray()
-        
-        # Save temporarily as OGG file
-        with tempfile.NamedTemporaryFile(suffix='.ogg', delete=False) as temp_audio:
-            temp_audio.write(voice_bytes)
-            temp_audio_path = temp_audio.name
-        
-        # Transcribe with Whisper
-        with open(temp_audio_path, 'rb') as audio_file:
-            transcript = openai_client.audio.transcriptions.create(
-                model="whisper-1",
-                file=audio_file,
-                language="es"
-            )
-        
-        user_text = transcript.text
-        log_to_db(chat_id, 'user', f'[Voice: {user_text}]', 'voice')
-        
-        # Send to Claude
-        message = anthropic_client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=2048,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_text}]
-        )
-        bot_reply = message.content[0].text
-        
-        # Generate voice response with ElevenLabs
-        audio_generator = elevenlabs_client.text_to_speech.convert(
-            voice_id=ELEVENLABS_VOICE_ID,
-            text=bot_reply,
-            model_id="eleven_multilingual_v2",
-            voice_settings=VoiceSettings(
-                stability=0.5,
-                similarity_boost=0.75,
-                style=0.0,
-                use_speaker_boost=True
-            )
-        )
-        
-        # Save audio response
-        with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_response:
-            for chunk in audio_generator:
-                temp_response.write(chunk)
-            temp_response_path = temp_response.name
-        
-        # Send transcription text first
-        await context.bot.send_message(chat_id=chat_id, text=f"🎤 Escuché: \"{user_text}\"")
-        
-        # Send voice response
-        with open(temp_response_path, 'rb') as audio_file:
-            await context.bot.send_voice(chat_id=chat_id, voice=audio_file)
-        
-        # Log bot reply
-        log_to_db(chat_id, 'bot', bot_reply, 'voice')
-        
-        # Clean up temp files
-        os.unlink(temp_audio_path)
-        os.unlink(temp_response_path)
-        
-    except Exception as e:
-        logging.error(f"Error processing voice: {e}")
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text="Lo siento Pablo, tuve un problema procesando tu nota de voz. ¿Puedes intentar de nuevo?"
-        )
-
-if __name__ == '__main__':
-    if not TELEGRAM_TOKEN:
-        print("Error: TELEGRAM_TOKEN not found.")
-    else:
-        application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-        
-        start_handler = CommandHandler('start', start)
-        text_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text)
-        voice_handler = MessageHandler(filters.VOICE, handle_voice)
-        
-        application.add_handler(start_handler)
-        application.add_handler(text_handler)
-        application.add_handler(voice_handler)
-        
-        print("🤖 Claudette Bot iniciado y escuchando...")
-        application.run_polling()
+            },
+            {
+                "name": "save_user_fact",
+                "description": "Guarda un dato importante en la memoria permanente de Pablo. Úsala cuando Pablo te diga información que debe recordarse (IDs, fechas importantes, preferencias, datos de familia, etc.)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "key": {
+                            "type": "string",
+                            "description": "Identificador único para el dato (ej: 'pasaporte_sofia', 'cumpleaños_liliana')"
+                        },
+                        "value": {
+                            "type": "string",
+                            "description": "El dato a guardar"
+                        },
+                        "category": {
+                            "type": "string",
+                            "description": "Categoría: 'familia', 'salud', 'trabajo', 'finanzas', 'general'"
+                        }
+                    },
+                    "required": ["key", "value", "category"]
+                }
+            },
+            {
+                "name": "get_user_fact",
+                "description": "Busca información en la memoria permanente de Pablo.",
