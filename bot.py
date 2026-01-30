@@ -1,3 +1,4 @@
+import memory_manager
 import logging
 import os
 import tempfile
@@ -150,6 +151,46 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             },
             {
                 "name": "create_calendar_event",
+                elif tool_name == "save_user_fact":
+    success = memory_manager.save_user_fact(
+        user_id=chat_id,
+        key=tool_input['key'],
+        value=tool_input['value'],
+        category=tool_input.get('category', 'general')
+    )
+    
+    if success:
+        result = f"✅ Guardado: {tool_input['key']} = {tool_input['value']}"
+    else:
+        result = "❌ Error al guardar"
+
+elif tool_name == "get_user_fact":
+    fact = memory_manager.get_user_fact(
+        user_id=chat_id,
+        query=tool_input['query']
+    )
+    
+    if fact:
+        result = f"📋 Encontré: {fact}"
+    else:
+        result = "❌ No encontré esa información"
+
+elif tool_name == "get_all_user_facts":
+    facts = memory_manager.get_all_user_facts(
+        user_id=chat_id,
+        category=tool_input.get('category')
+    )
+    
+    if facts:
+        result = "📋 TU INFORMACIÓN GUARDADA:\n\n"
+        current_category = None
+        for key, value, category in facts:
+            if category != current_category:
+                result += f"\n**{category.upper()}**\n"
+                current_category = category
+            result += f"• {key}: {value}\n"
+    else:
+        result = "No hay información guardada aún"
                 "description": "Crea un nuevo evento en el calendario de Pablo. Úsala cuando Pablo pida crear una reunión, cita o evento.",
                 "input_schema": {
                     "type": "object",
@@ -180,6 +221,57 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             },
             {
                 "name": "create_reminder",
+                # En la sección de tools, después de create_reminder, agrega:
+
+{
+    "name": "save_user_fact",
+    "description": "Guarda un dato importante en la memoria permanente de Pablo. Úsala cuando Pablo te diga información que debe recordarse (IDs, fechas importantes, preferencias, datos de familia, etc.)",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "key": {
+                "type": "string",
+                "description": "Identificador único para el dato (ej: 'pasaporte_sofia', 'cumpleaños_liliana')"
+            },
+            "value": {
+                "type": "string",
+                "description": "El dato a guardar"
+            },
+            "category": {
+                "type": "string",
+                "description": "Categoría: 'familia', 'salud', 'trabajo', 'finanzas', 'general'"
+            }
+        },
+        "required": ["key", "value", "category"]
+    }
+},
+{
+    "name": "get_user_fact",
+    "description": "Busca información en la memoria permanente de Pablo. Úsala cuando Pablo pregunte por datos que le hayas guardado previamente.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "Término de búsqueda (ej: 'pasaporte sofia', 'cumpleaños')"
+            }
+        },
+        "required": ["query"]
+    }
+},
+{
+    "name": "get_all_user_facts",
+    "description": "Obtiene todos los datos guardados de Pablo, opcionalmente filtrados por categoría.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "category": {
+                "type": "string",
+                "description": "Categoría opcional: 'familia', 'salud', 'trabajo', 'finanzas', 'general'"
+            }
+        }
+    }
+}
                 "description": "Crea un recordatorio en el calendario de Pablo. Úsala cuando Pablo pida que le recuerdes algo.",
                 "input_schema": {
                     "type": "object",
