@@ -104,6 +104,42 @@ Responde de forma conversacional, como si estuvieras en una reunión ejecutiva c
 Usa sus 216 modelos mentales de múltiples disciplinas (filosofía, ciencia, economía, psicología, estrategia, sistemas) para dar perspectivas profundas y multidimensionales."""
 
 def log_to_db(chat_id, sender, content, msg_type='text'):
+    def setup_memory_table():
+    """Create user_facts table if it doesn't exist"""
+    if not DATABASE_URL:
+        return
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        
+        # Create table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS user_facts (
+                id SERIAL PRIMARY KEY,
+                user_id VARCHAR(100) NOT NULL,
+                fact_key VARCHAR(255) NOT NULL,
+                fact_value TEXT NOT NULL,
+                category VARCHAR(100) DEFAULT 'general',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, fact_key)
+            )
+        """)
+        
+        # Create index
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_user_facts_key 
+            ON user_facts(user_id, fact_key)
+        """)
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        logging.info("✅ Memory table verified/created")
+        
+    except Exception as e:
+        logging.error(f"Error setting up memory table: {e}")
     if not DATABASE_URL:
         return
     try:
