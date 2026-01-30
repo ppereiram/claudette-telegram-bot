@@ -6,6 +6,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Messa
 from anthropic import Anthropic
 from openai import OpenAI
 from elevenlabs import ElevenLabs, VoiceSettings
+import google_calendar
 import psycopg2
 from datetime import datetime
 
