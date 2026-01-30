@@ -167,7 +167,229 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.error(f"Error: {e}")
         await context.bot.send_message(chat_id=chat_id, text="Lo siento Pablo, encontré un error. Intenta de nuevo.")
 
-async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_text = update.message.text
+    chat_id = update.effective_chat.id
+    
+    log_to_db(chat_id, 'user', user_text, 'text')
+    
+    try:
+        # Define tools for Claude
+        tools = [
+            {
+                "name": "get_calendar_events",
+                "description": "Obtiene los eventos del calendario de Pablo para hoy o días específicos. Úsala cuando Pablo pregunte sobre su agenda, reuniones o eventos.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "day": {
+                            "type": "string",
+                            "description": "El día para consultar: 'today', 'tomorrow', o una fecha específica"
+                        }
+                    },
+                    "required": ["day"]
+                }
+            },
+            {
+                "name": "create_calendar_event",
+                "description": "Crea un nuevo evento en el calendario de Pablo. Úsala cuando Pablo pida crear una reunión, cita o evento.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Título del evento"
+                        },
+                        "start_time": {
+                            "type": "string",
+                            "description": "Hora de inicio en formato ISO (ej: 2026-01-30T16:00:00)"
+                        },
+                        "duration_hours": {
+                            "type": "number",
+                            "description": "Duración en horas (ej: 1, 0.5, 2)"
+                        },
+                        "location": {
+                            "type": "string",
+                            "description": "Ubicación del evento (opcional)"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Descripción o notas del evento (opcional)"
+                        }
+                    },
+                    "required": ["title", "start_time", "duration_hours"]
+                }
+            },
+            {
+                "name": "create_reminder",
+                "description": "Crea un recordatorio en el calendario de Pablo. Úsala cuando Pablo pida que le recuerdes algo.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Qué recordar"
+                        },
+                        "reminder_time": {
+                            "type": "string",
+                            "description": "Cuándo recordar en formato ISO"
+                        }
+                    },
+                    "required": ["title", "reminder_time"]
+                }
+            }
+        ]
+        
+        # First message to Claude
+        message = anthropic_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2048,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": user_text}],
+            tools=tools
+        )
+        
+        # Check if Claude wants to use tools
+        while message.stop_reason == "tool_use":
+            tool_results = []
+            
+            for content_block in message.content:
+                if content_block.type == "tool_use":
+                    tool_name = content_block.name
+                    tool_input = content_block.input
+                    
+                    # Execute the tool
+                    if tool_name == "get_calendar_events":
+                        events = google_calendar.get_today_events()
+                        if events:
+                            result = google_calendar.format_events_for_context(events)
+                        else:
+                            result = "No hay eventos hoy"
+                    
+                    elif tool_name == "create_calendar_event":
+                        from datetime import datetime, timedelta
+                        start_dt = datetime.fromisoformat(tool_input['start_time'])
+                        end_dt = start_dt + timedelta(hours=tool_input['duration_hours'])
+                        
+                        event = google_calendar.create_event(
+                            summary=tool_input['title'],
+                            start_time=start_dt,
+                            end_time=end_dt,
+                            description=tool_input.get('description'),
+                            location=tool_input.get('location')
+                        )
+                        
+                        if event:
+                            result = f"✅ Evento creado: {tool_input['title']} - {start_dt.strftime('%d/%m/%Y %I:%M %p')}"
+                        else:
+                            result = "❌ Error al crear el evento"
+                    
+                    elif tool_name == "create_reminder":
+                        from datetime import datetime, timedelta
+                        reminder_dt = datetime.fromisoformat(tool_input['reminder_time'])
+                        
+                        # Create 15-minute reminder event
+                        event = google_calendar.create_event(
+                            summary=f"🔔 RECORDATORIO: {tool_input['title']}",
+                            start_time=reminder_dt,
+                            end_time=reminder_dt + timedelta(minutes=15),
+                            description=f"Recordatorio: {tool_input['title']}"
+                        )
+                        
+                        if event:
+                            result = f"✅ Recordatorio creado: {tool_input['title']} - {reminder_dt.strftime('%d/%m/%Y %I:%M %p')}"
+                        else:
+                            result = "❌ Error al crear el recordatorio"
+                    
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": content_block.id,
+                        "content": result
+                    })
+            
+            # Continue conversation with tool results
+            message = anthropic_client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=2048,
+                system=SYSTEM_PROMPT,
+                messages=[
+                    {"role": "user", "content": user_text},
+                    {"role": "assistant", "content": message.content},
+                    {"role": "user", "content": tool_results}
+                ],
+                tools=tools
+            )
+        
+        # Extract final text response
+        bot_reply = ""
+        for content_block in message.content:
+            if hasattr(content_block, 'text'):
+                bot_reply += content_block.text
+        
+        # Send response
+        max_length = 4000
+        if len(bot_reply) <= max_length:
+            await context.bot.send_message(chat_id=chat_id, text=bot_reply)
+        else:
+            chunks = [bot_reply[i:i+max_length] for i in range(0, len(bot_reply), max_length)]
+            for chunk in chunks:
+                await context.bot.send_message(chat_id=chat_id, text=chunk)
+        
+        log_to_db(chat_id, 'bot', bot_reply, 'text')
+        
+    except Exception as e:
+        logging.error(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
+        await context.bot.send_message(chat_id=chat_id, text="Lo siento Pablo, encontré un error. Intenta de nuevo.")
+```
+
+---
+
+## ✅ ACTUALIZA bot.py
+
+1. GitHub → bot.py → Edit
+2. **Reemplaza SOLO la función `handle_text`** (línea ~130) con el código de arriba
+3. Commit changes
+
+---
+
+## 🎯 QUÉ CAMBIA:
+
+**ANTES:**
+```
+Tú: "Crea reunión con Liliana mañana 4pm"
+Claudette: "Claro, necesito más detalles..."
+[No hace nada]
+```
+
+**AHORA:**
+```
+Tú: "Crea reunión con Liliana mañana 4pm"
+Claudette: [USA TOOL] → Crea el evento
+"✅ Evento creado: Reunión con Liliana - 31/01/2026 4:00 PM"
+```
+
+**Y RECORDATORIOS:**
+```
+Tú: "Recuérdame 4 horas antes"
+Claudette: [USA TOOL] → Crea recordatorio
+"✅ Recordatorio creado: Reunión con Liliana - 31/01/2026 12:00 PM"
+```
+
+---
+
+## 📋 PRÓXIMO PASO (MEMORIA):
+
+Después de esto, agregamos **memoria persistente** para que recuerde contexto entre conversaciones.
+
+---
+
+**Actualiza bot.py con esa función y commit.** 
+
+Después del deploy (~3 min) prueba:
+```
+"Claudette, crea reunión Feline Canopy mañana 3pm, 1 hora"
     chat_id = update.effective_chat.id
     
     try:
