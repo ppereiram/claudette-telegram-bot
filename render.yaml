@@ -18,3 +18,13 @@ services:
         sync: false
       - key: ELEVENLABS_VOICE_ID
         sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: claudette-db
+          property: connectionString
+
+databases:
+  - name: claudette-db
+    databaseName: claudette
+    user: claudette
+    plan: free
