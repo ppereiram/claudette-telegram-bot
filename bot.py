@@ -103,8 +103,7 @@ CONTEXTO DE PABLO:
 Responde de forma conversacional, como si estuvieras en una reunión ejecutiva con Pablo.
 Usa sus 216 modelos mentales de múltiples disciplinas (filosofía, ciencia, economía, psicología, estrategia, sistemas) para dar perspectivas profundas y multidimensionales."""
 
-def log_to_db(chat_id, sender, content, msg_type='text'):
-    def setup_memory_table():
+def setup_memory_table():
     """Create user_facts table if it doesn't exist"""
     if not DATABASE_URL:
         return
@@ -140,6 +139,8 @@ def log_to_db(chat_id, sender, content, msg_type='text'):
         
     except Exception as e:
         logging.error(f"Error setting up memory table: {e}")
+
+def log_to_db(chat_id, sender, content, msg_type='text'):
     if not DATABASE_URL:
         return
     try:
@@ -238,13 +239,13 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             },
             {
                 "name": "save_user_fact",
-                "description": "Guarda un dato importante en la memoria permanente de Pablo. Úsala cuando Pablo te diga información que debe recordarse (IDs, fechas importantes, preferencias, datos de familia, etc.)",
+                "description": "Guarda un dato importante en la memoria permanente de Pablo.",
                 "input_schema": {
                     "type": "object",
                     "properties": {
                         "key": {
                             "type": "string",
-                            "description": "Identificador único para el dato (ej: 'pasaporte_sofia', 'cumpleaños_liliana')"
+                            "description": "Identificador único para el dato"
                         },
                         "value": {
                             "type": "string",
@@ -261,3 +262,252 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             {
                 "name": "get_user_fact",
                 "description": "Busca información en la memoria permanente de Pablo.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Término de búsqueda"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            },
+            {
+                "name": "get_all_user_facts",
+                "description": "Obtiene todos los datos guardados de Pablo.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "category": {
+                            "type": "string",
+                            "description": "Categoría opcional"
+                        }
+                    }
+                }
+            }
+        ]
+        
+        # First message to Claude
+        message = anthropic_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2048,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": user_text}],
+            tools=tools
+        )
+        
+        # Check if Claude wants to use tools
+        while message.stop_reason == "tool_use":
+            tool_results = []
+            
+            for content_block in message.content:
+                if content_block.type == "tool_use":
+                    tool_name = content_block.name
+                    tool_input = content_block.input
+                    
+                    # Execute the tool
+                    if tool_name == "get_calendar_events":
+                        events = google_calendar.get_today_events()
+                        if events:
+                            result = google_calendar.format_events_for_context(events)
+                        else:
+                            result = "No hay eventos hoy"
+                    
+                    elif tool_name == "create_calendar_event":
+                        start_dt = datetime.fromisoformat(tool_input['start_time'])
+                        end_dt = start_dt + timedelta(hours=tool_input['duration_hours'])
+                        
+                        event = google_calendar.create_event(
+                            summary=tool_input['title'],
+                            start_time=start_dt,
+                            end_time=end_dt,
+                            description=tool_input.get('description'),
+                            location=tool_input.get('location')
+                        )
+                        
+                        if event:
+                            result = f"✅ Evento creado: {tool_input['title']} - {start_dt.strftime('%d/%m/%Y %I:%M %p')}"
+                        else:
+                            result = "❌ Error al crear el evento"
+                    
+                    elif tool_name == "create_reminder":
+                        reminder_dt = datetime.fromisoformat(tool_input['reminder_time'])
+                        
+                        event = google_calendar.create_event(
+                            summary=f"🔔 RECORDATORIO: {tool_input['title']}",
+                            start_time=reminder_dt,
+                            end_time=reminder_dt + timedelta(minutes=15),
+                            description=f"Recordatorio: {tool_input['title']}"
+                        )
+                        
+                        if event:
+                            result = f"✅ Recordatorio creado: {tool_input['title']} - {reminder_dt.strftime('%d/%m/%Y %I:%M %p')}"
+                        else:
+                            result = "❌ Error al crear el recordatorio"
+                    
+                    elif tool_name == "save_user_fact":
+                        success = memory_manager.save_user_fact(
+                            user_id=chat_id,
+                            key=tool_input['key'],
+                            value=tool_input['value'],
+                            category=tool_input.get('category', 'general')
+                        )
+                        
+                        if success:
+                            result = f"✅ Guardado: {tool_input['key']} = {tool_input['value']}"
+                        else:
+                            result = "❌ Error al guardar"
+                    
+                    elif tool_name == "get_user_fact":
+                        fact = memory_manager.get_user_fact(
+                            user_id=chat_id,
+                            query=tool_input['query']
+                        )
+                        
+                        if fact:
+                            result = f"📋 Encontré: {fact}"
+                        else:
+                            result = "❌ No encontré esa información"
+                    
+                    elif tool_name == "get_all_user_facts":
+                        facts = memory_manager.get_all_user_facts(
+                            user_id=chat_id,
+                            category=tool_input.get('category')
+                        )
+                        
+                        if facts:
+                            result = "📋 TU INFORMACIÓN GUARDADA:\n\n"
+                            current_category = None
+                            for key, value, category in facts:
+                                if category != current_category:
+                                    result += f"\n**{category.upper()}**\n"
+                                    current_category = category
+                                result += f"• {key}: {value}\n"
+                        else:
+                            result = "No hay información guardada aún"
+                    
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": content_block.id,
+                        "content": result
+                    })
+            
+            # Continue conversation with tool results
+            message = anthropic_client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=2048,
+                system=SYSTEM_PROMPT,
+                messages=[
+                    {"role": "user", "content": user_text},
+                    {"role": "assistant", "content": message.content},
+                    {"role": "user", "content": tool_results}
+                ],
+                tools=tools
+            )
+        
+        # Extract final text response
+        bot_reply = ""
+        for content_block in message.content:
+            if hasattr(content_block, 'text'):
+                bot_reply += content_block.text
+        
+        # Send response
+        max_length = 4000
+        if len(bot_reply) <= max_length:
+            await context.bot.send_message(chat_id=chat_id, text=bot_reply)
+        else:
+            chunks = [bot_reply[i:i+max_length] for i in range(0, len(bot_reply), max_length)]
+            for chunk in chunks:
+                await context.bot.send_message(chat_id=chat_id, text=chunk)
+        
+        log_to_db(chat_id, 'bot', bot_reply, 'text')
+        
+    except Exception as e:
+        logging.error(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
+        await context.bot.send_message(chat_id=chat_id, text="Lo siento Pablo, encontré un error. Intenta de nuevo.")
+
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    
+    try:
+        voice = await update.message.voice.get_file()
+        voice_bytes = await voice.download_as_bytearray()
+        
+        with tempfile.NamedTemporaryFile(suffix='.ogg', delete=False) as temp_audio:
+            temp_audio.write(voice_bytes)
+            temp_audio_path = temp_audio.name
+        
+        with open(temp_audio_path, 'rb') as audio_file:
+            transcript = openai_client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file,
+                language="es"
+            )
+        
+        user_text = transcript.text
+        log_to_db(chat_id, 'user', f'[Voice: {user_text}]', 'voice')
+        
+        message = anthropic_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2048,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": user_text}]
+        )
+        bot_reply = message.content[0].text
+        
+        audio_generator = elevenlabs_client.text_to_speech.convert(
+            voice_id=ELEVENLABS_VOICE_ID,
+            text=bot_reply,
+            model_id="eleven_multilingual_v2",
+            voice_settings=VoiceSettings(
+                stability=0.5,
+                similarity_boost=0.75,
+                style=0.0,
+                use_speaker_boost=True
+            )
+        )
+        
+        with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_response:
+            for chunk in audio_generator:
+                temp_response.write(chunk)
+            temp_response_path = temp_response.name
+        
+        await context.bot.send_message(chat_id=chat_id, text=f"🎤 Escuché: \"{user_text}\"")
+        
+        with open(temp_response_path, 'rb') as audio_file:
+            await context.bot.send_voice(chat_id=chat_id, voice=audio_file)
+        
+        log_to_db(chat_id, 'bot', bot_reply, 'voice')
+        
+        os.unlink(temp_audio_path)
+        os.unlink(temp_response_path)
+        
+    except Exception as e:
+        logging.error(f"Error processing voice: {e}")
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="Lo siento Pablo, tuve un problema procesando tu nota de voz. ¿Puedes intentar de nuevo?"
+        )
+
+if __name__ == '__main__':
+    if not TELEGRAM_TOKEN:
+        print("Error: TELEGRAM_TOKEN not found.")
+    else:
+        # Setup memory table on startup
+        setup_memory_table()
+        
+        application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+        
+        start_handler = CommandHandler('start', start)
+        text_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text)
+        voice_handler = MessageHandler(filters.VOICE, handle_voice)
+        
+        application.add_handler(start_handler)
+        application.add_handler(text_handler)
+        application.add_handler(voice_handler)
+        
+        print("🤖 Claudette Bot iniciado y escuchando...")
+        application.run_polling()
