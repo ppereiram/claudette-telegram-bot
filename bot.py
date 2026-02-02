@@ -66,7 +66,9 @@ IDENTIDAD:
 - Tu nombre es Claudette (NO Claude)
 - Eres su asistente ejecutiva personal
 - Tienes acceso completo a sus 216 modelos mentales
-- Conoces información de Pablo desde su perfil permanente
+- Tienes DOS tipos de memoria:
+  1. PERFIL BASE: Información estática sobre Pablo (familia, contexto permanente)
+  2. MEMORIA DINÁMICA: Información nueva que Pablo te dice para guardar
 
 PERSONALIDAD:
 - Profesional pero cálida (asistente ejecutiva sofisticada)
@@ -76,12 +78,19 @@ PERSONALIDAD:
 
 CALENDARIO & PRODUCTIVIDAD:
 - Tienes acceso al Google Calendar de Pablo
-- Cuando Pablo pregunte sobre su agenda, eventos, reuniones o citas, USA LA TOOL get_calendar_events
-- Cuando Pablo pida crear una reunión, cita o evento, USA LA TOOL create_calendar_event INMEDIATAMENTE
+- Cuando Pablo pregunte sobre su agenda, USA LA TOOL get_calendar_events
+- Cuando Pablo pida crear reunión/evento, USA LA TOOL create_calendar_event INMEDIATAMENTE
 - Cuando Pablo pida un recordatorio, USA LA TOOL create_reminder
-- SÉ PROACTIVA: Si Pablo dice "crea reunión con X mañana 4pm", CRÉALA inmediatamente con la tool
-- NO preguntes si debe crear el evento, CRÉALO directamente
-- IMPORTANTE: La fecha de HOY es {current_date} - úsala para calcular "mañana", fechas relativas, etc.
+- SÉ PROACTIVA: Si Pablo dice "crea reunión con X mañana 4pm", CRÉALA sin preguntar
+- IMPORTANTE: La fecha de HOY es {current_date} - úsala para calcular fechas relativas
+
+MEMORIA DINÁMICA:
+- SIEMPRE usa save_user_fact cuando Pablo dice "guarda", "anota", "recuerda" + información NUEVA
+- SIEMPRE usa get_user_fact cuando Pablo pregunta por información guardada dinámicamente
+- Keys en minúsculas con guiones bajos (ej: "pasaporte_chile_pablo", "cuenta_banco_bac")
+- Categorías: 'familia', 'salud', 'trabajo', 'finanzas', 'documentos', 'general'
+- SÉ PROACTIVA: Si Pablo dice "mi pasaporte chileno es X", GUÁRDALO AUTOMÁTICAMENTE con save_user_fact
+- NO preguntes si debe guardarse, GUÁRDALO directamente
 
 PROTOCOLO DE APLICACIÓN DE MODELOS MENTALES:
 
@@ -92,13 +101,12 @@ PROTOCOLO DE APLICACIÓN DE MODELOS MENTALES:
    - Decisión/dilema SIN contexto → PREGUNTA PRIMERO, luego aplica
    - Análisis profundo → MODO COMPLETO con 10-15 modelos
 
-2. Para decisiones/dilemas, pregúntate:
+2. Para decisiones/dilemas:
    "¿Entiendo las variables clave, opciones, y consecuencias?"
    - SI → Aplica modelos ahora
    - NO → Pide contexto específico, luego aplica
 
 3. NUNCA preguntes "¿Quieres que aplique [modelo]?" - Ese es TU trabajo.
-   Pablo te creó para pensar CON los modelos, no para pedir permiso.
 
 4. SÉ PROACTIVA pero no forzada:
    - Si un modelo ilumina la situación → úsalo
@@ -108,7 +116,7 @@ PROTOCOLO DE APLICACIÓN DE MODELOS MENTALES:
 CONTEXTO DE PABLO:
 - Arquitecto y desarrollador inmobiliario, 56 años, Costa Rica
 - Transformación post-pandemia: de alta performance a filosofía de slowness
-- 25+ años experiencia en zone francas e industrial parks
+- 25+ años experiencia en zonas francas e industrial parks
 - Master planning de parques industriales hasta $45M
 - Trader (NQ futures con NinjaTrader), ultra-endurance athlete (Ultraman)
 - Filosofía: flâneur contemplativo, 12,000 km caminados, ~500 libros leídos
@@ -183,7 +191,7 @@ def log_to_db(chat_id, sender, content, msg_type='text'):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_message = """🎯 Hola Pablo, soy Claudette, tu asistente ejecutiva con:
 - 📅 Acceso a tu Google Calendar
-- 📋 Acceso a tu perfil personal permanente
+- 📋 Perfil permanente + Memoria dinámica
 - 🧠 216 modelos mentales para análisis profundo
 
 ¿En qué puedo ayudarte hoy?"""
@@ -259,6 +267,55 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     },
                     "required": ["title", "reminder_time"]
                 }
+            },
+            {
+                "name": "save_user_fact",
+                "description": "Guarda información nueva que Pablo proporciona en su memoria permanente dinámica.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "key": {
+                            "type": "string",
+                            "description": "Identificador único en minúsculas con guiones bajos (ej: 'pasaporte_chile_pablo')"
+                        },
+                        "value": {
+                            "type": "string",
+                            "description": "El dato a guardar"
+                        },
+                        "category": {
+                            "type": "string",
+                            "description": "Categoría: 'familia', 'salud', 'trabajo', 'finanzas', 'documentos', 'general'"
+                        }
+                    },
+                    "required": ["key", "value", "category"]
+                }
+            },
+            {
+                "name": "get_user_fact",
+                "description": "Busca información previamente guardada en la memoria dinámica de Pablo.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Término de búsqueda (ej: 'pasaporte', 'cuenta banco')"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            },
+            {
+                "name": "get_all_user_facts",
+                "description": "Obtiene todos los datos guardados dinámicamente.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "category": {
+                            "type": "string",
+                            "description": "Categoría opcional para filtrar"
+                        }
+                    }
+                }
             }
         ]
         
@@ -328,6 +385,47 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         except Exception as e:
                             result = f"❌ Error: {str(e)}"
                             logging.error(f"Reminder error: {e}")
+                    
+                    elif tool_name == "save_user_fact":
+                        success = memory_manager.save_user_fact(
+                            user_id=chat_id,
+                            key=tool_input['key'],
+                            value=tool_input['value'],
+                            category=tool_input.get('category', 'general')
+                        )
+                        
+                        if success:
+                            result = f"✅ Guardado permanentemente: {tool_input['key']} = {tool_input['value']}"
+                        else:
+                            result = "❌ Error al guardar en memoria permanente"
+                    
+                    elif tool_name == "get_user_fact":
+                        fact = memory_manager.get_user_fact(
+                            user_id=chat_id,
+                            query=tool_input['query']
+                        )
+                        
+                        if fact:
+                            result = f"📋 Encontré en memoria dinámica: {fact}"
+                        else:
+                            result = "❌ No encontré esa información en memoria dinámica"
+                    
+                    elif tool_name == "get_all_user_facts":
+                        facts = memory_manager.get_all_user_facts(
+                            user_id=chat_id,
+                            category=tool_input.get('category')
+                        )
+                        
+                        if facts:
+                            result = "📋 INFORMACIÓN GUARDADA DINÁMICAMENTE:\n\n"
+                            current_category = None
+                            for key, value, category in facts:
+                                if category != current_category:
+                                    result += f"\n**{category.upper()}**\n"
+                                    current_category = category
+                                result += f"• {key}: {value}\n"
+                        else:
+                            result = "No hay información dinámica guardada aún"
                     
                     tool_results.append({
                         "type": "tool_result",
