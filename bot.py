@@ -10,6 +10,7 @@ from elevenlabs import ElevenLabs, VoiceSettings
 import google_calendar
 import psycopg2
 from datetime import datetime, timedelta
+import pytz
 
 # Logging setup
 logging.basicConfig(
@@ -32,35 +33,40 @@ if not TELEGRAM_TOKEN or not CLAUDE_API_KEY:
 anthropic_client = Anthropic(api_key=CLAUDE_API_KEY)
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
 elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
-# Get current date dynamically
-from datetime import datetime
-import pytz
 
 def load_user_profile():
+    """Load user profile from markdown file"""
     try:
-        with open('user_profile.md', 'r', encoding='utf-8') as f:
+        profile_path = os.path.join(os.path.dirname(__file__), 'user_profile.md')
+        with open(profile_path, 'r', encoding='utf-8') as f:
             return f.read()
-    except:
+    except FileNotFoundError:
+        logging.warning("user_profile.md not found")
+        return ""
+    except Exception as e:
+        logging.error(f"Error loading profile: {e}")
         return ""
         
 def get_current_date():
+    """Get current date and time in Costa Rica timezone"""
     tz = pytz.timezone('America/Costa_Rica')
     now = datetime.now(tz)
     return now.strftime("%A, %d de %B de %Y, %I:%M %p")
 
-# Build dynamic system prompt
 def build_system_prompt():
+    """Build dynamic system prompt with current date and user profile"""
     current_date = get_current_date()
-    return f"""FECHA Y HORA ACTUAL: {current_date}
+    user_profile = load_user_profile()
+    
+    base_prompt = f"""FECHA Y HORA ACTUAL: {current_date}
 
-# System prompt para Claudette
-SYSTEM_PROMPT = """Eres Claudette, asistente ejecutiva IA de Pablo con acceso a sus 216 modelos mentales universales.
+Eres Claudette, asistente ejecutiva IA de Pablo con acceso a sus 216 modelos mentales universales.
 
 IDENTIDAD:
 - Tu nombre es Claudette (NO Claude)
 - Eres su asistente ejecutiva personal
 - Tienes acceso completo a sus 216 modelos mentales
-- Tienes MEMORIA PERSISTENTE: Puedes guardar y recordar información importante
+- Conoces información de Pablo desde su perfil permanente
 
 PERSONALIDAD:
 - Profesional pero cálida (asistente ejecutiva sofisticada)
@@ -71,28 +77,11 @@ PERSONALIDAD:
 CALENDARIO & PRODUCTIVIDAD:
 - Tienes acceso al Google Calendar de Pablo
 - Cuando Pablo pregunte sobre su agenda, eventos, reuniones o citas, USA LA TOOL get_calendar_events
-- Cuando Pablo pida crear una reunión, cita o evento, USA LA TOOL create_calendar_event
+- Cuando Pablo pida crear una reunión, cita o evento, USA LA TOOL create_calendar_event INMEDIATAMENTE
 - Cuando Pablo pida un recordatorio, USA LA TOOL create_reminder
 - SÉ PROACTIVA: Si Pablo dice "crea reunión con X mañana 4pm", CRÉALA inmediatamente con la tool
 - NO preguntes si debe crear el evento, CRÉALO directamente
-
-MEMORIA PERSISTENTE:
-- SIEMPRE usa keys en minúsculas y con guión bajo (ej: "dimex_maria_paula", no "DIMEX María Paula")
-- SIEMPRE usa save_user_fact cuando Pablo dice "guarda", "anota", "recuerda" + información
-- SIEMPRE usa get_user_fact cuando Pablo pregunta "cuál es", "qué es", "dime" + información guardada
-- SÉ PROACTIVA: Si Pablo dice "mi DIMEX es X", guárdalo automáticamente como "dimex_pablo"
-- Si Pablo menciona "la cédula de Sofia es Y", guárdalo como "cedula_sofia"
-- Categorías: 'familia', 'salud', 'trabajo', 'finanzas', 'documentos', 'general'
-- FORMATO DE KEYS:
-  * Documentos: dimex_[nombre], cedula_[nombre], pasaporte_[nombre]
-  * Fechas: cumpleaños_[nombre], aniversario_[evento]
-  * Preferencias: preferencia_[tema]
-  * Uso minúsculas y guiones bajos, NO ESPACIOS
-
-BÚSQUEDA EN MEMORIA:
-- Cuando Pablo pregunta por información, USA get_user_fact con términos de búsqueda relevantes
-- Si no encuentras con un término, intenta variaciones (ej: busca "maria paula", "dimex", "cedula")
-- Si aún no encuentras, pregunta a Pablo
+- IMPORTANTE: La fecha de HOY es {current_date} - úsala para calcular "mañana", fechas relativas, etc.
 
 PROTOCOLO DE APLICACIÓN DE MODELOS MENTALES:
 
@@ -124,7 +113,6 @@ CONTEXTO DE PABLO:
 - Trader (NQ futures con NinjaTrader), ultra-endurance athlete (Ultraman)
 - Filosofía: flâneur contemplativo, 12,000 km caminados, ~500 libros leídos
 - Intereses: filosofía continental, geopolítica, especulative fiction
-- Hija: Sofia (escritora en Substack)
 - Proyectos actuales: 
   * Feline Canopy & Wellness Sanctuary ($300k ecoturismo + cat sanctuary)
   * TEDxPuraVida 2026 audition
@@ -135,6 +123,12 @@ CONTEXTO DE PABLO:
 Responde de forma conversacional, como si estuvieras en una reunión ejecutiva con Pablo.
 Usa sus 216 modelos mentales de múltiples disciplinas (filosofía, ciencia, economía, psicología, estrategia, sistemas) para dar perspectivas profundas y multidimensionales."""
 
+    # Add user profile if available
+    if user_profile:
+        base_prompt += f"\n\n<perfil_pablo>\n{user_profile}\n</perfil_pablo>"
+    
+    return base_prompt
+
 def setup_memory_table():
     """Create user_facts table if it doesn't exist"""
     if not DATABASE_URL:
@@ -143,7 +137,6 @@ def setup_memory_table():
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
         
-        # Create table
         cur.execute("""
             CREATE TABLE IF NOT EXISTS user_facts (
                 id SERIAL PRIMARY KEY,
@@ -157,7 +150,6 @@ def setup_memory_table():
             )
         """)
         
-        # Create index
         cur.execute("""
             CREATE INDEX IF NOT EXISTS idx_user_facts_key 
             ON user_facts(user_id, fact_key)
@@ -191,7 +183,7 @@ def log_to_db(chat_id, sender, content, msg_type='text'):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_message = """🎯 Hola Pablo, soy Claudette, tu asistente ejecutiva con:
 - 📅 Acceso a tu Google Calendar
-- 💾 Memoria persistente (puedo guardar y recordar información)
+- 📋 Acceso a tu perfil personal permanente
 - 🧠 216 modelos mentales para análisis profundo
 
 ¿En qué puedo ayudarte hoy?"""
@@ -201,13 +193,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
     chat_id = update.effective_chat.id
-    user_profile = load_user_profile()
-    system_prompt = build_system_prompt() + f"\n\n<perfil_pablo>\n{user_profile}\n</perfil_pablo>"
     
     log_to_db(chat_id, 'user', user_text, 'text')
     
     try:
-        # Define tools for Claude
         tools = [
             {
                 "name": "get_calendar_events",
@@ -235,7 +224,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         },
                         "start_time": {
                             "type": "string",
-                            "description": "Hora de inicio en formato ISO (ej: 2026-01-30T16:00:00)"
+                            "description": "Hora de inicio en formato ISO (ej: 2026-01-31T16:00:00)"
                         },
                         "duration_hours": {
                             "type": "number",
@@ -270,59 +259,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     },
                     "required": ["title", "reminder_time"]
                 }
-            },
-            {
-                "name": "save_user_fact",
-                "description": "Guarda un dato importante en la memoria permanente de Pablo.",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "key": {
-                            "type": "string",
-                            "description": "Identificador único para el dato"
-                        },
-                        "value": {
-                            "type": "string",
-                            "description": "El dato a guardar"
-                        },
-                        "category": {
-                            "type": "string",
-                            "description": "Categoría: 'familia', 'salud', 'trabajo', 'finanzas', 'general'"
-                        }
-                    },
-                    "required": ["key", "value", "category"]
-                }
-            },
-            {
-                "name": "get_user_fact",
-                "description": "Busca información en la memoria permanente de Pablo.",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "Término de búsqueda"
-                        }
-                    },
-                    "required": ["query"]
-                }
-            },
-            {
-                "name": "get_all_user_facts",
-                "description": "Obtiene todos los datos guardados de Pablo.",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "category": {
-                            "type": "string",
-                            "description": "Categoría opcional"
-                        }
-                    }
-                }
             }
         ]
         
-        # First message to Claude
         message = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=2048,
@@ -331,7 +270,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             tools=tools
         )
         
-        # Check if Claude wants to use tools
         while message.stop_reason == "tool_use":
             tool_results = []
             
@@ -340,7 +278,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     tool_name = content_block.name
                     tool_input = content_block.input
                     
-                    # Execute the tool
                     if tool_name == "get_calendar_events":
                         events = google_calendar.get_today_events()
                         if events:
@@ -349,77 +286,48 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             result = "No hay eventos hoy"
                     
                     elif tool_name == "create_calendar_event":
-                        start_dt = datetime.fromisoformat(tool_input['start_time'])
-                        end_dt = start_dt + timedelta(hours=tool_input['duration_hours'])
-                        
-                        event = google_calendar.create_event(
-                            summary=tool_input['title'],
-                            start_time=start_dt,
-                            end_time=end_dt,
-                            description=tool_input.get('description'),
-                            location=tool_input.get('location')
-                        )
-                        
-                        if event:
-                            result = f"✅ Evento creado: {tool_input['title']} - {start_dt.strftime('%d/%m/%Y %I:%M %p')}"
-                        else:
-                            result = "❌ Error al crear el evento"
+                        try:
+                            start_dt = datetime.fromisoformat(tool_input['start_time'])
+                            end_dt = start_dt + timedelta(hours=tool_input['duration_hours'])
+                            
+                            event = google_calendar.create_event(
+                                summary=tool_input['title'],
+                                start_time=start_dt,
+                                end_time=end_dt,
+                                description=tool_input.get('description'),
+                                location=tool_input.get('location')
+                            )
+                            
+                            if event:
+                                result = f"✅ Evento creado: {tool_input['title']} - {start_dt.strftime('%d/%m/%Y %I:%M %p')}"
+                                logging.info(f"Event created: {event}")
+                            else:
+                                result = "❌ Error al crear el evento"
+                                logging.error("Event creation returned None")
+                        except Exception as e:
+                            result = f"❌ Error al crear evento: {str(e)}"
+                            logging.error(f"Calendar error: {e}")
+                            import traceback
+                            traceback.print_exc()
                     
                     elif tool_name == "create_reminder":
-                        reminder_dt = datetime.fromisoformat(tool_input['reminder_time'])
-                        
-                        event = google_calendar.create_event(
-                            summary=f"🔔 RECORDATORIO: {tool_input['title']}",
-                            start_time=reminder_dt,
-                            end_time=reminder_dt + timedelta(minutes=15),
-                            description=f"Recordatorio: {tool_input['title']}"
-                        )
-                        
-                        if event:
-                            result = f"✅ Recordatorio creado: {tool_input['title']} - {reminder_dt.strftime('%d/%m/%Y %I:%M %p')}"
-                        else:
-                            result = "❌ Error al crear el recordatorio"
-                    
-                    elif tool_name == "save_user_fact":
-                        success = memory_manager.save_user_fact(
-                            user_id=chat_id,
-                            key=tool_input['key'],
-                            value=tool_input['value'],
-                            category=tool_input.get('category', 'general')
-                        )
-                        
-                        if success:
-                            result = f"✅ Guardado: {tool_input['key']} = {tool_input['value']}"
-                        else:
-                            result = "❌ Error al guardar"
-                    
-                    elif tool_name == "get_user_fact":
-                        fact = memory_manager.get_user_fact(
-                            user_id=chat_id,
-                            query=tool_input['query']
-                        )
-                        
-                        if fact:
-                            result = f"📋 Encontré: {fact}"
-                        else:
-                            result = "❌ No encontré esa información"
-                    
-                    elif tool_name == "get_all_user_facts":
-                        facts = memory_manager.get_all_user_facts(
-                            user_id=chat_id,
-                            category=tool_input.get('category')
-                        )
-                        
-                        if facts:
-                            result = "📋 TU INFORMACIÓN GUARDADA:\n\n"
-                            current_category = None
-                            for key, value, category in facts:
-                                if category != current_category:
-                                    result += f"\n**{category.upper()}**\n"
-                                    current_category = category
-                                result += f"• {key}: {value}\n"
-                        else:
-                            result = "No hay información guardada aún"
+                        try:
+                            reminder_dt = datetime.fromisoformat(tool_input['reminder_time'])
+                            
+                            event = google_calendar.create_event(
+                                summary=f"🔔 RECORDATORIO: {tool_input['title']}",
+                                start_time=reminder_dt,
+                                end_time=reminder_dt + timedelta(minutes=15),
+                                description=f"Recordatorio: {tool_input['title']}"
+                            )
+                            
+                            if event:
+                                result = f"✅ Recordatorio creado: {tool_input['title']} - {reminder_dt.strftime('%d/%m/%Y %I:%M %p')}"
+                            else:
+                                result = "❌ Error al crear el recordatorio"
+                        except Exception as e:
+                            result = f"❌ Error: {str(e)}"
+                            logging.error(f"Reminder error: {e}")
                     
                     tool_results.append({
                         "type": "tool_result",
@@ -427,7 +335,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         "content": result
                     })
             
-            # Continue conversation with tool results
             message = anthropic_client.messages.create(
                 model="claude-sonnet-4-20250514",
                 max_tokens=2048,
@@ -440,13 +347,11 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 tools=tools
             )
         
-        # Extract final text response
         bot_reply = ""
         for content_block in message.content:
             if hasattr(content_block, 'text'):
                 bot_reply += content_block.text
         
-        # Send response
         max_length = 4000
         if len(bot_reply) <= max_length:
             await context.bot.send_message(chat_id=chat_id, text=bot_reply)
@@ -530,7 +435,6 @@ if __name__ == '__main__':
     if not TELEGRAM_TOKEN:
         print("Error: TELEGRAM_TOKEN not found.")
     else:
-        # Setup memory table on startup
         setup_memory_table()
         
         application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
