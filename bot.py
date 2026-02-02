@@ -32,6 +32,19 @@ if not TELEGRAM_TOKEN or not CLAUDE_API_KEY:
 anthropic_client = Anthropic(api_key=CLAUDE_API_KEY)
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
 elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+# Get current date dynamically
+from datetime import datetime
+import pytz
+
+def get_current_date():
+    tz = pytz.timezone('America/Costa_Rica')
+    now = datetime.now(tz)
+    return now.strftime("%A, %d de %B de %Y, %I:%M %p")
+
+# Build dynamic system prompt
+def build_system_prompt():
+    current_date = get_current_date()
+    return f"""FECHA Y HORA ACTUAL: {current_date}
 
 # System prompt para Claudette
 SYSTEM_PROMPT = """Eres Claudette, asistente ejecutiva IA de Pablo con acceso a sus 216 modelos mentales universales.
@@ -304,7 +317,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=2048,
-            system=SYSTEM_PROMPT,
+            system=build_system_prompt(),
             messages=[{"role": "user", "content": user_text}],
             tools=tools
         )
@@ -409,7 +422,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             message = anthropic_client.messages.create(
                 model="claude-sonnet-4-20250514",
                 max_tokens=2048,
-                system=SYSTEM_PROMPT,
+                system=build_system_prompt(),
                 messages=[
                     {"role": "user", "content": user_text},
                     {"role": "assistant", "content": message.content},
@@ -465,7 +478,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=2048,
-            system=SYSTEM_PROMPT,
+            system=build_system_prompt(),
             messages=[{"role": "user", "content": user_text}]
         )
         bot_reply = message.content[0].text
