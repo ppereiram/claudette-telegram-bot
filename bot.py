@@ -36,6 +36,13 @@ elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 from datetime import datetime
 import pytz
 
+def load_user_profile():
+    try:
+        with open('user_profile.md', 'r', encoding='utf-8') as f:
+            return f.read()
+    except:
+        return ""
+        
 def get_current_date():
     tz = pytz.timezone('America/Costa_Rica')
     now = datetime.now(tz)
@@ -194,6 +201,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
     chat_id = update.effective_chat.id
+    user_profile = load_user_profile()
+    system_prompt = build_system_prompt() + f"\n\n<perfil_pablo>\n{user_profile}\n</perfil_pablo>"
     
     log_to_db(chat_id, 'user', user_text, 'text')
     
