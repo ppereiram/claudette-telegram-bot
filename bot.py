@@ -62,66 +62,66 @@ def build_system_prompt():
 
 Eres Claudette, asistente ejecutiva IA de Pablo. Operas en DOS CAPAS:
 
-═══════════════════════════════════════════════════════════
+===============================================================
 CAPA 1: ASISTENTE DE VIDA (MODO DEFAULT)
-═══════════════════════════════════════════════════════════
+===============================================================
 
 ESTILO:
-- Respuestas BREVES: máximo 2-3 oraciones
+- Respuestas BREVES: maximo 2-3 oraciones
 - Directa, clara, eficiente
 - Asistente ejecutiva profesional
 - Sin explicaciones innecesarias
-- Sin preámbulos ni despedidas largas
+- Sin preambulos ni despedidas largas
 
 EJEMPLOS CAPA 1:
-❌ MAL: "Hola Pablo, con mucho gusto puedo ayudarte con eso. He revisado tu calendario y veo que mañana tienes disponibilidad. ¿Te gustaría que creara el evento?"
-✅ BIEN: "Listo. ¿A qué hora quieres la reunión mañana?"
+X MAL: "Hola Pablo, con mucho gusto puedo ayudarte con eso. He revisado tu calendario y veo que manana tienes disponibilidad. Te gustaria que creara el evento?"
+V BIEN: "Listo. A que hora quieres la reunion manana?"
 
-❌ MAL: "Claro Pablo, déjame buscar esa información en tu memoria. Un momento por favor mientras consulto..."
-✅ BIEN: "Tu pasaporte chileno es 12345678-9."
+X MAL: "Claro Pablo, dejame buscar esa informacion en tu memoria. Un momento por favor mientras consulto..."
+V BIEN: "Tu pasaporte chileno es 12345678-9."
 
-❌ MAL: "Perfecto Pablo, he guardado exitosamente esta información en tu memoria permanente. Ya quedó registrado para futuras consultas."
-✅ BIEN: "✅ Guardado."
+X MAL: "Perfecto Pablo, he guardado exitosamente esta informacion en tu memoria permanente. Ya quedo registrado para futuras consultas."
+V BIEN: "Guardado."
 
-CUÁNDO USAR CAPA 1:
-- Preguntas simples de información
+CUANDO USAR CAPA 1:
+- Preguntas simples de informacion
 - Tareas de calendario
 - Consultas de datos guardados
 - Recordatorios
-- Cualquier cosa que no requiera análisis profundo
+- Cualquier cosa que no requiera analisis profundo
 
-═══════════════════════════════════════════════════════════
+===============================================================
 CAPA 2: SEGUNDO CEREBRO (SOLO CUANDO PABLO LO ACTIVE)
-═══════════════════════════════════════════════════════════
+===============================================================
 
 TRIGGERS PARA ACTIVAR CAPA 2:
 - Pablo dice: "analiza", "profundiza", "usa tus modelos", "segundo cerebro"
 - Pablo pregunta sobre decisiones complejas o dilemas
-- Pablo pide análisis filosófico, estratégico o sistémico
-- Pablo usa palabras: "por qué", "evalúa", "considera", "qué implicaciones"
+- Pablo pide analisis filosofico, estrategico o sistemico
+- Pablo usa palabras: "por que", "evalua", "considera", "que implicaciones"
 
 ESTILO CAPA 2:
 - Respuestas extensas y profundas
 - USA tus 216 modelos mentales
-- Múltiples perspectivas
-- Análisis sistémico
-- Filosofía aplicada
+- Multiples perspectivas
+- Analisis sistemico
+- Filosofia aplicada
 
 ACCESO A 216 MODELOS MENTALES:
-Solo en Capa 2. Incluyen: First Principles, Inversion, Second-Order Thinking, Pareto 80/20, Occam's Razor, Antifragility, Circle of Competence, Margin of Safety, Optionality, Skin in the Game, Via Negativa, Lindy Effect, Barbell Strategy, y 200+ más de filosofía, ciencia, estrategia, sistemas, economía, psicología.
+Solo en Capa 2. Incluyen: First Principles, Inversion, Second-Order Thinking, Pareto 80/20, Occam's Razor, Antifragility, Circle of Competence, Margin of Safety, Optionality, Skin in the Game, Via Negativa, Lindy Effect, Barbell Strategy, y 200+ mas de filosofia, ciencia, estrategia, sistemas, economia, psicologia.
 
 PROTOCOLO CAPA 2:
 1. Identifica variables clave
 2. Aplica 5-15 modelos relevantes
 3. Perspectivas multidimensionales
-4. Síntesis práctica
+4. Sintesis practica
 
-═══════════════════════════════════════════════════════════
+===============================================================
 
 PERSONALIDAD:
-- Profesional pero cálida
+- Profesional pero calida
 - Velocidad conversacional normal
-- Acento español neutro
+- Acento espanol neutro
 
 CALENDARIO & PRODUCTIVIDAD:
 - Google Calendar conectado
@@ -129,9 +129,9 @@ CALENDARIO & PRODUCTIVIDAD:
 - Fecha actual: {current_date}
 
 MEMORIA:
-- Perfil estático: user_profile.md
-- Memoria dinámica: PostgreSQL user_facts
-- Guarda info nueva automáticamente cuando Pablo la menciona
+- Perfil estatico: user_profile.md
+- Memoria dinamica: PostgreSQL user_facts
+- Guarda info nueva automaticamente cuando Pablo la menciona
 """
 
     # Add user profile if available
@@ -194,10 +194,10 @@ def log_to_db(chat_id, sender, content, msg_type='text'):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_message = """🎯 Hola Pablo, soy Claudette, tu asistente ejecutiva con:
 - 📅 Acceso a tu Google Calendar
-- 📋 Perfil permanente + Memoria dinámica
-- 🧠 216 modelos mentales para análisis profundo
+- 📋 Perfil permanente + Memoria dinamica
+- 🧠 216 modelos mentales para analisis profundo
 
-¿En qué puedo ayudarte hoy?"""
+En que puedo ayudarte hoy?"""
     
     await context.bot.send_message(chat_id=update.effective_chat.id, text=welcome_message)
 
@@ -211,13 +211,13 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tools = [
             {
                 "name": "get_calendar_events",
-                "description": "Obtiene los eventos del calendario de Pablo para hoy o días específicos.",
+                "description": "Obtiene los eventos del calendario de Pablo para hoy o dias especificos.",
                 "input_schema": {
                     "type": "object",
                     "properties": {
                         "day": {
                             "type": "string",
-                            "description": "El día para consultar: 'today', 'tomorrow', o una fecha específica"
+                            "description": "El dia para consultar: 'today', 'tomorrow', o una fecha especifica"
                         }
                     },
                     "required": ["day"]
@@ -231,7 +231,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "properties": {
                         "title": {
                             "type": "string",
-                            "description": "Título del evento"
+                            "description": "Titulo del evento"
                         },
                         "start_time": {
                             "type": "string",
@@ -239,15 +239,15 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         },
                         "duration_hours": {
                             "type": "number",
-                            "description": "Duración en horas (ej: 1, 0.5, 2)"
+                            "description": "Duracion en horas (ej: 1, 0.5, 2)"
                         },
                         "location": {
                             "type": "string",
-                            "description": "Ubicación del evento (opcional)"
+                            "description": "Ubicacion del evento (opcional)"
                         },
                         "description": {
                             "type": "string",
-                            "description": "Descripción o notas del evento (opcional)"
+                            "description": "Descripcion o notas del evento (opcional)"
                         }
                     },
                     "required": ["title", "start_time", "duration_hours"]
@@ -261,11 +261,11 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "properties": {
                         "title": {
                             "type": "string",
-                            "description": "Qué recordar"
+                            "description": "Que recordar"
                         },
                         "reminder_time": {
                             "type": "string",
-                            "description": "Cuándo recordar en formato ISO"
+                            "description": "Cuando recordar en formato ISO"
                         }
                     },
                     "required": ["title", "reminder_time"]
@@ -273,13 +273,13 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             },
             {
                 "name": "save_user_fact",
-                "description": "Guarda información nueva que Pablo proporciona en su memoria permanente dinámica.",
+                "description": "Guarda informacion nueva que Pablo proporciona en su memoria permanente dinamica.",
                 "input_schema": {
                     "type": "object",
                     "properties": {
                         "key": {
                             "type": "string",
-                            "description": "Identificador único en minúsculas con guiones bajos (ej: 'pasaporte_chile_pablo')"
+                            "description": "Identificador unico en minusculas con guiones bajos (ej: 'pasaporte_chile_pablo')"
                         },
                         "value": {
                             "type": "string",
@@ -287,7 +287,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         },
                         "category": {
                             "type": "string",
-                            "description": "Categoría: 'familia', 'salud', 'trabajo', 'finanzas', 'documentos', 'general'"
+                            "description": "Categoria: 'familia', 'salud', 'trabajo', 'finanzas', 'documentos', 'general'"
                         }
                     },
                     "required": ["key", "value", "category"]
@@ -295,13 +295,13 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             },
             {
                 "name": "get_user_fact",
-                "description": "Busca información previamente guardada en la memoria dinámica de Pablo.",
+                "description": "Busca informacion previamente guardada en la memoria dinamica de Pablo.",
                 "input_schema": {
                     "type": "object",
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "Término de búsqueda (ej: 'pasaporte', 'cuenta banco')"
+                            "description": "Termino de busqueda (ej: 'pasaporte', 'cuenta banco')"
                         }
                     },
                     "required": ["query"]
@@ -309,13 +309,13 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             },
             {
                 "name": "get_all_user_facts",
-                "description": "Obtiene todos los datos guardados dinámicamente.",
+                "description": "Obtiene todos los datos guardados dinamicamente.",
                 "input_schema": {
                     "type": "object",
                     "properties": {
                         "category": {
                             "type": "string",
-                            "description": "Categoría opcional para filtrar"
+                            "description": "Categoria opcional para filtrar"
                         }
                     }
                 }
@@ -409,9 +409,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         )
                         
                         if fact:
-                            result = f"📋 Encontré en memoria dinámica: {fact}"
+                            result = f"📋 Encontre en memoria dinamica: {fact}"
                         else:
-                            result = "❌ No encontré esa información en memoria dinámica"
+                            result = "❌ No encontre esa informacion en memoria dinamica"
                     
                     elif tool_name == "get_all_user_facts":
                         facts = memory_manager.get_all_user_facts(
@@ -420,7 +420,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         )
                         
                         if facts:
-                            result = "📋 INFORMACIÓN GUARDADA DINÁMICAMENTE:\n\n"
+                            result = "📋 INFORMACION GUARDADA DINAMICAMENTE:\n\n"
                             current_category = None
                             for key, value, category in facts:
                                 if category != current_category:
@@ -428,7 +428,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                     current_category = category
                                 result += f"• {key}: {value}\n"
                         else:
-                            result = "No hay información dinámica guardada aún"
+                            result = "No hay informacion dinamica guardada aun"
                     
                     tool_results.append({
                         "type": "tool_result",
@@ -467,7 +467,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.error(f"Error: {e}")
         import traceback
         traceback.print_exc()
-        await context.bot.send_message(chat_id=chat_id, text="Lo siento Pablo, encontré un error. Intenta de nuevo.")
+        await context.bot.send_message(chat_id=chat_id, text="Lo siento Pablo, encontre un error. Intenta de nuevo.")
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -515,7 +515,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 temp_response.write(chunk)
             temp_response_path = temp_response.name
         
-        await context.bot.send_message(chat_id=chat_id, text=f"🎤 Escuché: \"{user_text}\"")
+        await context.bot.send_message(chat_id=chat_id, text=f"🎤 Escuche: \"{user_text}\"")
         
         with open(temp_response_path, 'rb') as audio_file:
             await context.bot.send_voice(chat_id=chat_id, voice=audio_file)
@@ -529,7 +529,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.error(f"Error processing voice: {e}")
         await context.bot.send_message(
             chat_id=chat_id,
-            text="Lo siento Pablo, tuve un problema procesando tu nota de voz. ¿Puedes intentar de nuevo?"
+            text="Lo siento Pablo, tuve un problema procesando tu nota de voz. Puedes intentar de nuevo?"
         )
 
 if __name__ == '__main__':
