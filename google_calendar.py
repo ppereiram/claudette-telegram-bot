@@ -1,155 +1,161 @@
 import os
-import json
-from datetime import datetime, timedelta
+import logging
+import traceback
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-import logging
+from datetime import datetime
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Google Calendar API settings
 SCOPES = ['https://www.googleapis.com/auth/calendar']
+SERVICE_ACCOUNT_FILE = 'service-account-key.json'
 
 def get_calendar_service():
-    """Initialize Google Calendar service"""
+    """Initialize and return Google Calendar service"""
+    logger.info("📡 Initializing Google Calendar service...")
+    
     try:
-        # Load service account from environment
-        if os.getenv('GOOGLE_SERVICE_ACCOUNT'):
-            creds_data = json.loads(os.getenv('GOOGLE_SERVICE_ACCOUNT'))
-            credentials = service_account.Credentials.from_service_account_info(
-                creds_data, scopes=SCOPES)
-        else:
-            credentials = service_account.Credentials.from_service_account_file(
-                'service-account.json', scopes=SCOPES)
+        if not os.path.exists(SERVICE_ACCOUNT_FILE):
+            raise FileNotFoundError(f"Service account file not found: {SERVICE_ACCOUNT_FILE}")
+        
+        credentials = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_FILE,
+            scopes=SCOPES
+        )
         
         service = build('calendar', 'v3', credentials=credentials)
+        logger.info("✅ Calendar service initialized successfully")
+        
         return service
+        
     except Exception as e:
-        logging.error(f"Error initializing Calendar service: {e}")
-        return None
+        logger.error(f"❌ Error initializing calendar service: {str(e)}")
+        logger.error(f"❌ TRACEBACK: {traceback.format_exc()}")
+        raise
 
-def list_upcoming_events(max_results=10):
-    """List upcoming calendar events"""
-    service = get_calendar_service()
-    if not service:
-        return None
+def get_calendar_events(start_date, end_date):
+    """Get calendar events between two dates"""
+    logger.info(f"📅 GET_EVENTS CALLED")
+    logger.info(f"  Start: {start_date}")
+    logger.info(f"  End: {end_date}")
     
     try:
-        now = datetime.utcnow().isoformat() + 'Z'
+        service = get_calendar_service()
+        
+        logger.info(f"🔍 Fetching events from calendar...")
+        
         events_result = service.events().list(
             calendarId='primary',
-            timeMin=now,
-            maxResults=max_results,
+            timeMin=start_date,
+            timeMax=end_date,
             singleEvents=True,
             orderBy='startTime'
         ).execute()
         
         events = events_result.get('items', [])
-        return events
+        
+        logger.info(f"✅ Found {len(events)} events")
+        
+        if not events:
+            return "No hay eventos en ese rango de fechas."
+        
+        event_list = []
+        for event in events:
+            start = event['start'].get('dateTime', event['start'].get('date'))
+            summary = event.get('summary', 'Sin título')
+            location = event.get('location', '')
+            
+            event_str = f"- {summary} ({start})"
+            if location:
+                event_str += f" en {location}"
+            
+            event_list.append(event_str)
+        
+        result = f"Eventos encontrados ({len(events)}):\n" + "\n".join(event_list)
+        logger.info(f"📤 EVENTS RESULT: {result}")
+        
+        return result
+        
     except Exception as e:
-        logging.error(f"Error listing events: {e}")
-        return None
+        error_msg = f"❌ Error getting events: {str(e)}\n{traceback.format_exc()}"
+        logger.error(error_msg)
+        return error_msg
 
-def get_today_events():
-    """Get today's calendar events"""
-    service = get_calendar_service()
-    if not service:
-        return None
+def create_calendar_event(summary, start_time, end_time, location=None):
+    """Create a calendar event"""
+    logger.info(f"📅 CREATE_EVENT CALLED")
+    logger.info(f"  Summary: {summary}")
+    logger.info(f"  Start: {start_time}")
+    logger.info(f"  End: {end_time}")
+    logger.info(f"  Location: {location}")
     
     try:
-        # Start and end of today
-        now = datetime.now()
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+        service = get_calendar_service()
+        logger.info(f"✅ Calendar service obtained")
         
-        events_result = service.events().list(
-            calendarId='primary',
-            timeMin=start_of_day.isoformat() + 'Z',
-            timeMax=end_of_day.isoformat() + 'Z',
-            singleEvents=True,
-            orderBy='startTime'
-        ).execute()
-        
-        events = events_result.get('items', [])
-        return events
-    except Exception as e:
-        logging.error(f"Error getting today's events: {e}")
-        return None
-
-def create_event(summary, start_time, end_time, description=None, location=None):
-    """Create a new calendar event"""
-    service = get_calendar_service()
-    if not service:
-        return None
-    
-    try:
         event = {
             'summary': summary,
             'start': {
-                'dateTime': start_time.isoformat(),
+                'dateTime': start_time,
                 'timeZone': 'America/Costa_Rica',
             },
             'end': {
-                'dateTime': end_time.isoformat(),
+                'dateTime': end_time,
                 'timeZone': 'America/Costa_Rica',
             },
         }
         
-        if description:
-            event['description'] = description
         if location:
             event['location'] = location
         
-        event = service.events().insert(calendarId='primary', body=event).execute()
-        return event
-    except Exception as e:
-        logging.error(f"Error creating event: {e}")
-        return None
-
-def search_events(query, max_results=10):
-    """Search events by keyword"""
-    service = get_calendar_service()
-    if not service:
-        return None
-    
-    try:
-        now = datetime.utcnow().isoformat() + 'Z'
-        events_result = service.events().list(
+        logger.info(f"📝 Event object created: {event}")
+        
+        logger.info(f"🚀 Calling Google Calendar API to insert event...")
+        
+        created_event = service.events().insert(
             calendarId='primary',
-            timeMin=now,
-            q=query,
-            maxResults=max_results,
-            singleEvents=True,
-            orderBy='startTime'
+            body=event
         ).execute()
         
-        events = events_result.get('items', [])
-        return events
+        event_link = created_event.get('htmlLink', 'No link')
+        event_id = created_event.get('id', 'No ID')
+        
+        logger.info(f"🎉 EVENT CREATED SUCCESSFULLY!")
+        logger.info(f"  ID: {event_id}")
+        logger.info(f"  Link: {event_link}")
+        
+        return f"✅ Evento creado: {event_link}"
+        
     except Exception as e:
-        logging.error(f"Error searching events: {e}")
-        return None
+        error_msg = f"❌ CALENDAR ERROR: {str(e)}"
+        logger.error(error_msg)
+        logger.error(f"❌ FULL TRACEBACK:\n{traceback.format_exc()}")
+        return error_msg
 
-def format_events_for_context(events):
-    """Format events for Claude's context"""
-    if not events:
-        return "No hay eventos próximos en el calendario."
+if __name__ == "__main__":
+    # Test
+    from datetime import datetime, timedelta
     
-    formatted = "📅 EVENTOS EN CALENDARIO:\n\n"
-    for event in events:
-        start = event['start'].get('dateTime', event['start'].get('date'))
-        summary = event.get('summary', 'Sin título')
-        location = event.get('location', '')
-        
-        # Parse datetime
-        try:
-            dt = datetime.fromisoformat(start.replace('Z', '+00:00'))
-            time_str = dt.strftime('%I:%M %p')
-            date_str = dt.strftime('%d %b')
-        except:
-            time_str = start
-            date_str = ''
-        
-        formatted += f"• {summary}\n"
-        formatted += f"  📅 {date_str} a las {time_str}\n"
-        if location:
-            formatted += f"  📍 {location}\n"
-        formatted += "\n"
+    logger.info("🧪 Testing calendar functions...")
     
-    return formatted
+    # Test get events
+    start = datetime.now().isoformat() + "-06:00"
+    end = (datetime.now() + timedelta(days=7)).isoformat() + "-06:00"
+    
+    logger.info(f"Testing get_calendar_events...")
+    print(get_calendar_events(start, end))
+    
+    # Test create event
+    logger.info(f"Testing create_calendar_event...")
+    test_start = (datetime.now() + timedelta(days=1)).replace(hour=14, minute=0).isoformat() + "-06:00"
+    test_end = (datetime.now() + timedelta(days=1)).replace(hour=15, minute=0).isoformat() + "-06:00"
+    
+    print(create_calendar_event(
+        "Test Event from Script",
+        test_start,
+        test_end,
+        "Test Location"
+    ))
