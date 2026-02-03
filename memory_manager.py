@@ -56,9 +56,14 @@ def setup_database():
     
     try:
         with get_db_cursor() as cursor:
+            # Drop old table if it exists (fresh start)
+            logger.info("🗑️ Dropping old table if exists...")
+            cursor.execute("DROP TABLE IF EXISTS user_facts CASCADE")
+            
             # Create user_facts table
+            logger.info("📝 Creating new user_facts table...")
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS user_facts (
+                CREATE TABLE user_facts (
                     id SERIAL PRIMARY KEY,
                     chat_id BIGINT NOT NULL,
                     key TEXT NOT NULL,
@@ -70,8 +75,9 @@ def setup_database():
             """)
             
             # Create index on chat_id for faster lookups
+            logger.info("🔍 Creating index...")
             cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_user_facts_chat_id 
+                CREATE INDEX idx_user_facts_chat_id 
                 ON user_facts(chat_id)
             """)
             
