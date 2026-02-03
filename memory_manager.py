@@ -1,157 +1,164 @@
 import os
-import psycopg2
 import logging
-from datetime import datetime
+import psycopg2
+from psycopg2 import pool
+from contextlib import contextmanager
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-def save_user_fact(user_id, key, value, category="general"):
-    """
-    Save a fact to user's persistent memory
+# Database connection pool
+connection_pool = None
+
+def get_db_connection():
+    """Get database connection from pool"""
+    global connection_pool
     
-    Args:
-        user_id: Telegram chat ID
-        key: Identifier for the fact (e.g., "pasaporte_sofia", "cumpleaños_liliana")
-        value: The actual data
-        category: Category for organization (e.g., "familia", "salud", "trabajo")
+    if connection_pool is None:
+        database_url = os.environ.get("DATABASE_URL")
+        if not database_url:
+            raise ValueError("DATABASE_URL not found in environment variables")
+        
+        # Create connection pool
+        connection_pool = psycopg2.pool.SimpleConnectionPool(
+            1, 10,  # min and max connections
+            database_url
+        )
+        logger.info("✅ Database connection pool created")
     
-    Returns:
-        bool: True if saved successfully
-    """
-    if not DATABASE_URL:
-        logging.error("DATABASE_URL not configured")
-        return False
-    
+    return connection_pool.getconn()
+
+def return_db_connection(conn):
+    """Return connection to pool"""
+    global connection_pool
+    if connection_pool:
+        connection_pool.putconn(conn)
+
+@contextmanager
+def get_db_cursor():
+    """Context manager for database operations"""
+    conn = get_db_connection()
     try:
-        conn = psycopg2.connect(DATABASE_URL)
-        cur = conn.cursor()
-        
-        # Upsert: Insert or update if key exists
-        cur.execute("""
-            INSERT INTO user_facts (user_id, fact_key, fact_value, category, updated_at)
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (user_id, fact_key) 
-            DO UPDATE SET 
-                fact_value = EXCLUDED.fact_value,
-                category = EXCLUDED.category,
-                updated_at = EXCLUDED.updated_at
-        """, (str(user_id), key, value, category, datetime.now()))
-        
+        cursor = conn.cursor()
+        yield cursor
         conn.commit()
-        cur.close()
-        conn.close()
-        
-        logging.info(f"✅ Saved fact: {key} = {value}")
-        return True
-        
     except Exception as e:
-        logging.error(f"Error saving fact: {e}")
-        return False
+        conn.rollback()
+        logger.error(f"Database error: {e}")
+        raise
+    finally:
+        cursor.close()
+        return_db_connection(conn)
 
-def get_user_fact(user_id, query):
-    """
-    Retrieve a fact from user's memory
-    
-    Args:
-        user_id: Telegram chat ID
-        query: Search term (searches in fact_key and fact_value)
-    
-    Returns:
-        str: The fact value, or None if not found
-    """
-    if not DATABASE_URL:
-        return None
+def setup_database():
+    """Create tables if they don't exist"""
+    logger.info("🗄️ Setting up database tables...")
     
     try:
-        conn = psycopg2.connect(DATABASE_URL)
-        cur = conn.cursor()
-        
-        # Search by key or value
-        cur.execute("""
-            SELECT fact_key, fact_value, category 
-            FROM user_facts 
-            WHERE user_id = %s 
-            AND (fact_key ILIKE %s OR fact_value ILIKE %s)
-            ORDER BY updated_at DESC
-            LIMIT 5
-        """, (str(user_id), f"%{query}%", f"%{query}%"))
-        
-        results = cur.fetchall()
-        cur.close()
-        conn.close()
-        
-        if not results:
-            return None
-        
-        # Format results
-        if len(results) == 1:
-            return results[0][1]  # Just return the value
-        else:
-            # Multiple results - return formatted
-            formatted = []
-            for key, value, category in results:
-                formatted.append(f"• {key}: {value} ({category})")
-            return "\n".join(formatted)
-        
+        with get_db_cursor() as cursor:
+            # Create user_facts table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS user_facts (
+                    id SERIAL PRIMARY KEY,
+                    chat_id BIGINT NOT NULL,
+                    key TEXT NOT NULL,
+                    value TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(chat_id, key)
+                )
+            """)
+            
+            # Create index on chat_id for faster lookups
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_user_facts_chat_id 
+                ON user_facts(chat_id)
+            """)
+            
+            logger.info("✅ Memory table verified/created")
+            
     except Exception as e:
-        logging.error(f"Error retrieving fact: {e}")
+        logger.error(f"❌ Error setting up database: {e}")
+        raise
+
+def save_fact(chat_id: int, key: str, value: str):
+    """Save or update a user fact"""
+    try:
+        with get_db_cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO user_facts (chat_id, key, value, updated_at)
+                VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
+                ON CONFLICT (chat_id, key) 
+                DO UPDATE SET 
+                    value = EXCLUDED.value,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (chat_id, key, value))
+            
+            logger.info(f"💾 Saved fact: {key} for chat {chat_id}")
+            
+    except Exception as e:
+        logger.error(f"❌ Error saving fact: {e}")
+        raise
+
+def get_fact(chat_id: int, key: str) -> str:
+    """Get a specific user fact"""
+    try:
+        with get_db_cursor() as cursor:
+            cursor.execute("""
+                SELECT value FROM user_facts 
+                WHERE chat_id = %s AND key = %s
+            """, (chat_id, key))
+            
+            result = cursor.fetchone()
+            return result[0] if result else None
+            
+    except Exception as e:
+        logger.error(f"❌ Error getting fact: {e}")
         return None
 
-def get_all_user_facts(user_id, category=None):
-    """Get all facts for a user, optionally filtered by category"""
-    if not DATABASE_URL:
-        return []
-    
+def get_all_facts(chat_id: int) -> dict:
+    """Get all facts for a user"""
     try:
-        conn = psycopg2.connect(DATABASE_URL)
-        cur = conn.cursor()
-        
-        if category:
-            cur.execute("""
-                SELECT fact_key, fact_value, category 
-                FROM user_facts 
-                WHERE user_id = %s AND category = %s
+        with get_db_cursor() as cursor:
+            cursor.execute("""
+                SELECT key, value FROM user_facts 
+                WHERE chat_id = %s
                 ORDER BY updated_at DESC
-            """, (str(user_id), category))
-        else:
-            cur.execute("""
-                SELECT fact_key, fact_value, category 
-                FROM user_facts 
-                WHERE user_id = %s
-                ORDER BY category, updated_at DESC
-            """, (str(user_id),))
-        
-        results = cur.fetchall()
-        cur.close()
-        conn.close()
-        
-        return results
-        
+            """, (chat_id,))
+            
+            results = cursor.fetchall()
+            return {row[0]: row[1] for row in results}
+            
     except Exception as e:
-        logging.error(f"Error getting all facts: {e}")
-        return []
+        logger.error(f"❌ Error getting all facts: {e}")
+        return {}
 
-def delete_user_fact(user_id, key):
-    """Delete a specific fact"""
-    if not DATABASE_URL:
-        return False
-    
+def delete_fact(chat_id: int, key: str):
+    """Delete a specific user fact"""
     try:
-        conn = psycopg2.connect(DATABASE_URL)
-        cur = conn.cursor()
-        
-        cur.execute("""
-            DELETE FROM user_facts 
-            WHERE user_id = %s AND fact_key = %s
-        """, (str(user_id), key))
-        
-        deleted = cur.rowcount > 0
-        conn.commit()
-        cur.close()
-        conn.close()
-        
-        return deleted
-        
+        with get_db_cursor() as cursor:
+            cursor.execute("""
+                DELETE FROM user_facts 
+                WHERE chat_id = %s AND key = %s
+            """, (chat_id, key))
+            
+            logger.info(f"🗑️ Deleted fact: {key} for chat {chat_id}")
+            
     except Exception as e:
-        logging.error(f"Error deleting fact: {e}")
-        return False
+        logger.error(f"❌ Error deleting fact: {e}")
+        raise
+
+def clear_all_facts(chat_id: int):
+    """Clear all facts for a user"""
+    try:
+        with get_db_cursor() as cursor:
+            cursor.execute("""
+                DELETE FROM user_facts 
+                WHERE chat_id = %s
+            """, (chat_id,))
+            
+            logger.info(f"🧹 Cleared all facts for chat {chat_id}")
+            
+    except Exception as e:
+        logger.error(f"❌ Error clearing facts: {e}")
+        raise
