@@ -43,7 +43,7 @@ TOOLS = [
             },
             {
                 "name": "create_calendar_event",
-                "description": "Create a new calendar event. If user mentions reminder time (e.g., 'remind me 2 hours before', '30 minutes before'), include reminder_minutes parameter. If no reminder mentioned, leave it null and ask user after creating the event.",
+                "description": "Create a new calendar event. CRITICAL: Only set reminder_minutes if user EXPLICITLY says 'avísame', 'recuérdame', 'remind me', 'notifícame' with a specific time (e.g., '2 horas antes', '30 minutes before'). If user does NOT mention reminder at all, you MUST set reminder_minutes to null. After creating event, if reminder_minutes was null, ask user: '¿Quieres que te avise antes del evento?'",
                 "input_schema": {
                     "type": "object",
                     "properties": {
