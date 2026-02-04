@@ -2,7 +2,7 @@ import os
 import logging
 import json
 import pytz
-from datetime import datetime
+from datetime import datetime, timedelta
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import anthropic
@@ -37,7 +37,7 @@ TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "start_date": {"type": "string", "description": "Start date in ISO format (e.g., '2024-01-01T00:00:00-06:00')"},
+                "start_date": {"type": "string", "description": "Start date in ISO format (e.g., '2026-02-04T00:00:00-06:00')"},
                 "end_date": {"type": "string", "description": "End date in ISO format"}
             },
             "required": ["start_date", "end_date"]
@@ -45,13 +45,13 @@ TOOLS = [
     },
     {
         "name": "create_calendar_event",
-        "description": "Create a new calendar event",
+        "description": "Create a new calendar event. IMPORTANT: Always use year 2026 for dates.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "summary": {"type": "string", "description": "Event title"},
-                "start_time": {"type": "string", "description": "Start time in ISO format with timezone (e.g., '2026-02-05T14:00:00-06:00')"},
-                "end_time": {"type": "string", "description": "End time in ISO format with timezone"},
+                "start_time": {"type": "string", "description": "Start time in ISO format with timezone. MUST use year 2026. Example: '2026-02-05T15:00:00-06:00'"},
+                "end_time": {"type": "string", "description": "End time in ISO format with timezone. MUST use year 2026."},
                 "location": {"type": "string", "description": "Event location (optional)"}
             },
             "required": ["summary", "start_time", "end_time"]
@@ -122,32 +122,27 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Get current date/time in Costa Rica timezone
         costa_rica_tz = pytz.timezone('America/Costa_Rica')
         now = datetime.now(costa_rica_tz)
-        today_str = now.strftime("%Y-%m-%d")  # e.g., "2026-02-04"
-        current_datetime = now.strftime("%Y-%m-%dT%H:%M:%S%z")  # e.g., "2026-02-04T14:30:00-0600"
+        today_str = now.strftime("%Y-%m-%d")
+        tomorrow_str = (now + timedelta(days=1)).strftime("%Y-%m-%d")
         
-        # Format it nicely for insertion into string
-        current_datetime_formatted = current_datetime[:-2] + ':' + current_datetime[-2:]  # Add colon in timezone
-        
-        system_prompt = f"""You are Claudette, a helpful assistant.
+        system_prompt = f"""You are Claudette, a helpful assistant in Costa Rica.
 
-CRITICAL DATE INFORMATION:
-- Today's date: {today_str}
-- Current datetime with timezone: {current_datetime_formatted}
-- Timezone: America/Costa_Rica (UTC-6)
+CRITICAL - CURRENT DATE: Today is {today_str} (February 4, 2026).
 
-When creating calendar events, you MUST use the year 2026. 
-Today is {today_str}.
-If user says "mañana" or "tomorrow", that means {(now + pytz.timedelta(days=1)).strftime("%Y-%m-%d")}.
-Always use ISO format with timezone: YYYY-MM-DDTHH:MM:SS-06:00
+When user says:
+- "hoy" or "today" = {today_str}
+- "mañana" or "tomorrow" = {tomorrow_str}
 
-EXAMPLES:
-- "mañana a las 3pm" = "{(now + pytz.timedelta(days=1)).strftime("%Y-%m-%d")}T15:00:00-06:00"
+You MUST use year 2026 for all calendar events. Do NOT use 2023 or any other year.
+
+Example dates:
+- "mañana a las 3pm" = "{tomorrow_str}T15:00:00-06:00"
 - "hoy a las 5pm" = "{today_str}T17:00:00-06:00"
-- "pasado mañana 10am" = "{(now + pytz.timedelta(days=2)).strftime("%Y-%m-%d")}T10:00:00-06:00"
 """
         
         # Call Claude API
         logger.info(f"🚀 CALLING CLAUDE API...")
+        logger.info(f"📅 System prompt includes: Today = {today_str}, Tomorrow = {tomorrow_str}")
         
         response = client.messages.create(
             model="claude-3-haiku-20240307",
@@ -270,15 +265,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-```
-
----
-
-## ✅ AHORA:
-
-1. **Reemplaza** `bot.py` completo con este código
-2. **Commit**
-3. **Espera 3 minutos**
-4. **Prueba:**
-```
-Crea reunión mañana 3pm, 1 hora, prueba final
