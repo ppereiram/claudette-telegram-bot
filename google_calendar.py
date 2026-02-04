@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 # Google Calendar API settings
 SCOPES = ['https://www.googleapis.com/auth/calendar']
+# Get calendar ID from environment
+CALENDAR_ID = os.environ.get('GOOGLE_CALENDAR_ID', 'primary')
 
 def get_service_account_info():
     """Get service account from environment variable"""
@@ -53,7 +55,7 @@ def get_calendar_events(start_date, end_date):
         logger.info(f"🔍 Fetching events from calendar...")
         
         events_result = service.events().list(
-            calendarId='primary',
+            calendarId=CALENDAR_ID,
             timeMin=start_date,
             timeMax=end_date,
             singleEvents=True,
@@ -121,7 +123,7 @@ def create_calendar_event(summary, start_time, end_time, location=None):
         logger.info(f"🚀 Calling Google Calendar API to insert event...")
         
         created_event = service.events().insert(
-            calendarId='primary',
+            calendarId=CALENDAR_ID,
             body=event
         ).execute()
         
