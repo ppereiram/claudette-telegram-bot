@@ -1,6 +1,7 @@
 import os
 import logging
 import traceback
+import json
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from datetime import datetime
@@ -10,8 +11,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Google Calendar API settings
-import json
-
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
 def get_service_account_info():
@@ -39,27 +38,6 @@ def get_calendar_service():
         
     except Exception as e:
         logger.error(f"❌ Error initializing calendar service: {e}")
-        logger.error(f"❌ TRACEBACK: {traceback.format_exc()}")
-        raise
-    """Initialize and return Google Calendar service"""
-    logger.info("📡 Initializing Google Calendar service...")
-    
-    try:
-        if not os.path.exists(SERVICE_ACCOUNT_FILE):
-            raise FileNotFoundError(f"Service account file not found: {SERVICE_ACCOUNT_FILE}")
-        
-        credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE,
-            scopes=SCOPES
-        )
-        
-        service = build('calendar', 'v3', credentials=credentials)
-        logger.info("✅ Calendar service initialized successfully")
-        
-        return service
-        
-    except Exception as e:
-        logger.error(f"❌ Error initializing calendar service: {str(e)}")
         logger.error(f"❌ TRACEBACK: {traceback.format_exc()}")
         raise
 
