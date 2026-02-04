@@ -29,90 +29,77 @@ client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 # Tool definitions for Claude
 TOOLS = [
-            {
-                "name": "get_calendar_events",
-                "description": "Get calendar events between two dates",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "start_date": {"type": "string", "description": "Start date in ISO format (e.g., '2024-01-01T00:00:00-06:00')"},
-                        "end_date": {"type": "string", "description": "End date in ISO format"}
-                    },
-                    "required": ["start_date", "end_date"]
-                }
+    {
+        "name": "get_calendar_events",
+        "description": "Get calendar events between two dates",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "start_date": {"type": "string", "description": "Start date in ISO format (e.g., '2024-01-01T00:00:00-06:00')"},
+                "end_date": {"type": "string", "description": "End date in ISO format"}
             },
-            {
-                "name": "create_calendar_event",
-                "description": "Create a new calendar event. CRITICAL: Only set reminder_minutes if user EXPLICITLY says 'avísame', 'recuérdame', 'remind me', 'notifícame' with a specific time (e.g., '2 horas antes', '30 minutes before'). If user does NOT mention reminder at all, you MUST set reminder_minutes to null. After creating event, if reminder_minutes was null, ask user: '¿Quieres que te avise antes del evento?'",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "summary": {"type": "string", "description": "Event title"},
-                        "start_time": {"type": "string", "description": "Start time in ISO format with timezone (e.g., '2024-01-15T14:00:00-06:00')"},
-                        "end_time": {"type": "string", "description": "End time in ISO format with timezone"},
-                        "location": {"type": "string", "description": "Event location (optional)"},
-                        "reminder_minutes": {"type": "integer", "description": "Minutes before event to send reminder (e.g., 60 for 1 hour, 120 for 2 hours). Only include if user explicitly mentions reminder time. Leave null otherwise."}
-                    },
-                    "required": ["summary", "start_time", "end_time"]
-                }
+            "required": ["start_date", "end_date"]
+        }
+    },
+    {
+        "name": "create_calendar_event",
+        "description": "Create a new calendar event",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "summary": {"type": "string", "description": "Event title"},
+                "start_time": {"type": "string", "description": "Start time in ISO format with timezone (e.g., '2024-01-15T14:00:00-06:00')"},
+                "end_time": {"type": "string", "description": "End time in ISO format with timezone"},
+                "location": {"type": "string", "description": "Event location (optional)"}
             },
-            {
-                "name": "update_event_reminder",
-                "description": "Update or set reminder for an existing calendar event. Use this when user wants to add/change reminder after event is created.",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "event_id": {"type": "string", "description": "The event ID from the created event"},
-                        "reminder_minutes": {"type": "integer", "description": "Minutes before event to remind (e.g., 60 for 1 hour, 120 for 2 hours). Use 0 for no reminder."}
-                    },
-                    "required": ["event_id", "reminder_minutes"]
-                }
+            "required": ["summary", "start_time", "end_time"]
+        }
+    },
+    {
+        "name": "create_reminder",
+        "description": "Create a reminder for the user",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "message": {"type": "string", "description": "The reminder message"},
+                "time": {"type": "string", "description": "When to remind (e.g., '2pm', 'in 30 minutes')"}
             },
-            {
-                "name": "create_reminder",
-                "description": "Create a reminder for the user",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "message": {"type": "string", "description": "The reminder message"},
-                        "time": {"type": "string", "description": "When to remind (e.g., '2pm', 'in 30 minutes')"}
-                    },
-                    "required": ["message", "time"]
-                }
+            "required": ["message", "time"]
+        }
+    },
+    {
+        "name": "save_user_fact",
+        "description": "Save a fact about the user for future reference",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "key": {"type": "string", "description": "Category or key for the fact (e.g., 'favorite_color', 'birthday')"},
+                "value": {"type": "string", "description": "The fact to remember"}
             },
-            {
-                "name": "save_user_fact",
-                "description": "Save a fact about the user for future reference",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "key": {"type": "string", "description": "Category or key for the fact (e.g., 'favorite_color', 'birthday')"},
-                        "value": {"type": "string", "description": "The fact to remember"}
-                    },
-                    "required": ["key", "value"]
-                }
+            "required": ["key", "value"]
+        }
+    },
+    {
+        "name": "get_user_fact",
+        "description": "Retrieve a specific fact about the user",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "key": {"type": "string", "description": "The key to look up"}
             },
-            {
-                "name": "get_user_fact",
-                "description": "Retrieve a specific fact about the user",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "key": {"type": "string", "description": "The key to look up"}
-                    },
-                    "required": ["key"]
-                }
-            },
-            {
-                "name": "get_all_user_facts",
-                "description": "Get all saved facts about the user",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {},
-                    "required": []
-                }
-            }
-        ]
+            "required": ["key"]
+        }
+    },
+    {
+        "name": "get_all_user_facts",
+        "description": "Get all saved facts about the user",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    }
+]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send a message when the command /start is issued."""
@@ -175,13 +162,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         summary=tool_input.get("summary"),
                         start_time=tool_input.get("start_time"),
                         end_time=tool_input.get("end_time"),
-                        location=tool_input.get("location"),
-                        reminder_minutes=tool_input.get("reminder_minutes")
-                    )
-                elif tool_name == "update_event_reminder":
-                    result = google_calendar.update_event_reminder(
-                        event_id=tool_input.get("event_id"),
-                        reminder_minutes=tool_input.get("reminder_minutes")
+                        location=tool_input.get("location")
                     )
                 elif tool_name == "create_reminder":
                     result = f"⏰ Recordatorio creado: {tool_input.get('message')} para {tool_input.get('time')}"
@@ -258,4 +239,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    # Force deploy - v2
