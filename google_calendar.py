@@ -91,13 +91,14 @@ def get_calendar_events(start_date, end_date):
         logger.error(error_msg)
         return error_msg
 
-def create_calendar_event(summary, start_time, end_time, location=None):
+def create_calendar_event(summary, start_time, end_time, location=None, reminder_minutes=None):
     """Create a calendar event"""
     logger.info(f"📅 CREATE_EVENT CALLED")
     logger.info(f"  Summary: {summary}")
     logger.info(f"  Start: {start_time}")
     logger.info(f"  End: {end_time}")
     logger.info(f"  Location: {location}")
+    logger.info(f"  Reminder: {reminder_minutes} minutes")
     
     try:
         service = get_calendar_service()
@@ -114,6 +115,24 @@ def create_calendar_event(summary, start_time, end_time, location=None):
                 'timeZone': 'America/Costa_Rica',
             },
         }
+        
+        # Add reminders if specified
+        if reminder_minutes is not None and reminder_minutes > 0:
+            event['reminders'] = {
+                'useDefault': False,
+                'overrides': [
+                    {'method': 'email', 'minutes': reminder_minutes},
+                    {'method': 'popup', 'minutes': reminder_minutes},
+                ],
+            }
+            logger.info(f"⏰ Adding reminder: {reminder_minutes} minutes before")
+        else:
+            # No reminders
+            event['reminders'] = {
+                'useDefault': False,
+                'overrides': [],
+            }
+            logger.info(f"🔕 No reminders set")
         
         if location:
             event['location'] = location
@@ -134,12 +153,67 @@ def create_calendar_event(summary, start_time, end_time, location=None):
         logger.info(f"  ID: {event_id}")
         logger.info(f"  Link: {event_link}")
         
-        return f"✅ Evento creado: {event_link}"
+        return f"✅ Evento creado: {event_link}\nEvent ID: {event_id}"
         
     except Exception as e:
         error_msg = f"❌ CALENDAR ERROR: {str(e)}"
         logger.error(error_msg)
         logger.error(f"❌ FULL TRACEBACK:\n{traceback.format_exc()}")
+        return error_msg
+
+def update_event_reminder(event_id, reminder_minutes):
+    """Update reminder for an existing event"""
+    logger.info(f"⏰ UPDATE_REMINDER CALLED")
+    logger.info(f"  Event ID: {event_id}")
+    logger.info(f"  Reminder: {reminder_minutes} minutes")
+    
+    try:
+        service = get_calendar_service()
+        
+        # Get the existing event
+        event = service.events().get(
+            calendarId=CALENDAR_ID,
+            eventId=event_id
+        ).execute()
+        
+        logger.info(f"📖 Retrieved event: {event.get('summary')}")
+        
+        # Update reminders
+        if reminder_minutes > 0:
+            event['reminders'] = {
+                'useDefault': False,
+                'overrides': [
+                    {'method': 'email', 'minutes': reminder_minutes},
+                    {'method': 'popup', 'minutes': reminder_minutes},
+                ],
+            }
+            logger.info(f"✅ Setting reminder: {reminder_minutes} minutes before")
+        else:
+            # No reminder
+            event['reminders'] = {
+                'useDefault': False,
+                'overrides': [],
+            }
+            logger.info(f"🔕 Removing reminders")
+        
+        # Update the event
+        updated_event = service.events().update(
+            calendarId=CALENDAR_ID,
+            eventId=event_id,
+            body=event
+        ).execute()
+        
+        logger.info(f"🎉 REMINDER UPDATED SUCCESSFULLY!")
+        
+        if reminder_minutes > 0:
+            return f"✅ Recordatorio configurado: {reminder_minutes} minutos antes"
+        else:
+            return f"✅ Sin recordatorio"
+        
+    except Exception as e:
+        error_msg = f"❌ ERROR UPDATING REMINDER: {str(e)}"
+        logger.error(error_msg)
+        logger.error(f"❌ TRACEBACK:\n{traceback.format_exc()}")
         return error_msg
 
 if __name__ == "__main__":
