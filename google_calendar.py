@@ -103,7 +103,7 @@ def create_calendar_event(summary, start_time, end_time, location=None):
         service = get_calendar_service()
         logger.info(f"✅ Calendar service obtained")
         
-           event = {
+        event = {    # ← AQUÍ: 8 espacios, alineado con las líneas de arriba
             'summary': summary,
             'start': {
                 'dateTime': start_time,
