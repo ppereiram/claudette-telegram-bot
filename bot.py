@@ -8,6 +8,10 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 import anthropic
 import google_calendar
 from memory_manager import setup_database, save_fact, get_fact, get_all_facts
+from openai import OpenAI
+from elevenlabs.client import ElevenLabs
+from elevenlabs import save
+import tempfile
 
 # Configure logging
 logging.basicConfig(
@@ -19,6 +23,8 @@ logger = logging.getLogger(__name__)
 # Get tokens from environment
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY')
 
 if not TELEGRAM_BOT_TOKEN:
     raise ValueError("TELEGRAM_BOT_TOKEN not found in environment variables")
@@ -26,8 +32,10 @@ if not TELEGRAM_BOT_TOKEN:
 if not ANTHROPIC_API_KEY:
     raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
 
-# Initialize Anthropic client
+# Initialize clients
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY) if ELEVENLABS_API_KEY else None
 
 # Tool definitions for Claude
 TOOLS = [
@@ -111,10 +119,90 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         '¿En qué puedo ayudarte?'
     )
 
+async def transcribe_voice(voice_file):
+    """Transcribe voice message using Whisper."""
+    if not openai_client:
+        return None
+    
+    try:
+        with open(voice_file, 'rb') as audio_file:
+            transcript = openai_client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file,
+                language="es"
+            )
+        return transcript.text
+    except Exception as e:
+        logger.error(f"❌ Error transcribing voice: {e}")
+        return None
+
+async def text_to_speech(text):
+    """Convert text to speech using ElevenLabs."""
+    if not elevenlabs_client:
+        return None
+    
+    try:
+        audio = elevenlabs_client.generate(
+            text=text,
+            voice="Rachel",  # Puedes cambiar la voz
+            model="eleven_multilingual_v2"
+        )
+        
+        # Save to temporary file
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
+        save(audio, temp_file.name)
+        return temp_file.name
+    except Exception as e:
+        logger.error(f"❌ Error generating speech: {e}")
+        return None
+
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle voice messages."""
+    logger.info("🎤 Received voice message")
+    
+    if not openai_client:
+        await update.message.reply_text("Lo siento, la transcripción de voz no está disponible.")
+        return
+    
+    try:
+        # Download voice file
+        voice_file = await update.message.voice.get_file()
+        temp_voice = tempfile.NamedTemporaryFile(delete=False, suffix='.ogg')
+        await voice_file.download_to_drive(temp_voice.name)
+        
+        # Transcribe
+        logger.info("🔄 Transcribing voice...")
+        transcript = await transcribe_voice(temp_voice.name)
+        
+        if not transcript:
+            await update.message.reply_text("Lo siento, no pude entender el audio.")
+            return
+        
+        logger.info(f"📝 Transcript: {transcript}")
+        
+        # Process as text message
+        context.user_data['is_voice'] = True
+        context.user_data['transcript'] = transcript
+        
+        # Create fake text update
+        update.message.text = transcript
+        await handle_message(update, context)
+        
+    except Exception as e:
+        logger.error(f"❌ Error handling voice: {e}", exc_info=True)
+        await update.message.reply_text(f"Error procesando voz: {str(e)}")
+    finally:
+        # Cleanup
+        try:
+            os.unlink(temp_voice.name)
+        except:
+            pass
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle incoming messages."""
     user_message = update.message.text
     chat_id = update.message.chat_id
+    is_voice = context.user_data.get('is_voice', False)
     
     logger.info(f"💬 USER MESSAGE: {user_message}")
     
@@ -142,7 +230,6 @@ Example dates:
         
         # Call Claude API
         logger.info(f"🚀 CALLING CLAUDE API...")
-        logger.info(f"📅 System prompt includes: Today = {today_str}, Tomorrow = {tomorrow_str}")
         
         response = client.messages.create(
             model="claude-3-haiku-20240307",
@@ -155,7 +242,6 @@ Example dates:
         )
         
         logger.info(f"🤖 CLAUDE RESPONSE - Stop Reason: {response.stop_reason}")
-        logger.info(f"🤖 CLAUDE CONTENT: {json.dumps([{'type': block.type, 'text': block.name if hasattr(block, 'name') else ''} for block in response.content], indent=2)}")
         
         # Check if Claude wants to use tools
         if response.stop_reason == "tool_use":
@@ -173,7 +259,6 @@ Example dates:
                 tool_id = tool_call.id
                 
                 logger.info(f"🔨 Executing: {tool_name}")
-                logger.info(f"⚙️ EXECUTING TOOL: {tool_name}")
                 logger.info(f"📥 TOOL INPUT: {json.dumps(tool_input, indent=2)}")
                 
                 # Execute the appropriate tool
@@ -241,7 +326,23 @@ Example dates:
             final_response = "\n".join(text_blocks)
         
         logger.info(f"📨 SENDING TO USER: {final_response}")
-        await update.message.reply_text(final_response)
+        
+        # Send response
+        if is_voice and elevenlabs_client:
+            # Send voice response
+            logger.info("🔊 Generating voice response...")
+            voice_file = await text_to_speech(final_response)
+            
+            if voice_file:
+                await update.message.reply_voice(voice=open(voice_file, 'rb'))
+                os.unlink(voice_file)
+            else:
+                await update.message.reply_text(final_response)
+        else:
+            await update.message.reply_text(final_response)
+        
+        # Reset voice flag
+        context.user_data['is_voice'] = False
         
     except Exception as e:
         logger.error(f"❌ ERROR: {e}", exc_info=True)
@@ -257,6 +358,7 @@ def main():
 
     # Handlers
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.VOICE, handle_voice))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     # Start the bot
