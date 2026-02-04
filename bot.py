@@ -134,7 +134,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info(f"🚀 CALLING CLAUDE API...")
         
         response = client.messages.create(
-            model="claude-3-opus-20240229",
+            model="claude-3-sonnet-20240229",
             max_tokens=4096,
             tools=TOOLS,
             messages=[
@@ -212,7 +212,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.info(f"🔄 CALLING CLAUDE AGAIN WITH TOOL RESULTS...")
             
             follow_up_response = client.messages.create(
-                model="claude-3-opus-20240229",
+                model="claude-3-sonnet-20240229",
                 max_tokens=4096,
                 tools=TOOLS,
                 messages=[
