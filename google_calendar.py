@@ -103,7 +103,7 @@ def create_calendar_event(summary, start_time, end_time, location=None):
         service = get_calendar_service()
         logger.info(f"✅ Calendar service obtained")
         
-        event = {    # ← AQUÍ: 8 espacios, alineado con las líneas de arriba
+        event = {
             'summary': summary,
             'start': {
                 'dateTime': start_time,
@@ -112,13 +112,6 @@ def create_calendar_event(summary, start_time, end_time, location=None):
             'end': {
                 'dateTime': end_time,
                 'timeZone': 'America/Costa_Rica',
-            },
-            'reminders': {
-                'useDefault': False,
-                'overrides': [
-                    {'method': 'email', 'minutes': 60},
-                    {'method': 'popup', 'minutes': 60},
-                ],
             },
         }
         
