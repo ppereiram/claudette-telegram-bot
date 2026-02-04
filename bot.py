@@ -1,6 +1,8 @@
 import os
 import logging
 import json
+import pytz
+from datetime import datetime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import anthropic
@@ -48,7 +50,7 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "summary": {"type": "string", "description": "Event title"},
-                "start_time": {"type": "string", "description": "Start time in ISO format with timezone (e.g., '2024-01-15T14:00:00-06:00')"},
+                "start_time": {"type": "string", "description": "Start time in ISO format with timezone (e.g., '2026-02-05T14:00:00-06:00')"},
                 "end_time": {"type": "string", "description": "End time in ISO format with timezone"},
                 "location": {"type": "string", "description": "Event location (optional)"}
             },
@@ -117,12 +119,40 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"💬 USER MESSAGE: {user_message}")
     
     try:
+        # Get current date/time in Costa Rica timezone
+        costa_rica_tz = pytz.timezone('America/Costa_Rica')
+        now = datetime.now(costa_rica_tz)
+        today_str = now.strftime("%Y-%m-%d")  # e.g., "2026-02-04"
+        current_datetime = now.strftime("%Y-%m-%dT%H:%M:%S%z")  # e.g., "2026-02-04T14:30:00-0600"
+        
+        # Format it nicely for insertion into string
+        current_datetime_formatted = current_datetime[:-2] + ':' + current_datetime[-2:]  # Add colon in timezone
+        
+        system_prompt = f"""You are Claudette, a helpful assistant.
+
+CRITICAL DATE INFORMATION:
+- Today's date: {today_str}
+- Current datetime with timezone: {current_datetime_formatted}
+- Timezone: America/Costa_Rica (UTC-6)
+
+When creating calendar events, you MUST use the year 2026. 
+Today is {today_str}.
+If user says "mañana" or "tomorrow", that means {(now + pytz.timedelta(days=1)).strftime("%Y-%m-%d")}.
+Always use ISO format with timezone: YYYY-MM-DDTHH:MM:SS-06:00
+
+EXAMPLES:
+- "mañana a las 3pm" = "{(now + pytz.timedelta(days=1)).strftime("%Y-%m-%d")}T15:00:00-06:00"
+- "hoy a las 5pm" = "{today_str}T17:00:00-06:00"
+- "pasado mañana 10am" = "{(now + pytz.timedelta(days=2)).strftime("%Y-%m-%d")}T10:00:00-06:00"
+"""
+        
         # Call Claude API
         logger.info(f"🚀 CALLING CLAUDE API...")
         
         response = client.messages.create(
             model="claude-3-haiku-20240307",
             max_tokens=4096,
+            system=system_prompt,
             tools=TOOLS,
             messages=[
                 {"role": "user", "content": user_message}
@@ -195,6 +225,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             follow_up_response = client.messages.create(
                 model="claude-3-haiku-20240307",
                 max_tokens=4096,
+                system=system_prompt,
                 tools=TOOLS,
                 messages=[
                     {"role": "user", "content": user_message},
@@ -239,3 +270,15 @@ def main():
 
 if __name__ == '__main__':
     main()
+```
+
+---
+
+## ✅ AHORA:
+
+1. **Reemplaza** `bot.py` completo con este código
+2. **Commit**
+3. **Espera 3 minutos**
+4. **Prueba:**
+```
+Crea reunión mañana 3pm, 1 hora, prueba final
