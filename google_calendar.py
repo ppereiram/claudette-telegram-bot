@@ -10,10 +10,37 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Google Calendar API settings
+import json
+
 SCOPES = ['https://www.googleapis.com/auth/calendar']
-SERVICE_ACCOUNT_FILE = 'service-account-key.json'
+
+def get_service_account_info():
+    """Get service account from environment variable"""
+    service_account_json = os.environ.get('GOOGLE_SERVICE_ACCOUNT_JSON')
+    if not service_account_json:
+        raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON not found in environment")
+    return json.loads(service_account_json)
 
 def get_calendar_service():
+    """Initialize and return Google Calendar service"""
+    logger.info("📡 Initializing Google Calendar service...")
+    
+    try:
+        service_account_info = get_service_account_info()
+        
+        credentials = service_account.Credentials.from_service_account_info(
+            service_account_info,
+            scopes=SCOPES
+        )
+        
+        service = build('calendar', 'v3', credentials=credentials)
+        logger.info("✅ Calendar service initialized successfully")
+        return service
+        
+    except Exception as e:
+        logger.error(f"❌ Error initializing calendar service: {e}")
+        logger.error(f"❌ TRACEBACK: {traceback.format_exc()}")
+        raise
     """Initialize and return Google Calendar service"""
     logger.info("📡 Initializing Google Calendar service...")
     
