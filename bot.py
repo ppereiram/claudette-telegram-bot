@@ -1,27 +1,11 @@
 import os
 import logging
-import traceback
-from datetime import datetime
-import pytz
+import json
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from anthropic import Anthropic
-import json
-import base64
-import requests
-from io import BytesIO
-
-# Import custom modules
-from google_calendar import (
-    get_calendar_events,
-    create_calendar_event
-)
-from memory_manager import (
-    setup_database,
-    save_fact,
-    get_fact,
-    get_all_facts
-)
+import anthropic
+import google_calendar
+from memory_manager import setup_database, save_fact, get_fact, get_all_facts
 
 # Configure logging
 logging.basicConfig(
@@ -30,369 +14,247 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize clients
-anthropic_client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+# Get tokens from environment
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
 
-# Model selection
-CLAUDE_MODEL = "claude-sonnet-4-20250514"
+if not TELEGRAM_BOT_TOKEN:
+    raise ValueError("TELEGRAM_BOT_TOKEN not found in environment variables")
 
-def get_user_profile():
-    """Load user profile from file"""
-    try:
-        profile_path = os.path.join(os.path.dirname(__file__), 'user_profile.md')
-        with open(profile_path, 'r', encoding='utf-8') as f:
-            return f.read()
-    except Exception as e:
-        logger.error(f"Error loading user profile: {e}")
-        return ""
+if not ANTHROPIC_API_KEY:
+    raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
 
-def get_current_date():
-    """Get current date and time in Costa Rica timezone"""
-    tz = pytz.timezone('America/Costa_Rica')
-    now = datetime.now(tz)
-    return now.strftime("%A, %B %d, %Y at %I:%M %p %Z")
+# Initialize Anthropic client
+client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
-def build_system_prompt():
-    """Build the system prompt with user profile and current date"""
-    user_profile = get_user_profile()
-    current_date = get_current_date()
-    
-    system_prompt = f"""Eres Claudette, la asistente personal de Pablo Pereira.
-
-FECHA Y HORA ACTUAL: {current_date}
-
-PERFIL DEL USUARIO:
-{user_profile}
-
-SISTEMA DE DOS CAPAS - MUY IMPORTANTE:
-
-CAPA 1 (DEFAULT - Asistente de Vida):
-- Respuestas ULTRA CONCISAS: máximo 2-3 oraciones
-- Directo al grano, sin explicaciones innecesarias
-- Tono profesional pero amigable
-- Para: consultas simples, tareas de calendario, recordatorios, datos
-- NO uses los 216 modelos mentales en Capa 1
-
-Ejemplos Capa 1:
-- Usuario: "¿Tengo algo mañana?"
-  Claudette: "Tienes 2 reuniones: 9am con el equipo y 3pm call con inversores."
-  
-- Usuario: "Recuérdame comprar leche"
-  Claudette: "Listo. Te recordaré comprar leche."
-
-- Usuario: "¿Cuándo es mi cita con el dentista?"
-  Claudette: "El jueves 10 a las 4pm en Belén."
-
-MALO Capa 1: "Hola Pablo, con mucho gusto puedo ayudarte a revisar tu calendario. Déjame verificar..."
-
-CAPA 2 (Activación bajo demanda - Segundo Cerebro):
-- Respuestas EXTENDIDAS con análisis profundo
-- USA los 216 modelos mentales para perspectivas múltiples
-- Análisis sistémico, estratégico, filosófico
-- Para: decisiones complejas, dilemas, estrategia, filosofía
-
-Activadores explícitos de Capa 2:
-- "analiza", "profundiza", "usa tus modelos", "segundo cerebro"
-- "qué opinas sobre", "ayúdame a pensar", "considera"
-
-Activadores implícitos:
-- Preguntas que requieren análisis profundo
-- Decisiones con múltiples factores
-- Dilemas éticos o estratégicos
-- Palabras clave: "por qué", "evalúa", "considera", "qué implicaciones"
-
-HERRAMIENTAS DISPONIBLES:
-- get_calendar_events: Para consultar eventos del calendario
-- create_calendar_event: Para crear eventos en el calendario
-- create_reminder: Para recordatorios
-- save_user_fact: Guardar información que Pablo te diga
-- get_user_fact: Recuperar información específica
-- get_all_user_facts: Ver todos los datos guardados
-
-REGLAS DE ORO:
-1. DEFAULT = Capa 1 (conciso)
-2. Solo cambia a Capa 2 cuando sea solicitado explícita o implícitamente
-3. Nunca mezcles estilos
-4. Si dudas, pregunta: "¿Quieres análisis rápido o profundo?"
-"""
-    
-    return system_prompt
-
-# Tool definitions
-tools = [
-    {
-        "name": "get_calendar_events",
-        "description": "Obtiene eventos del calendario de Google entre dos fechas. Usa formato ISO 8601 con timezone (ej: 2024-01-20T09:00:00-06:00 para Costa Rica)",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "start_date": {
-                    "type": "string",
-                    "description": "Fecha/hora de inicio en formato ISO 8601 con timezone"
-                },
-                "end_date": {
-                    "type": "string",
-                    "description": "Fecha/hora de fin en formato ISO 8601 con timezone"
+# Tool definitions for Claude
+TOOLS = [
+            {
+                "name": "get_calendar_events",
+                "description": "Get calendar events between two dates",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "start_date": {"type": "string", "description": "Start date in ISO format (e.g., '2024-01-01T00:00:00-06:00')"},
+                        "end_date": {"type": "string", "description": "End date in ISO format"}
+                    },
+                    "required": ["start_date", "end_date"]
                 }
             },
-            "required": ["start_date", "end_date"]
-        }
-    },
-    {
-        "name": "create_calendar_event",
-        "description": "Crea un evento en el calendario de Google. Usa formato ISO 8601 con timezone America/Costa_Rica",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "summary": {
-                    "type": "string",
-                    "description": "Título del evento"
-                },
-                "start_time": {
-                    "type": "string",
-                    "description": "Fecha/hora de inicio en formato ISO 8601 (ej: 2024-01-20T14:00:00-06:00)"
-                },
-                "end_time": {
-                    "type": "string",
-                    "description": "Fecha/hora de fin en formato ISO 8601"
-                },
-                "location": {
-                    "type": "string",
-                    "description": "Ubicación del evento (opcional)"
+            {
+                "name": "create_calendar_event",
+                "description": "Create a new calendar event. If user mentions reminder time (e.g., 'remind me 2 hours before', '30 minutes before'), include reminder_minutes parameter. If no reminder mentioned, leave it null and ask user after creating the event.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "summary": {"type": "string", "description": "Event title"},
+                        "start_time": {"type": "string", "description": "Start time in ISO format with timezone (e.g., '2024-01-15T14:00:00-06:00')"},
+                        "end_time": {"type": "string", "description": "End time in ISO format with timezone"},
+                        "location": {"type": "string", "description": "Event location (optional)"},
+                        "reminder_minutes": {"type": "integer", "description": "Minutes before event to send reminder (e.g., 60 for 1 hour, 120 for 2 hours). Only include if user explicitly mentions reminder time. Leave null otherwise."}
+                    },
+                    "required": ["summary", "start_time", "end_time"]
                 }
             },
-            "required": ["summary", "start_time", "end_time"]
-        }
-    },
-    {
-        "name": "create_reminder",
-        "description": "Crea un recordatorio simple",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "reminder_text": {
-                    "type": "string",
-                    "description": "Texto del recordatorio"
-                },
-                "reminder_time": {
-                    "type": "string",
-                    "description": "Cuándo recordar (opcional, puede ser texto natural)"
+            {
+                "name": "update_event_reminder",
+                "description": "Update or set reminder for an existing calendar event. Use this when user wants to add/change reminder after event is created.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "event_id": {"type": "string", "description": "The event ID from the created event"},
+                        "reminder_minutes": {"type": "integer", "description": "Minutes before event to remind (e.g., 60 for 1 hour, 120 for 2 hours). Use 0 for no reminder."}
+                    },
+                    "required": ["event_id", "reminder_minutes"]
                 }
             },
-            "required": ["reminder_text"]
-        }
-    },
-    {
-        "name": "save_user_fact",
-        "description": "Guarda un dato importante que Pablo te diga (preferencias, información personal, etc)",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "key": {
-                    "type": "string",
-                    "description": "Categoría o nombre del dato (ej: 'comida_favorita', 'proyecto_actual')"
-                },
-                "value": {
-                    "type": "string",
-                    "description": "El dato a guardar"
+            {
+                "name": "create_reminder",
+                "description": "Create a reminder for the user",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "message": {"type": "string", "description": "The reminder message"},
+                        "time": {"type": "string", "description": "When to remind (e.g., '2pm', 'in 30 minutes')"}
+                    },
+                    "required": ["message", "time"]
                 }
             },
-            "required": ["key", "value"]
-        }
-    },
-    {
-        "name": "get_user_fact",
-        "description": "Recupera un dato específico previamente guardado",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "key": {
-                    "type": "string",
-                    "description": "Nombre del dato a buscar"
+            {
+                "name": "save_user_fact",
+                "description": "Save a fact about the user for future reference",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "key": {"type": "string", "description": "Category or key for the fact (e.g., 'favorite_color', 'birthday')"},
+                        "value": {"type": "string", "description": "The fact to remember"}
+                    },
+                    "required": ["key", "value"]
                 }
             },
-            "required": ["key"]
-        }
-    },
-    {
-        "name": "get_all_user_facts",
-        "description": "Obtiene todos los datos guardados del usuario",
-        "input_schema": {
-            "type": "object",
-            "properties": {},
-            "required": []
-        }
-    }
-]
+            {
+                "name": "get_user_fact",
+                "description": "Retrieve a specific fact about the user",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "key": {"type": "string", "description": "The key to look up"}
+                    },
+                    "required": ["key"]
+                }
+            },
+            {
+                "name": "get_all_user_facts",
+                "description": "Get all saved facts about the user",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        ]
 
-def execute_tool(tool_name: str, tool_input: dict, chat_id: int) -> str:
-    """Execute a tool and return the result"""
-    logger.info(f"⚙️ EXECUTING TOOL: {tool_name}")
-    logger.info(f"📥 TOOL INPUT: {json.dumps(tool_input, indent=2)}")
-    
-    try:
-        if tool_name == "get_calendar_events":
-            result = get_calendar_events(
-                tool_input["start_date"],
-                tool_input["end_date"]
-            )
-        elif tool_name == "create_calendar_event":
-            result = create_calendar_event(
-                tool_input["summary"],
-                tool_input["start_time"],
-                tool_input["end_time"],
-                tool_input.get("location")
-            )
-        elif tool_name == "create_reminder":
-            result = f"✅ Recordatorio creado: {tool_input['reminder_text']}"
-            if "reminder_time" in tool_input:
-                result += f" para {tool_input['reminder_time']}"
-        elif tool_name == "save_user_fact":
-            save_fact(chat_id, tool_input["key"], tool_input["value"])
-            result = f"✅ Guardado: {tool_input['key']}"
-        elif tool_name == "get_user_fact":
-            value = get_fact(chat_id, tool_input["key"])
-            result = value if value else f"No encontré información sobre '{tool_input['key']}'"
-        elif tool_name == "get_all_user_facts":
-            facts = get_all_facts(chat_id)
-            if facts:
-                result = "Datos guardados:\n" + "\n".join([f"- {k}: {v}" for k, v in facts.items()])
-            else:
-                result = "No hay datos guardados aún"
-        else:
-            result = f"❌ Tool desconocido: {tool_name}"
-        
-        logger.info(f"📤 TOOL RESULT: {result}")
-        return result
-        
-    except Exception as e:
-        error_msg = f"❌ Error ejecutando {tool_name}: {str(e)}\n{traceback.format_exc()}"
-        logger.error(error_msg)
-        return error_msg
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Send a message when the command /start is issued."""
+    await update.message.reply_text(
+        '¡Hola! Soy Claudette, tu asistente personal. '
+        'Puedo ayudarte con tu calendario, recordatorios y más. '
+        '¿En qué puedo ayudarte?'
+    )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle incoming text messages"""
-    chat_id = update.effective_chat.id
+    """Handle incoming messages."""
     user_message = update.message.text
+    chat_id = update.message.chat_id
     
     logger.info(f"💬 USER MESSAGE: {user_message}")
     
     try:
-        # Build conversation with Claude
-        messages = [{"role": "user", "content": user_message}]
-        
+        # Call Claude API
         logger.info(f"🚀 CALLING CLAUDE API...")
         
-        # Call Claude API
-        response = anthropic_client.messages.create(
-            model=CLAUDE_MODEL,
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
             max_tokens=4096,
-            system=build_system_prompt(),
-            tools=tools,
-            messages=messages
+            tools=TOOLS,
+            messages=[
+                {"role": "user", "content": user_message}
+            ]
         )
         
         logger.info(f"🤖 CLAUDE RESPONSE - Stop Reason: {response.stop_reason}")
-        logger.info(f"🤖 CLAUDE CONTENT: {json.dumps([{'type': c.type, 'text': c.text if hasattr(c, 'text') else c.name if hasattr(c, 'name') else str(c)} for c in response.content], indent=2)}")
+        logger.info(f"🤖 CLAUDE CONTENT: {json.dumps([{'type': block.type, 'text': block.name if hasattr(block, 'name') else ''} for block in response.content], indent=2)}")
         
-        # Process tool uses
-        while response.stop_reason == "tool_use":
+        # Check if Claude wants to use tools
+        if response.stop_reason == "tool_use":
             logger.info(f"🔧 CLAUDE REQUESTED TOOLS")
             
-            # Extract tool uses and text
-            tool_uses = [block for block in response.content if block.type == "tool_use"]
-            text_blocks = [block.text for block in response.content if hasattr(block, "text")]
-            
-            logger.info(f"🔧 FOUND {len(tool_uses)} TOOL CALLS")
-            
-            # Execute tools
+            # Extract tool calls
             tool_results = []
-            for tool_use in tool_uses:
-                logger.info(f"🔨 Executing: {tool_use.name}")
-                result = execute_tool(tool_use.name, tool_use.input, chat_id)
+            tool_calls = [block for block in response.content if block.type == "tool_use"]
+            
+            logger.info(f"🔧 FOUND {len(tool_calls)} TOOL CALLS")
+            
+            for tool_call in tool_calls:
+                tool_name = tool_call.name
+                tool_input = tool_call.input
+                tool_id = tool_call.id
+                
+                logger.info(f"🔨 Executing: {tool_name}")
+                logger.info(f"⚙️ EXECUTING TOOL: {tool_name}")
+                logger.info(f"📥 TOOL INPUT: {json.dumps(tool_input, indent=2)}")
+                
+                # Execute the appropriate tool
+                if tool_name == "get_calendar_events":
+                    result = google_calendar.get_calendar_events(
+                        start_date=tool_input.get("start_date"),
+                        end_date=tool_input.get("end_date")
+                    )
+                elif tool_name == "create_calendar_event":
+                    result = google_calendar.create_calendar_event(
+                        summary=tool_input.get("summary"),
+                        start_time=tool_input.get("start_time"),
+                        end_time=tool_input.get("end_time"),
+                        location=tool_input.get("location"),
+                        reminder_minutes=tool_input.get("reminder_minutes")
+                    )
+                elif tool_name == "update_event_reminder":
+                    result = google_calendar.update_event_reminder(
+                        event_id=tool_input.get("event_id"),
+                        reminder_minutes=tool_input.get("reminder_minutes")
+                    )
+                elif tool_name == "create_reminder":
+                    result = f"⏰ Recordatorio creado: {tool_input.get('message')} para {tool_input.get('time')}"
+                elif tool_name == "save_user_fact":
+                    save_fact(chat_id, tool_input.get("key"), tool_input.get("value"))
+                    result = f"✅ Guardado: {tool_input.get('key')} = {tool_input.get('value')}"
+                elif tool_name == "get_user_fact":
+                    fact = get_fact(chat_id, tool_input.get("key"))
+                    result = fact if fact else f"No tengo información sobre {tool_input.get('key')}"
+                elif tool_name == "get_all_user_facts":
+                    facts = get_all_facts(chat_id)
+                    if facts:
+                        result = "Esto es lo que sé sobre ti:\n" + "\n".join([f"- {k}: {v}" for k, v in facts.items()])
+                    else:
+                        result = "Aún no tengo información guardada sobre ti."
+                else:
+                    result = f"Tool {tool_name} not implemented yet"
+                
+                logger.info(f"📤 TOOL RESULT: {result}")
+                
                 tool_results.append({
                     "type": "tool_result",
-                    "tool_use_id": tool_use.id,
+                    "tool_use_id": tool_id,
                     "content": result
                 })
             
-            # Continue conversation with tool results
-            messages.append({"role": "assistant", "content": response.content})
-            messages.append({"role": "user", "content": tool_results})
-            
+            # Call Claude again with tool results
             logger.info(f"🔄 CALLING CLAUDE AGAIN WITH TOOL RESULTS...")
             
-            response = anthropic_client.messages.create(
-                model=CLAUDE_MODEL,
+            follow_up_response = client.messages.create(
+                model="claude-3-5-sonnet-20241022",
                 max_tokens=4096,
-                system=build_system_prompt(),
-                tools=tools,
-                messages=messages
+                tools=TOOLS,
+                messages=[
+                    {"role": "user", "content": user_message},
+                    {"role": "assistant", "content": response.content},
+                    {"role": "user", "content": tool_results}
+                ]
             )
             
-            logger.info(f"🤖 CLAUDE SECOND RESPONSE - Stop Reason: {response.stop_reason}")
+            logger.info(f"🤖 CLAUDE SECOND RESPONSE - Stop Reason: {follow_up_response.stop_reason}")
+            
+            # Extract text response
+            text_blocks = [block.text for block in follow_up_response.content if hasattr(block, "text")]
+            final_response = "\n".join(text_blocks) if text_blocks else "✅ Hecho!"
+            
+        else:
+            # Direct text response
+            text_blocks = [block.text for block in response.content if hasattr(block, "text")]
+            final_response = "\n".join(text_blocks)
         
-        # Extract final text response
-        final_text = ""
-        for block in response.content:
-            if hasattr(block, "text"):
-                final_text += block.text
-        
-        if not final_text:
-            final_text = "✅ Listo"
-        
-        logger.info(f"📨 SENDING TO USER: {final_text}")
-        
-        await update.message.reply_text(final_text)
+        logger.info(f"📨 SENDING TO USER: {final_response}")
+        await update.message.reply_text(final_response)
         
     except Exception as e:
-        error_msg = f"❌ Error: {str(e)}\n{traceback.format_exc()}"
-        logger.error(error_msg)
-        await update.message.reply_text("❌ Hubo un error procesando tu mensaje. Intenta de nuevo.")
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle /start command"""
-    await update.message.reply_text(
-        "👋 Hola! Soy Claudette, tu asistente personal.\n\n"
-        "Puedo ayudarte con:\n"
-        "- 📅 Tu calendario\n"
-        "- 💾 Guardar información importante\n"
-        "- 🧠 Análisis profundo (activa 'segundo cerebro')\n\n"
-        "¿En qué puedo ayudarte?"
-    )
-
-async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle voice messages"""
-    await update.message.reply_text("🎤 Funcionalidad de voz en desarrollo...")
-
-async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle photo messages"""
-    await update.message.reply_text("📸 Funcionalidad de fotos en desarrollo...")
+        logger.error(f"❌ ERROR: {e}", exc_info=True)
+        await update.message.reply_text(f"Lo siento, ocurrió un error: {str(e)}")
 
 def main():
-    """Start the bot"""
-    # Setup database
-    logger.info("🗄️ Setting up database...")
+    """Start the bot."""
+    logger.info(f"🗄️ Setting up database...")
     setup_database()
     
-    # Get token
-    token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    if not token:
-        raise ValueError("TELEGRAM_BOT_TOKEN not found in environment variables")
-    
-    # Create application
-    logger.info("🤖 Creating Telegram application...")
-    application = Application.builder().token(token).build()
-    
-    # Add handlers
+    logger.info(f"🤖 Creating Telegram application...")
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+
+    # Handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    application.add_handler(MessageHandler(filters.VOICE, handle_voice))
-    application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-    
-    # Start bot
-    logger.info("✅ Bot started and listening...")
+
+    # Start the bot
+    logger.info(f"✅ Bot started and listening...")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
