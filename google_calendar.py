@@ -1,272 +1,111 @@
 import os
-import logging
 import json
-import pytz
 from datetime import datetime
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-import anthropic
-import google_calendar
-from memory_manager import setup_database, save_fact, get_fact, get_all_facts
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+import logging
 
-# Configure logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
 logger = logging.getLogger(__name__)
 
-# Get tokens from environment
-TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
-ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
+# Get calendar ID from environment
+CALENDAR_ID = os.environ.get('GOOGLE_CALENDAR_ID', 'primary')
 
-if not TELEGRAM_BOT_TOKEN:
-    raise ValueError("TELEGRAM_BOT_TOKEN not found in environment variables")
-
-if not ANTHROPIC_API_KEY:
-    raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
-
-# Initialize Anthropic client
-client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-
-# Tool definitions for Claude
-TOOLS = [
-    {
-        "name": "get_calendar_events",
-        "description": "Get calendar events between two dates",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "start_date": {"type": "string", "description": "Start date in ISO format (e.g., '2024-01-01T00:00:00-06:00')"},
-                "end_date": {"type": "string", "description": "End date in ISO format"}
-            },
-            "required": ["start_date", "end_date"]
-        }
-    },
-    {
-        "name": "create_calendar_event",
-        "description": "Create a new calendar event",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "summary": {"type": "string", "description": "Event title"},
-                "start_time": {"type": "string", "description": "Start time in ISO format with timezone (e.g., '2026-02-05T14:00:00-06:00')"},
-                "end_time": {"type": "string", "description": "End time in ISO format with timezone"},
-                "location": {"type": "string", "description": "Event location (optional)"}
-            },
-            "required": ["summary", "start_time", "end_time"]
-        }
-    },
-    {
-        "name": "create_reminder",
-        "description": "Create a reminder for the user",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "message": {"type": "string", "description": "The reminder message"},
-                "time": {"type": "string", "description": "When to remind (e.g., '2pm', 'in 30 minutes')"}
-            },
-            "required": ["message", "time"]
-        }
-    },
-    {
-        "name": "save_user_fact",
-        "description": "Save a fact about the user for future reference",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "key": {"type": "string", "description": "Category or key for the fact (e.g., 'favorite_color', 'birthday')"},
-                "value": {"type": "string", "description": "The fact to remember"}
-            },
-            "required": ["key", "value"]
-        }
-    },
-    {
-        "name": "get_user_fact",
-        "description": "Retrieve a specific fact about the user",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "key": {"type": "string", "description": "The key to look up"}
-            },
-            "required": ["key"]
-        }
-    },
-    {
-        "name": "get_all_user_facts",
-        "description": "Get all saved facts about the user",
-        "input_schema": {
-            "type": "object",
-            "properties": {},
-            "required": []
-        }
-    }
-]
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Send a message when the command /start is issued."""
-    await update.message.reply_text(
-        '¡Hola! Soy Claudette, tu asistente personal. '
-        'Puedo ayudarte con tu calendario, recordatorios y más. '
-        '¿En qué puedo ayudarte?'
-    )
-
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle incoming messages."""
-    user_message = update.message.text
-    chat_id = update.message.chat_id
-    
-    logger.info(f"💬 USER MESSAGE: {user_message}")
-    
+def get_calendar_service():
+    """Initialize and return Google Calendar service."""
     try:
-        # Get current date/time in Costa Rica timezone
-        costa_rica_tz = pytz.timezone('America/Costa_Rica')
-        now = datetime.now(costa_rica_tz)
-        today_str = now.strftime("%Y-%m-%d")  # e.g., "2026-02-04"
-        current_datetime = now.strftime("%Y-%m-%dT%H:%M:%S%z")  # e.g., "2026-02-04T14:30:00-0600"
+        # Get service account JSON from environment variable
+        service_account_info = json.loads(os.environ.get('GOOGLE_SERVICE_ACCOUNT_JSON'))
         
-        # Format it nicely for insertion into string
-        current_datetime_formatted = current_datetime[:-2] + ':' + current_datetime[-2:]  # Add colon in timezone
-        
-        system_prompt = f"""You are Claudette, a helpful assistant.
-
-CRITICAL DATE INFORMATION:
-- Today's date: {today_str}
-- Current datetime with timezone: {current_datetime_formatted}
-- Timezone: America/Costa_Rica (UTC-6)
-
-When creating calendar events, you MUST use the year 2026. 
-Today is {today_str}.
-If user says "mañana" or "tomorrow", that means {(now + pytz.timedelta(days=1)).strftime("%Y-%m-%d")}.
-Always use ISO format with timezone: YYYY-MM-DDTHH:MM:SS-06:00
-
-EXAMPLES:
-- "mañana a las 3pm" = "{(now + pytz.timedelta(days=1)).strftime("%Y-%m-%d")}T15:00:00-06:00"
-- "hoy a las 5pm" = "{today_str}T17:00:00-06:00"
-- "pasado mañana 10am" = "{(now + pytz.timedelta(days=2)).strftime("%Y-%m-%d")}T10:00:00-06:00"
-"""
-        
-        # Call Claude API
-        logger.info(f"🚀 CALLING CLAUDE API...")
-        
-        response = client.messages.create(
-            model="claude-3-haiku-20240307",
-            max_tokens=4096,
-            system=system_prompt,
-            tools=TOOLS,
-            messages=[
-                {"role": "user", "content": user_message}
-            ]
+        # Create credentials
+        credentials = service_account.Credentials.from_service_account_info(
+            service_account_info,
+            scopes=['https://www.googleapis.com/auth/calendar']
         )
         
-        logger.info(f"🤖 CLAUDE RESPONSE - Stop Reason: {response.stop_reason}")
-        logger.info(f"🤖 CLAUDE CONTENT: {json.dumps([{'type': block.type, 'text': block.name if hasattr(block, 'name') else ''} for block in response.content], indent=2)}")
+        # Build the service
+        service = build('calendar', 'v3', credentials=credentials)
+        return service
+    except Exception as e:
+        logger.error(f"❌ ERROR creating calendar service: {e}")
+        raise
+
+def get_calendar_events(start_date, end_date):
+    """Get calendar events between two dates."""
+    try:
+        service = get_calendar_service()
         
-        # Check if Claude wants to use tools
-        if response.stop_reason == "tool_use":
-            logger.info(f"🔧 CLAUDE REQUESTED TOOLS")
-            
-            # Extract tool calls
-            tool_results = []
-            tool_calls = [block for block in response.content if block.type == "tool_use"]
-            
-            logger.info(f"🔧 FOUND {len(tool_calls)} TOOL CALLS")
-            
-            for tool_call in tool_calls:
-                tool_name = tool_call.name
-                tool_input = tool_call.input
-                tool_id = tool_call.id
-                
-                logger.info(f"🔨 Executing: {tool_name}")
-                logger.info(f"⚙️ EXECUTING TOOL: {tool_name}")
-                logger.info(f"📥 TOOL INPUT: {json.dumps(tool_input, indent=2)}")
-                
-                # Execute the appropriate tool
-                if tool_name == "get_calendar_events":
-                    result = google_calendar.get_calendar_events(
-                        start_date=tool_input.get("start_date"),
-                        end_date=tool_input.get("end_date")
-                    )
-                elif tool_name == "create_calendar_event":
-                    result = google_calendar.create_calendar_event(
-                        summary=tool_input.get("summary"),
-                        start_time=tool_input.get("start_time"),
-                        end_time=tool_input.get("end_time"),
-                        location=tool_input.get("location")
-                    )
-                elif tool_name == "create_reminder":
-                    result = f"⏰ Recordatorio creado: {tool_input.get('message')} para {tool_input.get('time')}"
-                elif tool_name == "save_user_fact":
-                    save_fact(chat_id, tool_input.get("key"), tool_input.get("value"))
-                    result = f"✅ Guardado: {tool_input.get('key')} = {tool_input.get('value')}"
-                elif tool_name == "get_user_fact":
-                    fact = get_fact(chat_id, tool_input.get("key"))
-                    result = fact if fact else f"No tengo información sobre {tool_input.get('key')}"
-                elif tool_name == "get_all_user_facts":
-                    facts = get_all_facts(chat_id)
-                    if facts:
-                        result = "Esto es lo que sé sobre ti:\n" + "\n".join([f"- {k}: {v}" for k, v in facts.items()])
-                    else:
-                        result = "Aún no tengo información guardada sobre ti."
-                else:
-                    result = f"Tool {tool_name} not implemented yet"
-                
-                logger.info(f"📤 TOOL RESULT: {result}")
-                
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": tool_id,
-                    "content": result
-                })
-            
-            # Call Claude again with tool results
-            logger.info(f"🔄 CALLING CLAUDE AGAIN WITH TOOL RESULTS...")
-            
-            follow_up_response = client.messages.create(
-                model="claude-3-haiku-20240307",
-                max_tokens=4096,
-                system=system_prompt,
-                tools=TOOLS,
-                messages=[
-                    {"role": "user", "content": user_message},
-                    {"role": "assistant", "content": response.content},
-                    {"role": "user", "content": tool_results}
-                ]
-            )
-            
-            logger.info(f"🤖 CLAUDE SECOND RESPONSE - Stop Reason: {follow_up_response.stop_reason}")
-            
-            # Extract text response
-            text_blocks = [block.text for block in follow_up_response.content if hasattr(block, "text")]
-            final_response = "\n".join(text_blocks) if text_blocks else "✅ Hecho!"
-            
-        else:
-            # Direct text response
-            text_blocks = [block.text for block in response.content if hasattr(block, "text")]
-            final_response = "\n".join(text_blocks)
+        logger.info(f"📅 FETCHING EVENTS: {start_date} to {end_date}")
         
-        logger.info(f"📨 SENDING TO USER: {final_response}")
-        await update.message.reply_text(final_response)
+        events_result = service.events().list(
+            calendarId=CALENDAR_ID,
+            timeMin=start_date,
+            timeMax=end_date,
+            maxResults=10,
+            singleEvents=True,
+            orderBy='startTime'
+        ).execute()
         
+        events = events_result.get('items', [])
+        
+        if not events:
+            return "No hay eventos en ese rango de fechas."
+        
+        result = "📅 Eventos encontrados:\n\n"
+        for event in events:
+            start = event['start'].get('dateTime', event['start'].get('date'))
+            summary = event.get('summary', 'Sin título')
+            result += f"• {summary}\n  📆 {start}\n\n"
+        
+        logger.info(f"✅ FOUND {len(events)} EVENTS")
+        return result
+        
+    except HttpError as error:
+        logger.error(f"❌ GOOGLE API ERROR: {error}")
+        return f"Error al obtener eventos: {error}"
+    except Exception as e:
+        logger.error(f"❌ ERROR: {e}")
+        return f"Error: {str(e)}"
+
+def create_calendar_event(summary, start_time, end_time, location=None):
+    """Create a new calendar event."""
+    try:
+        service = get_calendar_service()
+        
+        logger.info(f"🎉 CREATING EVENT: {summary}")
+        logger.info(f"⏰ START: {start_time}")
+        logger.info(f"⏰ END: {end_time}")
+        logger.info(f"📍 LOCATION: {location}")
+        
+        event = {
+            'summary': summary,
+            'start': {
+                'dateTime': start_time,
+            },
+            'end': {
+                'dateTime': end_time,
+            },
+        }
+        
+        if location:
+            event['location'] = location
+        
+        # Create the event
+        created_event = service.events().insert(
+            calendarId=CALENDAR_ID,
+            body=event
+        ).execute()
+        
+        event_link = created_event.get('htmlLink')
+        
+        logger.info(f"🎉 EVENT CREATED SUCCESSFULLY!")
+        logger.info(f"🔗 LINK: {event_link}")
+        
+        return f"✅ Evento creado: {event_link}"
+        
+    except HttpError as error:
+        logger.error(f"❌ GOOGLE API ERROR: {error}")
+        return f"Error al crear evento: {error}"
     except Exception as e:
         logger.error(f"❌ ERROR: {e}", exc_info=True)
-        await update.message.reply_text(f"Lo siento, ocurrió un error: {str(e)}")
-
-def main():
-    """Start the bot."""
-    logger.info(f"🗄️ Setting up database...")
-    setup_database()
-    
-    logger.info(f"🤖 Creating Telegram application...")
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-
-    # Handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    # Start the bot
-    logger.info(f"✅ Bot started and listening...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
-
-if __name__ == '__main__':
-    main()
+        return f"Error: {str(e)}"
