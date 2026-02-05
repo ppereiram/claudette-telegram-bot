@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import anthropic
+import gmail_service
 import google_calendar
 from memory_manager import setup_database, save_fact, get_fact, get_all_facts
 from openai import OpenAI
@@ -112,6 +113,19 @@ TOOLS = [
     },
     {
         "name": "get_all_user_facts",
+        {
+    "name": "search_emails",
+    "description": "Search emails in Gmail...",
+    ...
+},
+{
+    "name": "read_email",
+    ...
+},
+{
+    "name": "send_email",
+    ...
+},
         "description": "Get all saved facts about the user",
         "input_schema": {
             "type": "object",
@@ -307,6 +321,12 @@ personal information.
                         end_time=tool_input.get("end_time"),
                         location=tool_input.get("location")
                     )
+                elif tool_name == "search_emails":
+                    ...
+                elif tool_name == "read_email":
+                    ...
+                elif tool_name == "send_email":
+                    ...
                 elif tool_name == "create_reminder":
                     result = f"⏰ Recordatorio creado: {tool_input.get('message')} para {tool_input.get('time')}"
                 elif tool_name == "read_local_file":
