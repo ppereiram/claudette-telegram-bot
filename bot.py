@@ -10,7 +10,6 @@ import google_calendar
 from memory_manager import setup_database, save_fact, get_fact, get_all_facts
 from openai import OpenAI
 from elevenlabs.client import ElevenLabs
-from elevenlabs import save
 import tempfile
 
 # Configure logging
@@ -142,15 +141,21 @@ async def text_to_speech(text):
         return None
     
     try:
-        audio = elevenlabs_client.generate(
+        # Generate audio using new API
+        audio = elevenlabs_client.text_to_speech.convert(
             text=text,
-            voice="Rachel",
-            model="eleven_multilingual_v2"
+            voice_id="21m00Tcm4TlvDq8ikWAM",  # Rachel voice
+            model_id="eleven_multilingual_v2"
         )
         
         # Save to temporary file
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
-        save(audio, temp_file.name)
+        
+        # Write audio chunks to file
+        with open(temp_file.name, 'wb') as f:
+            for chunk in audio:
+                f.write(chunk)
+        
         return temp_file.name
     except Exception as e:
         logger.error(f"❌ Error generating speech: {e}")
