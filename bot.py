@@ -144,7 +144,7 @@ async def text_to_speech(text):
     try:
         audio = elevenlabs_client.generate(
             text=text,
-            voice="Rachel",  # Puedes cambiar la voz
+            voice="Rachel",
             model="eleven_multilingual_v2"
         )
         
@@ -180,13 +180,8 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         logger.info(f"📝 Transcript: {transcript}")
         
-        # Process as text message
-        context.user_data['is_voice'] = True
-        context.user_data['transcript'] = transcript
-        
-        # Create fake text update
-        update.message.text = transcript
-        await handle_message(update, context)
+        # Process transcript directly
+        await process_user_message(update, context, transcript, is_voice=True)
         
     except Exception as e:
         logger.error(f"❌ Error handling voice: {e}", exc_info=True)
@@ -198,11 +193,9 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle incoming messages."""
-    user_message = update.message.text
+async def process_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE, user_message: str, is_voice: bool = False):
+    """Process user message (text or transcribed voice)."""
     chat_id = update.message.chat_id
-    is_voice = context.user_data.get('is_voice', False)
     
     logger.info(f"💬 USER MESSAGE: {user_message}")
     
@@ -341,12 +334,14 @@ Example dates:
         else:
             await update.message.reply_text(final_response)
         
-        # Reset voice flag
-        context.user_data['is_voice'] = False
-        
     except Exception as e:
         logger.error(f"❌ ERROR: {e}", exc_info=True)
         await update.message.reply_text(f"Lo siento, ocurrió un error: {str(e)}")
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle incoming text messages."""
+    user_message = update.message.text
+    await process_user_message(update, context, user_message, is_voice=False)
 
 def main():
     """Start the bot."""
