@@ -51,6 +51,22 @@ DEFAULT_LOCATION = {"lat": 9.9281, "lng": -84.0907, "name": "San José, Costa Ri
 DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
 # ============================================
+# LOAD CLAUDETTE CORE (Always-Loaded)
+# ============================================
+
+def load_claudette_core():
+    """Load CLAUDETTE_CORE.md - always-loaded base system."""
+    try:
+        with open('prompts/CLAUDETTE_CORE.md', 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        logger.error("⚠️ CLAUDETTE_CORE.md not found! Using fallback.")
+        return "Eres Claudette, asistente de Pablo."
+
+# Load core at startup
+CLAUDETTE_CORE = load_claudette_core()
+
+# ============================================
 # TOOLS DEFINITION
 # ============================================
 
@@ -190,29 +206,29 @@ TOOLS = [
         }
     },
     
-    # Places - NUEVO
+    # Places
     {
         "name": "search_nearby_places",
-        "description": "Buscar lugares cercanos: restaurantes, ferreterías, farmacias, gasolineras, etc. Usar cuando Pablo pregunte 'dónde puedo comer', 'hay una ferretería cerca', 'necesito una farmacia'.",
+        "description": "Buscar lugares cercanos: restaurantes, ferreterías, farmacias, gasolineras, etc.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Qué buscar: 'restaurante', 'ferretería', 'farmacia', etc."},
+                "query": {"type": "string", "description": "Qué buscar"},
                 "radius": {"type": "integer", "description": "Radio en metros (default 2000)"}
             },
             "required": ["query"]
         }
     },
     
-    # Phone - NUEVO
+    # Phone
     {
         "name": "make_phone_call",
-        "description": "Generar link para hacer llamada telefónica. Usar cuando Pablo diga 'llámame a X', 'necesito llamar a', 'comunícame con'.",
+        "description": "Generar link para hacer llamada telefónica.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "phone_number": {"type": "string", "description": "Número de teléfono"},
-                "contact_name": {"type": "string", "description": "Nombre del contacto (opcional)"}
+                "phone_number": {"type": "string"},
+                "contact_name": {"type": "string"}
             },
             "required": ["phone_number"]
         }
@@ -225,71 +241,197 @@ TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {
+                "category": {"type": "string"},
                 "key": {"type": "string"},
                 "value": {"type": "string"}
             },
-            "required": ["key", "value"]
+            "required": ["category", "key", "value"]
         }
     },
     {
-        "name": "get_all_user_facts",
-        "description": "Ver toda la información guardada.",
-        "input_schema": {"type": "object", "properties": {}, "required": []}
-    },
-    
-    # Profile
-    {
-        "name": "read_local_file",
-        "description": "Leer archivo local. user_profile.md tiene datos personales.",
+        "name": "get_user_fact",
+        "description": "Recuperar dato guardado.",
         "input_schema": {
             "type": "object",
-            "properties": {"filename": {"type": "string"}},
+            "properties": {
+                "category": {"type": "string"},
+                "key": {"type": "string"}
+            },
+            "required": ["category", "key"]
+        }
+    },
+    
+    # === CAPA 2: Sistema Jarvis ===
+    
+    {
+        "name": "read_knowledge_file",
+        "description": "Leer archivos del sistema Jarvis de modelos mentales. Usar cuando necesites profundidad analítica o metodología específica. Archivos disponibles: MODELS_DEEP.md (176 modelos especializados), FRAMEWORK.md (metodología paso-a-paso), ANTIPATTERNS.md (cuándo NO usar modelos), TEMPLATES.md (plantillas ejecutables).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "filename": {
+                    "type": "string",
+                    "enum": ["MODELS_DEEP.md", "FRAMEWORK.md", "ANTIPATTERNS.md", "TEMPLATES.md"],
+                    "description": "Archivo a leer"
+                }
+            },
             "required": ["filename"]
-        }
-    },
-    
-    # === CAPA 2: Modelos Mentales ===
-    {
-        "name": "load_mental_models",
-        "description": "Cargar los 216 modelos mentales para análisis profundo. Usar en modo /profundo o cuando Pablo pida análisis, reflexión, o resolver problemas complejos.",
-        "input_schema": {"type": "object", "properties": {}, "required": []}
-    },
-    
-    # === CAPA 3: Web Search (futuro) ===
-    {
-        "name": "web_search",
-        "description": "Buscar información actual en la web. (Pendiente de implementación)",
-        "input_schema": {
-            "type": "object",
-            "properties": {"query": {"type": "string"}},
-            "required": ["query"]
         }
     }
 ]
 
 # ============================================
-# HELPER FUNCTIONS
+# TOOL EXECUTION
 # ============================================
 
-def get_history(chat_id: int) -> list:
+def execute_tool(tool_name: str, tool_input: dict, chat_id: int):
+    """Execute tool and return result."""
+    
+    # Calendar
+    if tool_name == "get_calendar_events":
+        return google_calendar.get_events(
+            start_date=tool_input['start_date'],
+            end_date=tool_input['end_date']
+        )
+    
+    elif tool_name == "create_calendar_event":
+        return google_calendar.create_event(
+            summary=tool_input['summary'],
+            start_time=tool_input['start_time'],
+            end_time=tool_input['end_time'],
+            location=tool_input.get('location')
+        )
+    
+    # Tasks
+    elif tool_name == "list_tasks":
+        return google_tasks.list_tasks(
+            show_completed=tool_input.get('show_completed', False),
+            max_results=tool_input.get('max_results', 10)
+        )
+    
+    elif tool_name == "create_task":
+        return google_tasks.create_task(
+            title=tool_input['title'],
+            notes=tool_input.get('notes'),
+            due_date=tool_input.get('due_date')
+        )
+    
+    elif tool_name == "complete_task":
+        return google_tasks.complete_task(tool_input['task_id'])
+    
+    elif tool_name == "delete_task":
+        return google_tasks.delete_task(tool_input['task_id'])
+    
+    # Email
+    elif tool_name == "search_emails":
+        return gmail_service.search_emails(
+            query=tool_input['query'],
+            max_results=tool_input.get('max_results', 10)
+        )
+    
+    elif tool_name == "read_email":
+        return gmail_service.read_email(tool_input['email_id'])
+    
+    elif tool_name == "send_email":
+        return gmail_service.send_email(
+            to=tool_input['to'],
+            subject=tool_input['subject'],
+            body=tool_input['body'],
+            reply_to_id=tool_input.get('reply_to_id')
+        )
+    
+    # Drive
+    elif tool_name == "search_drive":
+        return google_drive.search_files(
+            query=tool_input['query'],
+            max_results=tool_input.get('max_results', 10)
+        )
+    
+    elif tool_name == "list_recent_files":
+        return google_drive.list_recent_files(
+            max_results=tool_input.get('max_results', 10)
+        )
+    
+    # Places
+    elif tool_name == "search_nearby_places":
+        loc = get_user_location(chat_id)
+        result = google_places.search_nearby_places(
+            query=tool_input['query'],
+            latitude=loc['lat'],
+            longitude=loc['lng'],
+            radius=tool_input.get('radius', 2000)
+        )
+        
+        if result.get('success') and result.get('places'):
+            formatted = google_places.format_places_response(result['places'])
+            return formatted
+        elif result.get('success'):
+            return result.get('message', 'No encontré lugares.')
+        else:
+            return f"Error: {result.get('error')}"
+    
+    # Phone
+    elif tool_name == "make_phone_call":
+        phone = tool_input['phone_number']
+        name = tool_input.get('contact_name', 'el número')
+        # Generate tel: link
+        tel_link = f"tel:{phone}"
+        return f"📞 Para llamar a {name}: [Click aquí]({tel_link}) o marca {phone}"
+    
+    # Memory
+    elif tool_name == "save_user_fact":
+        save_fact(
+            chat_id=chat_id,
+            category=tool_input['category'],
+            key=tool_input['key'],
+            value=tool_input['value']
+        )
+        return f"✅ Guardado: {tool_input['category']}/{tool_input['key']}"
+    
+    elif tool_name == "get_user_fact":
+        fact = get_fact(
+            chat_id=chat_id,
+            category=tool_input['category'],
+            key=tool_input['key']
+        )
+        return fact if fact else "No encontré ese dato."
+    
+    # === JARVIS SYSTEM ===
+    elif tool_name == "read_knowledge_file":
+        filename = tool_input['filename']
+        try:
+            filepath = f'prompts/{filename}'
+            with open(filepath, 'r', encoding='utf-8') as f:
+                content = f.read()
+            logger.info(f"📚 Loaded {filename}")
+            return content
+        except FileNotFoundError:
+            return f"Error: {filename} no encontrado en prompts/"
+        except Exception as e:
+            return f"Error leyendo {filename}: {str(e)}"
+    
+    else:
+        return f"Tool '{tool_name}' no implementado."
+
+# ============================================
+# CONVERSATION MANAGEMENT
+# ============================================
+
+def get_history(chat_id: int):
     if chat_id not in conversation_history:
         conversation_history[chat_id] = []
     return conversation_history[chat_id]
 
 def add_to_history(chat_id: int, role: str, content: str):
-    history = get_history(chat_id)
-    history.append({"role": role, "content": content})
-    if len(history) > MAX_HISTORY_LENGTH * 2:
-        conversation_history[chat_id] = history[-(MAX_HISTORY_LENGTH * 2):]
+    hist = get_history(chat_id)
+    hist.append({"role": role, "content": content})
+    
+    # Keep only last N messages
+    if len(hist) > MAX_HISTORY_LENGTH * 2:
+        conversation_history[chat_id] = hist[-(MAX_HISTORY_LENGTH * 2):]
 
 def clear_history(chat_id: int):
     conversation_history[chat_id] = []
-
-def get_user_location(chat_id: int) -> dict:
-    return user_locations.get(chat_id, DEFAULT_LOCATION)
-
-def set_user_location(chat_id: int, lat: float, lng: float, name: str = ""):
-    user_locations[chat_id] = {"lat": lat, "lng": lng, "name": name}
 
 def get_mode(chat_id: int) -> str:
     return user_modes.get(chat_id, "normal")
@@ -297,209 +439,84 @@ def get_mode(chat_id: int) -> str:
 def set_mode(chat_id: int, mode: str):
     user_modes[chat_id] = mode
 
-def has_many_numbers(text: str) -> bool:
-    """Check if text has many numbers (for voice fix)."""
-    # Find all number sequences
-    numbers = re.findall(r'\d+', text)
-    # If more than 3 number sequences or any number longer than 4 digits
-    if len(numbers) > 3:
-        return True
-    for num in numbers:
-        if len(num) > 4:
-            return True
-    return False
+def get_user_location(chat_id: int):
+    return user_locations.get(chat_id, DEFAULT_LOCATION.copy())
 
-def read_local_file(filename: str) -> str:
-    try:
-        path = os.path.join(os.path.dirname(__file__), filename)
-        with open(path, 'r', encoding='utf-8') as f:
-            return f.read()
-    except Exception as e:
-        return f"Error: {str(e)}"
+def set_user_location(chat_id: int, lat: float, lng: float, name: str):
+    user_locations[chat_id] = {"lat": lat, "lng": lng, "name": name}
 
 # ============================================
-# VOICE FUNCTIONS
+# VOICE PROCESSING
 # ============================================
 
-async def transcribe_voice(voice_file):
+async def transcribe_voice(audio_path: str) -> str:
+    """Transcribe voice using Whisper."""
     if not openai_client:
-        return None
+        return ""
+    
     try:
-        with open(voice_file, 'rb') as f:
+        with open(audio_path, 'rb') as audio:
             transcript = openai_client.audio.transcriptions.create(
-                model="whisper-1", file=f, language="es"
+                model="whisper-1",
+                file=audio,
+                language="es"
             )
         return transcript.text
     except Exception as e:
         logger.error(f"Transcription error: {e}")
-        return None
+        return ""
 
-async def text_to_speech(text):
+async def text_to_speech(text: str) -> str:
+    """Convert text to speech using ElevenLabs."""
     if not elevenlabs_client:
         return None
+    
     try:
-        audio = elevenlabs_client.text_to_speech.convert(
+        # Generate audio
+        audio = elevenlabs_client.generate(
             text=text,
-            voice_id="2fzSNSOmb5nntInhUtfm",
-            model_id="eleven_multilingual_v2"
+            voice="Rachel",
+            model="eleven_multilingual_v2"
         )
+        
+        # Save to temp file
         temp = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
-        with open(temp.name, 'wb') as f:
-            for chunk in audio:
-                f.write(chunk)
+        
+        # Write audio chunks
+        for chunk in audio:
+            if chunk:
+                temp.write(chunk)
+        
+        temp.close()
         return temp.name
+        
     except Exception as e:
         logger.error(f"TTS error: {e}")
         return None
 
-# ============================================
-# TOOL EXECUTION
-# ============================================
-
-def execute_tool(name: str, inputs: dict, chat_id: int) -> str:
-    
-    # Calendar
-    if name == "get_calendar_events":
-        return google_calendar.get_calendar_events(inputs.get("start_date"), inputs.get("end_date"))
-    
-    elif name == "create_calendar_event":
-        return google_calendar.create_calendar_event(
-            inputs.get("summary"), inputs.get("start_time"),
-            inputs.get("end_time"), inputs.get("location")
-        )
-    
-    # Tasks
-    elif name == "list_tasks":
-        result = google_tasks.list_tasks(inputs.get("show_completed", False), inputs.get("max_results", 20))
-        if result["success"] and result.get("tasks"):
-            text = f"📋 {result['count']} tareas:\n\n"
-            for i, t in enumerate(result["tasks"], 1):
-                icon = "✅" if t['status'] == 'completed' else "⬜"
-                text += f"{i}. {icon} {t['title']}\n"
-                if t.get('due_formatted'):
-                    text += f"   📅 {t['due_formatted']}\n"
-                text += f"   ID: `{t['id']}`\n\n"
-            return text
-        return result.get("message", "No hay tareas.")
-    
-    elif name == "create_task":
-        result = google_tasks.create_task(inputs.get("title"), inputs.get("notes"), inputs.get("due_date"))
-        return f"✅ {result['message']}" if result["success"] else f"❌ {result['error']}"
-    
-    elif name == "complete_task":
-        result = google_tasks.complete_task(inputs.get("task_id"))
-        return f"✅ {result['message']}" if result["success"] else f"❌ {result['error']}"
-    
-    elif name == "delete_task":
-        result = google_tasks.delete_task(inputs.get("task_id"))
-        return f"✅ {result['message']}" if result["success"] else f"❌ {result['error']}"
-    
-    # Email
-    elif name == "search_emails":
-        result = gmail_service.search_emails(inputs.get("query", ""), min(inputs.get("max_results", 10), 20))
-        if result["success"] and result.get("emails"):
-            text = f"📧 {result['count']} emails:\n\n"
-            for i, e in enumerate(result["emails"], 1):
-                text += f"{i}. **{e['subject']}**\n   De: {e['from']}\n   ID: `{e['id']}`\n\n"
-            return text
-        return result.get("message", "No hay emails.")
-    
-    elif name == "read_email":
-        result = gmail_service.get_email(inputs.get("email_id"))
-        if result["success"]:
-            return f"📧 **{result['subject']}**\nDe: {result['from']}\n\n{result['body']}"
-        return f"Error: {result['error']}"
-    
-    elif name == "send_email":
-        result = gmail_service.send_email(inputs.get("to"), inputs.get("subject"), inputs.get("body"), inputs.get("reply_to_id"))
-        return f"✅ {result['message']}" if result["success"] else f"❌ {result['error']}"
-    
-    # Drive
-    elif name == "search_drive":
-        result = google_drive.search_files(inputs.get("query"), inputs.get("max_results", 10))
-        if result["success"] and result.get("files"):
-            text = f"🔍 {result['count']} archivos:\n\n"
-            for i, f in enumerate(result["files"], 1):
-                text += f"{i}. {f['type']} **{f['name']}**\n   🔗 {f['link']}\n\n"
-            return text
-        return "No encontré archivos."
-    
-    elif name == "list_recent_files":
-        result = google_drive.list_recent_files(inputs.get("max_results", 10))
-        if result["success"] and result.get("files"):
-            text = f"📁 {result['count']} recientes:\n\n"
-            for i, f in enumerate(result["files"], 1):
-                text += f"{i}. {f['type']} {f['name']}\n   🔗 {f['link']}\n\n"
-            return text
-        return "No hay archivos recientes."
-    
-    # Places - NUEVO
-    elif name == "search_nearby_places":
-        loc = get_user_location(chat_id)
-        result = google_places.search_nearby_places(
-            inputs.get("query"),
-            loc["lat"],
-            loc["lng"],
-            inputs.get("radius", 2000)
-        )
-        if result["success"] and result.get("places"):
-            return google_places.format_places_response(result["places"])
-        return result.get("message", result.get("error", "No encontré lugares."))
-    
-    # Phone - NUEVO
-    elif name == "make_phone_call":
-        phone = inputs.get("phone_number", "").replace(" ", "").replace("-", "")
-        name_contact = inputs.get("contact_name", "")
-        
-        # Format phone link
-        tel_link = f"tel:{phone}"
-        
-        response = f"📞 **Llamar a {name_contact}**\n\n" if name_contact else "📞 **Hacer llamada**\n\n"
-        response += f"Número: {phone}\n\n"
-        response += f"👆 [Toca aquí para llamar]({tel_link})"
-        
-        return response
-    
-    # Memory
-    elif name == "save_user_fact":
-        save_fact(chat_id, inputs.get("key"), inputs.get("value"))
-        return f"✅ Guardado: {inputs.get('key')}"
-    
-    elif name == "get_all_user_facts":
-        facts = get_all_facts(chat_id)
-        if facts:
-            return "🧠 Lo que sé:\n" + "\n".join([f"• {k}: {v}" for k, v in facts.items()])
-        return "No tengo información guardada."
-    
-    # Files
-    elif name == "read_local_file":
-        return read_local_file(inputs.get("filename"))
-    
-    # Mental Models - CAPA 2
-    elif name == "load_mental_models":
-        return read_local_file("modelos_mentales.md")
-    
-    # Web Search - CAPA 3 (pendiente)
-    elif name == "web_search":
-        return "⚠️ Web search aún no implementado. Próximamente."
-    
-    return f"Tool '{name}' no implementada."
+def has_many_numbers(text: str) -> bool:
+    """Check if text has many numbers (don't read those aloud)."""
+    numbers = re.findall(r'\d+', text)
+    return len(numbers) > 5
 
 # ============================================
 # COMMAND HANDLERS
 # ============================================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.message.chat_id
-    clear_history(chat_id)
-    set_mode(chat_id, "normal")
     await update.message.reply_text(
-        '¡Hola Pablo! Soy Claudette con Sonnet 4 🧠\n\n'
+        '👋 Hola! Soy **Claudette**, tu asistente ejecutiva.\n\n'
         '**Comandos:**\n'
-        '/profundo - Modo análisis con 216 modelos mentales\n'
+        '/profundo - Modo análisis profundo con modelos mentales\n'
         '/normal - Modo asistente rápido\n'
-        '/ubicacion - Actualizar mi ubicación\n'
+        '/ubicacion - Ver/actualizar ubicación\n'
         '/clear - Borrar historial\n\n'
+        '**Capacidades:**\n'
+        '📅 Calendario y tareas\n'
+        '📧 Gmail\n'
+        '📁 Google Drive\n'
+        '📍 Lugares cercanos\n'
+        '🧠 Sistema Jarvis (modo profundo)\n\n'
         '¿En qué te ayudo?',
         parse_mode='Markdown'
     )
@@ -513,9 +530,14 @@ async def profundo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     set_mode(chat_id, "profundo")
     await update.message.reply_text(
         '🧠 **Modo Profundo activado**\n\n'
-        'Tengo acceso a tus 216 modelos mentales.\n'
-        'Ahora puedo hacer análisis extendidos, reflexiones filosóficas, '
+        'Sistema Jarvis con 216 modelos mentales disponibles.\n'
+        'Puedo hacer análisis extendidos, reflexiones filosóficas, '
         'y ayudarte a resolver problemas complejos.\n\n'
+        'Cuando lo necesite, cargaré automáticamente:\n'
+        '• MODELS_DEEP.md - 176 modelos especializados\n'
+        '• FRAMEWORK.md - Metodología paso-a-paso\n'
+        '• ANTIPATTERNS.md - Cuándo NO usar modelos\n'
+        '• TEMPLATES.md - Plantillas ejecutables\n\n'
         '¿Qué quieres analizar?',
         parse_mode='Markdown'
     )
@@ -523,12 +545,13 @@ async def profundo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def normal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     set_mode(chat_id, "normal")
-    await update.message.reply_text('⚡ Modo normal. Respuestas rápidas y precisas.')
+    await update.message.reply_text('⚡ Modo normal activado. Respuestas rápidas y precisas.')
 
 async def ubicacion_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    loc = get_user_location(update.message.chat_id)
     await update.message.reply_text(
         '📍 Para actualizar tu ubicación, envíame tu ubicación usando el botón 📎 → Ubicación en Telegram.\n\n'
-        f'Ubicación actual: {get_user_location(update.message.chat_id).get("name", "San José, Costa Rica")}'
+        f'Ubicación actual: {loc.get("name", "San José, Costa Rica")}'
     )
 
 async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -581,42 +604,39 @@ async def process_message(update: Update, context: ContextTypes.DEFAULT_TYPE, te
         tomorrow = (now + timedelta(days=1)).strftime("%Y-%m-%d")
         loc = get_user_location(chat_id)
         
-        # System prompt varies by mode
+        # Build system prompt with CLAUDETTE_CORE
         if mode == "profundo":
-            system_prompt = f"""Eres Claudette, asistente ejecutiva de Pablo con acceso a 216 modelos mentales.
+            system_prompt = f"""{CLAUDETTE_CORE}
 
-MODO: PROFUNDO - Análisis extendido, reflexión filosófica, resolución de problemas complejos.
-
+=== CONTEXTO ACTUAL ===
 FECHA: {day_name} {today} (2026), {now.strftime("%H:%M")}
 UBICACIÓN: {loc.get('name', 'Costa Rica')} ({loc['lat']}, {loc['lng']})
 
-INSTRUCCIONES MODO PROFUNDO:
-1. USA load_mental_models para cargar el framework completo
-2. Aplica múltiples modelos mentales (5-15) al problema
-3. Da análisis extensos y multidimensionales
-4. Usa filosofía continental, sistemas, estrategia
-5. Sé reflexivo y profundo, no superficial
+=== MODO PROFUNDO ACTIVADO ===
+Tienes acceso a read_knowledge_file para cargar:
+- MODELS_DEEP.md cuando necesites modelos especializados (filosofía, trading, geopolítica, etc.)
+- FRAMEWORK.md cuando necesites metodología paso-a-paso rigurosa
+- ANTIPATTERNS.md cuando necesites validar uso apropiado de modelos
+- TEMPLATES.md cuando tengas problema tipo estándar (decisión, negocio, riesgo, ético, innovación)
 
-CONTEXTO DE PABLO:
-- Arquitecto/desarrollador inmobiliario, 56 años
-- Filosofía de slowness post-pandemia
-- Trader NQ futures, ultra-endurance athlete (Ultraman)
-- Intereses: filosofía continental, geopolítica, IA
-- Proyectos: Feline Sanctuary, TEDx 2026, AI agents"""
+RECUERDA:
+- Los 40 modelos CORE ya están cargados en tu prompt
+- Para análisis Nivel 4-5, lee MODELS_DEEP.md + FRAMEWORK.md
+- NUNCA preguntes "¿quieres que use X?" - aplica modelos automáticamente
+- Integra modelos en narrativa natural, NO bullets académicos"""
         else:
-            system_prompt = f"""Eres Claudette, asistente personal de Pablo en Costa Rica.
+            system_prompt = f"""{CLAUDETTE_CORE}
 
-MODO: NORMAL - Respuestas rápidas, precisas, accionables.
-
+=== CONTEXTO ACTUAL ===
 FECHA: {day_name} {today} (2026), {now.strftime("%H:%M")}
 MAÑANA: {tomorrow}
 UBICACIÓN: {loc.get('name', 'Costa Rica')} ({loc['lat']}, {loc['lng']})
 
-HERRAMIENTAS:
+=== MODO NORMAL (ASISTENTE RÁPIDO) ===
+HERRAMIENTAS disponibles:
 - Calendario, Email, Tareas, Drive
 - Lugares cercanos (restaurantes, ferreterías, etc.)
 - Llamadas telefónicas
-- Datos personales en user_profile.md
 
 INSTRUCCIONES:
 1. Sé CONCISO - respuestas breves y útiles
@@ -626,7 +646,8 @@ INSTRUCCIONES:
 5. Incluye links de Drive y Maps
 6. Año 2026 para todas las fechas
 
-Si Pablo pide análisis profundo o reflexión, sugiere /profundo."""
+Los 40 modelos mentales CORE están disponibles - úsalos cuando detectes decisiones/dilemas.
+Si Pablo pide análisis profundo, sugiere /profundo."""
 
         messages = get_history(chat_id).copy()
         
@@ -674,7 +695,6 @@ Si Pablo pide análisis profundo o reflexión, sugiere /profundo."""
         add_to_history(chat_id, "assistant", final_response)
         
         # Send response
-        # FIX VOZ: Si es voz y tiene muchos números, enviar texto
         if is_voice and elevenlabs_client and not has_many_numbers(final_response):
             voice_file = await text_to_speech(final_response)
             if voice_file:
@@ -683,7 +703,6 @@ Si Pablo pide análisis profundo o reflexión, sugiere /profundo."""
             else:
                 await update.message.reply_text(final_response, parse_mode='Markdown')
         else:
-            # Si tiene números o no es voz, enviar texto
             if is_voice and has_many_numbers(final_response):
                 await update.message.reply_text("📝 *Te envío esto por escrito porque tiene datos numéricos:*\n\n" + final_response, parse_mode='Markdown')
             else:
@@ -704,7 +723,10 @@ def main():
     logger.info("🗄️ Setting up database...")
     setup_database()
     
-    logger.info(f"🤖 Starting Claudette v2 with {DEFAULT_MODEL}...")
+    logger.info("📚 Loading Claudette Core System...")
+    logger.info(f"✅ Core loaded: {len(CLAUDETTE_CORE)} chars")
+    
+    logger.info(f"🤖 Starting Claudette v2 (Jarvis) with {DEFAULT_MODEL}...")
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     
     # Commands
@@ -719,7 +741,7 @@ def main():
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     
-    logger.info("✅ Claudette v2 ready!")
+    logger.info("✅ Claudette v2 (Jarvis Edition) ready!")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
