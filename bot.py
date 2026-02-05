@@ -77,6 +77,17 @@ TOOLS = [
         }
     },
     {
+        "name": "read_local_file",
+        "description": "Read contents of a local file in the repository (e.g., user_profile.md with user's personal information, documents, etc.)",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "filename": {"type": "string", "description": "Name of the file to read (e.g., 'user_profile.md')"}
+            },
+            "required": ["filename"]
+        }
+    },
+    {
         "name": "save_user_fact",
         "description": "Save a fact about the user for future reference",
         "input_schema": {
@@ -118,6 +129,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         '¿En qué puedo ayudarte?'
     )
 
+def read_local_file(filename):
+    """Read a local file from the repository."""
+    try:
+        # Construct file path (same directory as bot.py)
+        file_path = os.path.join(os.path.dirname(__file__), filename)
+        
+        logger.info(f"📂 Reading file: {file_path}")
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        logger.info(f"✅ File read successfully: {len(content)} characters")
+        return content
+    except FileNotFoundError:
+        logger.error(f"❌ File not found: {filename}")
+        return f"❌ Archivo '{filename}' no encontrado."
+    except Exception as e:
+        logger.error(f"❌ Error reading file: {e}")
+        return f"❌ Error leyendo archivo: {str(e)}"
+
 async def transcribe_voice(voice_file):
     """Transcribe voice message using Whisper."""
     if not openai_client:
@@ -146,7 +177,7 @@ async def text_to_speech(text):
             text=text,
             voice_id="2fzSNSOmb5nntInhUtfm",  # Paloma voice
             model_id="eleven_multilingual_v2"
-       )
+        )
         
         # Save to temporary file
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
@@ -224,6 +255,10 @@ You MUST use year 2026 for all calendar events. Do NOT use 2023 or any other yea
 Example dates:
 - "mañana a las 3pm" = "{tomorrow_str}T15:00:00-06:00"
 - "hoy a las 5pm" = "{today_str}T17:00:00-06:00"
+
+IMPORTANT: When the user asks for personal information (passport, ID, phone numbers, addresses, etc.), 
+ALWAYS use the read_local_file tool to read "user_profile.md" first. This file contains all the user's 
+personal information.
 """
         
         # Call Claude API
@@ -274,6 +309,8 @@ Example dates:
                     )
                 elif tool_name == "create_reminder":
                     result = f"⏰ Recordatorio creado: {tool_input.get('message')} para {tool_input.get('time')}"
+                elif tool_name == "read_local_file":
+                    result = read_local_file(tool_input.get("filename"))
                 elif tool_name == "save_user_fact":
                     save_fact(chat_id, tool_input.get("key"), tool_input.get("value"))
                     result = f"✅ Guardado: {tool_input.get('key')} = {tool_input.get('value')}"
