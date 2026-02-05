@@ -144,9 +144,9 @@ async def text_to_speech(text):
         # Generate audio using new API
         audio = elevenlabs_client.text_to_speech.convert(
             text=text,
-            voice_id="21m00Tcm4TlvDq8ikWAM",  # Rachel voice
+            voice_id="2fzSNSOmb5nntInhUtfm",  # Paloma voice
             model_id="eleven_multilingual_v2"
-        )
+       )
         
         # Save to temporary file
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
