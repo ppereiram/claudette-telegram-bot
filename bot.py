@@ -265,7 +265,7 @@ TOOLS = [
         }
     },
     
-    # === CAPA 2: Sistema Jarvis ===
+    # === JARVIS SYSTEM ===
     
     {
         "name": "read_knowledge_file",
@@ -293,7 +293,8 @@ def execute_tool(tool_name: str, tool_input: dict, chat_id: int):
     
     # Calendar
     if tool_name == "get_calendar_events":
-        return google_calendar.get_events(
+        # CORREGIDO: Se llama get_calendar_events, no get_events
+        return google_calendar.get_calendar_events(
             start_date=tool_input['start_date'],
             end_date=tool_input['end_date']
         )
