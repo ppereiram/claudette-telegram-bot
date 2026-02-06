@@ -3,6 +3,7 @@ import logging
 import json
 import pytz
 import re
+import base64
 from datetime import datetime, timedelta
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
@@ -241,7 +242,7 @@ TOOLS = [
     },
     {
         "name": "save_user_fact",
-        "description": "Aprender dato del usuario.",
+        "description": "Aprender dato del usuario. ÚSALO SIEMPRE que extraigas información importante de una IMAGEN o DOCUMENTO.",
         "input_schema": {
             "type": "object",
             "properties": {"category": {"type": "string"}, "key": {"type": "string"}, "value": {"type": "string"}},
@@ -347,7 +348,13 @@ def get_history(chat_id):
 
 def add_to_history(chat_id, role, content):
     hist = get_history(chat_id)
-    hist.append({"role": role, "content": content})
+    # Si el contenido es una lista (imagen + texto), guardar solo un resumen texto para el historial local
+    if isinstance(content, list):
+        text_part = next((item['text'] for item in content if item['type'] == 'text'), "[Foto enviada]")
+        hist.append({"role": role, "content": text_part})
+    else:
+        hist.append({"role": role, "content": content})
+        
     if len(hist) > MAX_HISTORY_LENGTH * 2: conversation_history[chat_id] = hist[-(MAX_HISTORY_LENGTH * 2):]
 
 def clear_history(chat_id): conversation_history[chat_id] = []
@@ -361,7 +368,7 @@ async def transcribe_voice(audio_path):
             return openai_client.audio.transcriptions.create(model="whisper-1", file=audio, language="es").text
     except Exception: return ""
 
-async def start(update, context): await update.message.reply_text('👋 Soy Claudette. Lista para ayudar.')
+async def start(update, context): await update.message.reply_text('👋 Soy Claudette. Tengo ojos (envíame fotos) y oídos (audio).')
 async def clear_cmd(update, context): 
     clear_history(update.message.chat_id)
     await update.message.reply_text('✅ Memoria limpia.')
@@ -380,9 +387,41 @@ async def handle_voice(update, context):
         logger.error(f"Voice error: {e}")
         await update.message.reply_text("Error de audio.")
 
-async def process_message(update, context, text, is_voice=False):
+async def handle_photo(update, context):
+    """Maneja imágenes enviadas al bot."""
     chat_id = update.message.chat_id
-    add_to_history(chat_id, "user", text)
+    try:
+        # 1. Obtener la foto de mayor resolución
+        photo_file = await update.message.photo[-1].get_file()
+        
+        # 2. Descargar a memoria/temporal
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_img:
+            await photo_file.download_to_drive(temp_img.name)
+            temp_path = temp_img.name
+        
+        # 3. Leer y codificar en Base64
+        with open(temp_path, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+        
+        os.unlink(temp_path) # Limpiar
+        
+        # 4. Obtener caption o usar texto default
+        caption = update.message.caption or "Analiza esta imagen. Si es un documento, extrae los datos. Si es un lugar, dime qué es."
+        
+        # 5. Procesar con Visión
+        await process_message(update, context, caption, is_voice=False, image_data=encoded_string)
+
+    except Exception as e:
+        logger.error(f"Photo error: {e}")
+        await update.message.reply_text("❌ Error procesando la imagen.")
+
+
+async def process_message(update, context, text, is_voice=False, image_data=None):
+    chat_id = update.message.chat_id
+    
+    # Historial: Si hay imagen, guardamos un indicador
+    log_text = f"[IMAGEN] {text}" if image_data else text
+    add_to_history(chat_id, "user", log_text)
     
     try:
         # Contexto Dinámico
@@ -404,21 +443,40 @@ HECHOS APRENDIDOS: {mem_str}
 FECHA: {now.strftime("%A %d-%m-%Y %H:%M")} (Año simulado: 2026)
 UBICACIÓN: {loc['name']}
 
-=== INSTRUCCIONES DE RESPUESTA (SEGUNDO CEREBRO) ===
-1. **VERSATILIDAD TOTAL:** Eres el "Segundo Cerebro" de Pablo. No hay tema "demasiado trivial".
-   - Si pregunta por **Euphoria, farándula, chismes o TV**: USA `search_web` INMEDIATAMENTE. No juzgues la importancia del tema.
-   - Si pregunta por algo que parece un rumor (ej: "Euphoria Temporada 4"), no asumas que es falso. Búscalo. Puede ser noticia de última hora.
-   
-2. **MODO NOTICIAS:**
-   - Si pide "Noticias" o "Titulares" -> Usa `get_news_dashboard`.
-   
-3. **AGENDA:** Revisa siempre `get_calendar_events` Y `list_tasks`.
+=== PROTOCOLO DE VISIÓN (OJOS) ===
+Si recibes una imagen:
+1. **DOCUMENTOS (Pasaportes, IDs, Recibos):** Extrae TODOS los datos clave (números, fechas, nombres). 
+   - IMPORTANTE: Usa la herramienta `save_user_fact` para guardar esa información en la memoria (ej: Category: "Documentos", Key: "Pasaporte Numero", Value: "12345").
+2. **LUGARES/MONUMENTOS:** Identifica el lugar, su historia y contexto (ej: Camino de Santiago).
+3. **LIBROS/TEXTO:** Lee el texto, resúmelo o analízalo según pida el usuario.
 
-4. **TONO:**
-   - Para negocios: Ejecutiva, precisa.
-   - Para trivialidades: Curiosa, conversacional, servicial. "Googlealo por él" y dale el resumen.
+=== PROTOCOLO DE RESPUESTA ===
+1. Eres versátil: Farándula, Negocios, Filosofía o Análisis de Imágenes. Todo es importante.
+2. Si no sabes algo trivial (ej: chismes), BÚSCALO (`search_web`).
 """
         messages = get_history(chat_id).copy()
+        
+        # SI HAY IMAGEN, REEMPLAZAMOS EL ÚLTIMO MENSAJE DEL USER CON EL PAYLOAD MULTIMODAL
+        if image_data:
+            # Reemplazar la entrada de texto simple por la estructura de imagen
+            messages[-1] = {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": image_data
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": text
+                    }
+                ]
+            }
+
         final_response = ""
 
         # Thinking Loop (Max 5 pasos)
@@ -426,6 +484,10 @@ UBICACIÓN: {loc['name']}
             response = client.messages.create(
                 model=DEFAULT_MODEL, max_tokens=4096, system=system_prompt, tools=TOOLS, messages=messages
             )
+            
+            # Guardamos respuesta en historial (para el loop)
+            # Nota: Si Claude responde con texto + tool, messages debe manejarlo.
+            # Simplificación: guardamos contenido tal cual
             messages.append({"role": "assistant", "content": response.content})
             
             if response.stop_reason == "tool_use":
@@ -440,12 +502,11 @@ UBICACIÓN: {loc['name']}
                 final_response = "\n".join([b.text for b in response.content if hasattr(b, "text")])
                 break
 
-        if not final_response: final_response = "✅ Listo."
+        if not final_response: final_response = "✅ Procesado."
         add_to_history(chat_id, "assistant", final_response)
 
         # Output Handler
         if is_voice and elevenlabs_client:
-            # Si tiene muchos números o tablas, enviar texto
             if len(re.findall(r'\d+', final_response)) > 8:
                 await update.message.reply_text("📝 *Respuesta detallada:*\n\n" + final_response, parse_mode='Markdown')
             else:
@@ -473,6 +534,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("clear", clear_cmd))
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_photo)) # <--- NUEVO HANDLER FOTO
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     logger.info("✅ Claudette Online")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
