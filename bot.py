@@ -88,7 +88,7 @@ def search_web_ddg(query: str, max_results=4):
         if "2026" in query: query = query.replace("2026", "").strip()
         results = []
         with DDGS() as ddgs:
-            # Usamos region 'wt-wt' (world) o 'cr-cr' (Costa Rica) según contexto, default world
+            # Búsqueda de texto general
             search_gen = ddgs.text(query, region='wt-wt', safesearch='off', timelimit='d', max_results=max_results)
             for r in search_gen:
                 results.append(f"📰 {r['title']}\n🔗 {r['href']}\n📝 {r['body']}\n")
@@ -98,48 +98,51 @@ def search_web_ddg(query: str, max_results=4):
         return f"Error: {str(e)}"
 
 def get_news_dashboard():
-    """Obtiene titulares específicos de La Nación, CNN y Reuters."""
-    summary = "🗞️ **RESUMEN DE NOTICIAS (Últimas 24h)**\n\n"
+    """Obtiene titulares usando el motor de NOTICIAS de DDG."""
+    summary = "🗞️ **DASHBOARD DE NOTICIAS (En Tiempo Real)**\n\n"
     
     try:
         with DDGS() as ddgs:
-            # 1. Costa Rica - La Nación
+            # 1. Costa Rica - La Nación (Búsqueda específica en News)
             try:
-                # Buscamos específicamente en el sitio nacion.com
-                cr_results = ddgs.text("site:nacion.com titulares noticias hoy", region='cr-cr', timelimit='d', max_results=3)
-                if cr_results:
-                    summary += "🇨🇷 **LA NACIÓN (Costa Rica):**\n"
-                    for r in cr_results:
-                        summary += f"• [{r['title']}]({r['href']})\n"
+                # region='cr-cr' fuerza noticias locales
+                cr_news = ddgs.news(keywords="Costa Rica La Nación", region='cr-cr', safesearch='off', max_results=4)
+                if cr_news:
+                    summary += "🇨🇷 **COSTA RICA (La Nación & Locales):**\n"
+                    for r in cr_news:
+                        # r keys: date, title, body, url, image, source
+                        summary += f"• [{r['title']}]({r['url']}) - _{r['source']}_\n"
                     summary += "\n"
             except Exception as e:
                 logger.error(f"Error Nacion: {e}")
 
-            # 2. CNN en Español
+            # 2. CNN en Español (Internacional Latino)
             try:
-                cnn_results = ddgs.text("site:cnnespanol.cnn.com últimas noticias", timelimit='d', max_results=3)
-                if cnn_results:
+                cnn_news = ddgs.news(keywords="CNN en Español últimas noticias", region='wt-wt', safesearch='off', max_results=3)
+                if cnn_news:
                     summary += "🌎 **CNN EN ESPAÑOL:**\n"
-                    for r in cnn_results:
-                        summary += f"• [{r['title']}]({r['href']})\n"
+                    for r in cnn_news:
+                        summary += f"• [{r['title']}]({r['url']})\n"
                     summary += "\n"
             except Exception as e:
                 logger.error(f"Error CNN: {e}")
 
-            # 3. Reuters (Mundo/Finanzas)
+            # 3. Reuters (Global / Finanzas)
             try:
-                # Reuters en inglés suele ser más rápido/completo, el LLM lo traduce si es necesario
-                reu_results = ddgs.text("site:reuters.com top news world", timelimit='d', max_results=3)
-                if reu_results:
+                reu_news = ddgs.news(keywords="Reuters World News", region='us-en', safesearch='off', max_results=3)
+                if reu_news:
                     summary += "🌐 **REUTERS (Global):**\n"
-                    for r in reu_results:
-                        summary += f"• [{r['title']}]({r['href']})\n"
+                    for r in reu_news:
+                        summary += f"• [{r['title']}]({r['url']})\n"
             except Exception as e:
                 logger.error(f"Error Reuters: {e}")
 
     except Exception as e:
         return f"Error generando dashboard: {str(e)}"
     
+    if len(summary) < 60: # Si fallaron todas
+        return "⚠️ No pude conectar con los servicios de noticias en este momento."
+        
     return summary
 
 # ============================================
@@ -150,7 +153,7 @@ TOOLS = [
     # === HERRAMIENTA NUEVA: NEWS DASHBOARD ===
     {
         "name": "get_news_dashboard",
-        "description": "Obtener el resumen de titulares de hoy de La Nación (Costa Rica), CNN y Reuters. Úsalo cuando pidan 'noticias', 'titulares', 'qué pasa hoy' o 'resumen'.",
+        "description": "Obtener el resumen ejecutivo de titulares de hoy (La Nación, CNN, Reuters). Úsalo para 'noticias', 'resumen del día', 'titulares'.",
         "input_schema": {
             "type": "object",
             "properties": {},
@@ -160,7 +163,7 @@ TOOLS = [
     # === HERRAMIENTA EXISTENTE: BÚSQUEDA GENERAL ===
     {
         "name": "search_web",
-        "description": "Búsqueda libre en internet. Úsalo para investigar un tema específico a profundidad (ej: 'precio del dólar hoy', 'detalles sobre noticia X').",
+        "description": "Búsqueda libre. Úsalo para profundizar en un tema específico (ej: 'precio dólar hoy', 'detalle accidente X').",
         "input_schema": {
             "type": "object",
             "properties": {
