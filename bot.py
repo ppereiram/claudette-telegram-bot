@@ -295,11 +295,11 @@ def execute_tool(tool_name: str, tool_input: dict, chat_id: int):
         )
     
     elif tool_name == "create_calendar_event":
-        return google_calendar.create_event(
-            summary=tool_input['summary'],
-            start_time=tool_input['start_time'],
-            end_time=tool_input['end_time'],
-            location=tool_input.get('location')
+        return google_calendar.create_calendar_event(
+    summary=tool_input.get('summary'),
+    start_time=tool_input.get('start_time'),
+    end_time=tool_input.get('end_time'),
+    location=tool_input.get('location')
         )
     
     # Tasks
