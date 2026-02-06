@@ -31,7 +31,7 @@ TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY')
-# ID de la voz (Paloma u otra). Si no está en Render, usa un default.
+# ID de la voz. Si no está en Render, usa default.
 ELEVENLABS_VOICE_ID = os.environ.get('ELEVENLABS_VOICE_ID', 'JBFqnCBsd6RMkjVDRZzb') 
 
 if not TELEGRAM_BOT_TOKEN or not ANTHROPIC_API_KEY:
@@ -671,23 +671,20 @@ Si Pablo pide análisis profundo, sugiere /profundo."""
         add_to_history(chat_id, "assistant", final_response)
         
         # ===========================================
-        # RESPUESTA AL USUARIO (Texto + Audio)
+        # RESPUESTA AL USUARIO (Lógica Smart Voice)
         # ===========================================
         
-        # 1. SIEMPRE enviar respuesta de TEXTO
-        await update.message.reply_text(final_response, parse_mode='Markdown')
-
-        # 2. SI FUE VOZ y tenemos ElevenLabs activado, enviar AUDIO
+        # Caso 1: Usuario usó VOZ y tenemos ElevenLabs activo
         if is_voice and elevenlabs_client:
-            # Si hay demasiados números, mejor no leerlo (es molesto)
+            # Si hay demasiados números (ej: precios, coordenadas), mejor mandar texto para leer
             if has_many_numbers(final_response):
-                await update.message.reply_text("ℹ️ (Audio omitido porque hay demasiados datos numéricos)")
+                await update.message.reply_text("📝 *Te envío texto porque hay muchos datos numéricos:*\n\n" + final_response, parse_mode='Markdown')
             else:
                 try:
-                    # Notificar que está "grabando audio"
+                    # Notificar acción de grabar voz
                     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="record_voice")
                     
-                    # Generar el audio usando el método nuevo (.convert)
+                    # Generar audio
                     audio_stream = elevenlabs_client.text_to_speech.convert(
                         text=final_response,
                         voice_id=ELEVENLABS_VOICE_ID,
@@ -695,15 +692,18 @@ Si Pablo pide análisis profundo, sugiere /profundo."""
                         output_format="mp3_44100_128"
                     )
                     
-                    # Convertir el stream a bytes para Telegram
+                    # Convertir a bytes y enviar SOLO el audio
                     audio_bytes = b"".join(audio_stream)
-                    
-                    # Enviar la nota de voz
                     await update.message.reply_voice(voice=audio_bytes)
                     
                 except Exception as e:
                     logger.error(f"❌ Error generando voz ElevenLabs: {e}")
-                    # No enviamos error al usuario, ya recibió el texto.
+                    # Fallback: Si falla la generación de voz, enviamos texto para no dejar sin respuesta
+                    await update.message.reply_text(final_response, parse_mode='Markdown')
+
+        # Caso 2: Usuario escribió TEXTO o no hay ElevenLabs
+        else:
+            await update.message.reply_text(final_response, parse_mode='Markdown')
         
     except Exception as e:
         logger.error(f"❌ Error: {e}", exc_info=True)
