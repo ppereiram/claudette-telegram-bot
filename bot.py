@@ -706,7 +706,34 @@ Si Pablo pide análisis profundo, sugiere /profundo."""
             if is_voice and has_many_numbers(final_response):
                 await update.message.reply_text("📝 *Te envío esto por escrito porque tiene datos numéricos:*\n\n" + final_response, parse_mode='Markdown')
             else:
-                await update.message.reply_text(final_response, parse_mode='Markdown')
+                # 1. Enviar respuesta de TEXTO (siempre útil)
+    await update.message.reply_text(final_response, parse_mode='Markdown')
+
+    # 2. Generar y enviar AUDIO (solo si el usuario usó voz y tenemos ElevenLabs activado)
+    if is_voice and elevenlabs_client:
+        try:
+            # Notificar que está grabando audio (acción 'record_voice')
+            await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="record_voice")
+            
+            # Generar audio
+            voice_id = os.environ.get('ELEVENLABS_VOICE_ID', 'JBFqnCBsd6RMkjVDRZzb') # Default ID
+            
+            # Generar el audio (devuelve un generador)
+            audio_stream = elevenlabs_client.generate(
+                text=final_response,
+                voice=voice_id,
+                model="eleven_multilingual_v2" # Mejor para español
+            )
+            
+            # Convertir el stream a bytes para Telegram
+            audio_bytes = b"".join(audio_stream)
+            
+            # Enviar la nota de voz
+            await update.message.reply_voice(voice=audio_bytes)
+            
+        except Exception as e:
+            logger.error(f"❌ Error generando voz ElevenLabs: {e}")
+            # No enviamos error al usuario para no molestar, solo log
         
     except Exception as e:
         logger.error(f"❌ Error: {e}", exc_info=True)
