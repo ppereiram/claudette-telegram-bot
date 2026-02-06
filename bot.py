@@ -72,61 +72,112 @@ CLAUDETTE_CORE = load_file_content('CLAUDETTE_CORE.md', "Eres Claudette, asisten
 USER_PROFILE = load_file_content('user_profile.md', "") 
 
 # ============================================
-# HELPERS (Dates & Search)
+# HELPERS
 # ============================================
 
 def clean_date_iso(date_str, is_end=False):
-    """Google Calendar exige formato ISO con zona horaria (RFC3339)."""
+    """Google Calendar exige formato ISO con zona horaria."""
     if 'T' not in date_str:
-        # Si es solo fecha YYYY-MM-DD, agregar hora y zona horaria CR (-06:00)
         time_part = "T23:59:59" if is_end else "T00:00:00"
         return f"{date_str}{time_part}-06:00"
     return date_str
 
-def search_web_ddg(query: str, max_results=5):
-    """Búsqueda en web con manejo de errores."""
+def search_web_ddg(query: str, max_results=4):
+    """Búsqueda general en la web."""
     try:
-        # Forzar búsqueda de "hoy" si la query tiene fecha futura (evitar error 2026)
-        if "2026" in query:
-            query = query.replace("2026", "").strip()
-            query += " actual hoy"
-            
+        if "2026" in query: query = query.replace("2026", "").strip()
         results = []
         with DDGS() as ddgs:
+            # Usamos region 'wt-wt' (world) o 'cr-cr' (Costa Rica) según contexto, default world
             search_gen = ddgs.text(query, region='wt-wt', safesearch='off', timelimit='d', max_results=max_results)
             for r in search_gen:
                 results.append(f"📰 {r['title']}\n🔗 {r['href']}\n📝 {r['body']}\n")
-        
-        if not results: return "No encontré noticias recientes."
-        return "\n".join(results)
+        return "\n".join(results) if results else "No encontré resultados recientes."
     except Exception as e:
         logger.error(f"Search Error: {e}")
-        return f"Error buscando: {str(e)}"
+        return f"Error: {str(e)}"
+
+def get_news_dashboard():
+    """Obtiene titulares específicos de La Nación, CNN y Reuters."""
+    summary = "🗞️ **RESUMEN DE NOTICIAS (Últimas 24h)**\n\n"
+    
+    try:
+        with DDGS() as ddgs:
+            # 1. Costa Rica - La Nación
+            try:
+                # Buscamos específicamente en el sitio nacion.com
+                cr_results = ddgs.text("site:nacion.com titulares noticias hoy", region='cr-cr', timelimit='d', max_results=3)
+                if cr_results:
+                    summary += "🇨🇷 **LA NACIÓN (Costa Rica):**\n"
+                    for r in cr_results:
+                        summary += f"• [{r['title']}]({r['href']})\n"
+                    summary += "\n"
+            except Exception as e:
+                logger.error(f"Error Nacion: {e}")
+
+            # 2. CNN en Español
+            try:
+                cnn_results = ddgs.text("site:cnnespanol.cnn.com últimas noticias", timelimit='d', max_results=3)
+                if cnn_results:
+                    summary += "🌎 **CNN EN ESPAÑOL:**\n"
+                    for r in cnn_results:
+                        summary += f"• [{r['title']}]({r['href']})\n"
+                    summary += "\n"
+            except Exception as e:
+                logger.error(f"Error CNN: {e}")
+
+            # 3. Reuters (Mundo/Finanzas)
+            try:
+                # Reuters en inglés suele ser más rápido/completo, el LLM lo traduce si es necesario
+                reu_results = ddgs.text("site:reuters.com top news world", timelimit='d', max_results=3)
+                if reu_results:
+                    summary += "🌐 **REUTERS (Global):**\n"
+                    for r in reu_results:
+                        summary += f"• [{r['title']}]({r['href']})\n"
+            except Exception as e:
+                logger.error(f"Error Reuters: {e}")
+
+    except Exception as e:
+        return f"Error generando dashboard: {str(e)}"
+    
+    return summary
 
 # ============================================
 # TOOLS
 # ============================================
 
 TOOLS = [
+    # === HERRAMIENTA NUEVA: NEWS DASHBOARD ===
+    {
+        "name": "get_news_dashboard",
+        "description": "Obtener el resumen de titulares de hoy de La Nación (Costa Rica), CNN y Reuters. Úsalo cuando pidan 'noticias', 'titulares', 'qué pasa hoy' o 'resumen'.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    # === HERRAMIENTA EXISTENTE: BÚSQUEDA GENERAL ===
     {
         "name": "search_web",
-        "description": "Buscar noticias y actualidad. Si preguntan por 'noticias de hoy', usa esto. Ignora el año 2026 del sistema, busca información del 'mundo real' actual.",
+        "description": "Búsqueda libre en internet. Úsalo para investigar un tema específico a profundidad (ej: 'precio del dólar hoy', 'detalles sobre noticia X').",
         "input_schema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Término de búsqueda (ej: 'Noticias Costa Rica hoy', 'Precio Bitcoin hoy')"}
+                "query": {"type": "string", "description": "Término de búsqueda"}
             },
             "required": ["query"]
         }
     },
+    # === HERRAMIENTAS DE SIEMPRE ===
     {
         "name": "get_calendar_events",
         "description": "Ver eventos del calendario.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "start_date": {"type": "string", "description": "Fecha YYYY-MM-DD"},
-                "end_date": {"type": "string", "description": "Fecha YYYY-MM-DD"}
+                "start_date": {"type": "string"},
+                "end_date": {"type": "string"}
             },
             "required": ["start_date", "end_date"]
         }
@@ -274,11 +325,15 @@ TOOLS = [
 # ============================================
 
 def execute_tool(tool_name: str, tool_input: dict, chat_id: int):
+    # 🗞️ NEWS DASHBOARD (NUEVO)
+    if tool_name == "get_news_dashboard":
+        return get_news_dashboard()
+        
     # 🌍 WEB SEARCH
-    if tool_name == "search_web":
+    elif tool_name == "search_web":
         return search_web_ddg(tool_input['query'])
     
-    # 📅 CALENDAR (FIXED DATES)
+    # 📅 CALENDAR
     elif tool_name == "get_calendar_events":
         return google_calendar.get_calendar_events(
             start_date=clean_date_iso(tool_input['start_date']),
@@ -403,17 +458,17 @@ async def process_message(update, context, text, is_voice=False):
 
         system_prompt = f"""{CLAUDETTE_CORE}
 === MEMORIA ===
-PERFIL ESTÁTICO: {USER_PROFILE}
-MEMORIA APRENDIDA: {mem_str}
+PERFIL: {USER_PROFILE}
+HECHOS APRENDIDOS: {mem_str}
 
 === CONTEXTO ===
-FECHA SISTEMA: {now.strftime("%A %d-%m-%Y %H:%M")} (Año simulado: 2026)
+FECHA: {now.strftime("%A %d-%m-%Y %H:%M")} (Año simulado: 2026)
 UBICACIÓN: {loc['name']}
 
-=== REGLAS NOTICIAS Y ACTUALIDAD ===
-1. Si el usuario pide NOTICIAS, PRECIOS o ACTUALIDAD, usa la herramienta 'search_web'.
-2. IMPORTANTE: Al usar 'search_web', ignora que es el año 2026. Busca términos como "Noticias hoy" o "Precio actual" para obtener datos reales de internet.
-3. Para la agenda personal, revisa SIEMPRE 'get_calendar_events' Y 'list_tasks'.
+=== REGLAS IMPORTANTES ===
+1. NOTICIAS: Si te piden "Noticias", "Titulares", "Qué pasa hoy" o "Resumen diario" -> USA EXCLUSIVAMENTE LA HERRAMIENTA `get_news_dashboard`. No uses búsqueda genérica.
+2. INVESTIGACIÓN: Si te piden profundizar en una noticia específica -> USA `search_web`.
+3. AGENDA: Revisa siempre `get_calendar_events` Y `list_tasks`.
 """
         messages = get_history(chat_id).copy()
         final_response = ""
@@ -443,7 +498,7 @@ UBICACIÓN: {loc['name']}
         # Output Handler
         if is_voice and elevenlabs_client:
             # Si tiene muchos números o tablas, enviar texto
-            if len(re.findall(r'\d+', final_response)) > 6:
+            if len(re.findall(r'\d+', final_response)) > 8:
                 await update.message.reply_text("📝 *Respuesta detallada:*\n\n" + final_response, parse_mode='Markdown')
             else:
                 await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="record_voice")
