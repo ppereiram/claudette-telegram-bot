@@ -31,7 +31,6 @@ TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY')
-# ID de la voz. Si no está en Render, usa default.
 ELEVENLABS_VOICE_ID = os.environ.get('ELEVENLABS_VOICE_ID', 'JBFqnCBsd6RMkjVDRZzb') 
 
 if not TELEGRAM_BOT_TOKEN or not ANTHROPIC_API_KEY:
@@ -55,20 +54,29 @@ DEFAULT_LOCATION = {"lat": 9.9281, "lng": -84.0907, "name": "San José, Costa Ri
 DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
 # ============================================
-# LOAD CLAUDETTE CORE (Always-Loaded)
+# LOAD CORE & MEMORY
 # ============================================
 
-def load_claudette_core():
-    """Load CLAUDETTE_CORE.md - always-loaded base system."""
+def load_file_content(filename, default_text=""):
+    """Helper to load markdown files safely."""
     try:
-        with open('prompts/CLAUDETTE_CORE.md', 'r', encoding='utf-8') as f:
-            return f.read()
-    except FileNotFoundError:
-        logger.error("⚠️ CLAUDETTE_CORE.md not found! Using fallback.")
-        return "Eres Claudette, asistente de Pablo."
+        # Intentar ruta prompts/ primero
+        path = f'prompts/{filename}'
+        if not os.path.exists(path):
+            path = filename # Intentar ruta raíz
+            
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                logger.info(f"📚 Loaded {filename}")
+                return f.read()
+    except Exception as e:
+        logger.error(f"⚠️ Error loading {filename}: {e}")
+    
+    return default_text
 
-# Load core at startup
-CLAUDETTE_CORE = load_claudette_core()
+# Cargar Core y Perfil al inicio
+CLAUDETTE_CORE = load_file_content('CLAUDETTE_CORE.md', "Eres Claudette, asistente de Pablo.")
+USER_PROFILE = load_file_content('user_profile.md', "") 
 
 # ============================================
 # TOOLS DEFINITION
@@ -241,7 +249,7 @@ TOOLS = [
     # Memory
     {
         "name": "save_user_fact",
-        "description": "Guardar información del usuario.",
+        "description": "Guardar información nueva sobre el usuario en la base de datos (aprender).",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -254,7 +262,7 @@ TOOLS = [
     },
     {
         "name": "get_user_fact",
-        "description": "Recuperar dato guardado.",
+        "description": "Recuperar dato guardado específicamente.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -269,7 +277,7 @@ TOOLS = [
     
     {
         "name": "read_knowledge_file",
-        "description": "Leer archivos del sistema Jarvis de modelos mentales. Usar cuando necesites profundidad analítica o metodología específica. Archivos disponibles: MODELS_DEEP.md (176 modelos especializados), FRAMEWORK.md (metodología paso-a-paso), ANTIPATTERNS.md (cuándo NO usar modelos), TEMPLATES.md (plantillas ejecutables).",
+        "description": "Leer archivos del sistema Jarvis. NO usar para user_profile (ya está cargado). Usar para modelos mentales.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -293,7 +301,7 @@ def execute_tool(tool_name: str, tool_input: dict, chat_id: int):
     
     # Calendar
     if tool_name == "get_calendar_events":
-        # CORREGIDO: Se llama get_calendar_events, no get_events
+        # === FIX: Nombre correcto de la función ===
         return google_calendar.get_calendar_events(
             start_date=tool_input['start_date'],
             end_date=tool_input['end_date']
@@ -391,7 +399,7 @@ def execute_tool(tool_name: str, tool_input: dict, chat_id: int):
             key=tool_input['key'],
             value=tool_input['value']
         )
-        return f"✅ Guardado: {tool_input['category']}/{tool_input['key']}"
+        return f"✅ Dato aprendido y guardado: {tool_input['category']}/{tool_input['key']}"
     
     elif tool_name == "get_user_fact":
         fact = get_fact(
@@ -399,21 +407,12 @@ def execute_tool(tool_name: str, tool_input: dict, chat_id: int):
             category=tool_input['category'],
             key=tool_input['key']
         )
-        return fact if fact else "No encontré ese dato."
+        return fact if fact else "No encontré ese dato específico."
     
     # === JARVIS SYSTEM ===
     elif tool_name == "read_knowledge_file":
         filename = tool_input['filename']
-        try:
-            filepath = f'prompts/{filename}'
-            with open(filepath, 'r', encoding='utf-8') as f:
-                content = f.read()
-            logger.info(f"📚 Loaded {filename}")
-            return content
-        except FileNotFoundError:
-            return f"Error: {filename} no encontrado en prompts/"
-        except Exception as e:
-            return f"Error leyendo {filename}: {str(e)}"
+        return load_file_content(filename, f"Error: {filename} no encontrado.")
     
     else:
         return f"Tool '{tool_name}' no implementado."
@@ -574,6 +573,18 @@ async def process_message(update: Update, context: ContextTypes.DEFAULT_TYPE, te
     add_to_history(chat_id, "user", text)
     
     try:
+        # 1. Recuperar memoria dinámica (base de datos)
+        try:
+            db_facts = get_all_facts()
+            if db_facts:
+                dynamic_memory = "\n".join([f"- {k}: {v}" for k, v in db_facts.items()])
+            else:
+                dynamic_memory = "Sin datos aprendidos aún."
+        except Exception as e:
+            logger.error(f"Error reading DB facts: {e}")
+            dynamic_memory = "Error accediendo a memoria."
+
+        # 2. Configurar contexto temporal
         tz = pytz.timezone('America/Costa_Rica')
         now = datetime.now(tz)
         today = now.strftime("%Y-%m-%d")
@@ -581,28 +592,28 @@ async def process_message(update: Update, context: ContextTypes.DEFAULT_TYPE, te
         tomorrow = (now + timedelta(days=1)).strftime("%Y-%m-%d")
         loc = get_user_location(chat_id)
         
-        # Build system prompt with CLAUDETTE_CORE
+        # 3. Construir System Prompt con MEMORIA PERSISTENTE
+        base_prompt = f"""{CLAUDETTE_CORE}
+
+=== PERFIL DE USUARIO (ESTÁTICO - user_profile.md) ===
+{USER_PROFILE}
+
+=== MEMORIA APRENDIDA (DINÁMICA - Base de Datos) ===
+{dynamic_memory}
+"""
+
         if mode == "profundo":
-            system_prompt = f"""{CLAUDETTE_CORE}
+            system_prompt = f"""{base_prompt}
 
 === CONTEXTO ACTUAL ===
 FECHA: {day_name} {today} (2026), {now.strftime("%H:%M")}
 UBICACIÓN: {loc.get('name', 'Costa Rica')} ({loc['lat']}, {loc['lng']})
 
 === MODO PROFUNDO ACTIVADO ===
-Tienes acceso a read_knowledge_file para cargar:
-- MODELS_DEEP.md cuando necesites modelos especializados (filosofía, trading, geopolítica, etc.)
-- FRAMEWORK.md cuando necesites metodología paso-a-paso rigurosa
-- ANTIPATTERNS.md cuando necesites validar uso apropiado de modelos
-- TEMPLATES.md cuando tengas problema tipo estándar (decisión, negocio, riesgo, ético, innovación)
-
-RECUERDA:
-- Los 40 modelos CORE ya están cargados en tu prompt
-- Para análisis Nivel 4-5, lee MODELS_DEEP.md + FRAMEWORK.md
-- NUNCA preguntes "¿quieres que use X?" - aplica modelos automáticamente
-- Integra modelos en narrativa natural, NO bullets académicos"""
+Tienes acceso a read_knowledge_file para cargar modelos especializados.
+Recuerda: Integra modelos en narrativa natural, NO bullets académicos."""
         else:
-            system_prompt = f"""{CLAUDETTE_CORE}
+            system_prompt = f"""{base_prompt}
 
 === CONTEXTO ACTUAL ===
 FECHA: {day_name} {today} (2026), {now.strftime("%H:%M")}
@@ -610,21 +621,11 @@ MAÑANA: {tomorrow}
 UBICACIÓN: {loc.get('name', 'Costa Rica')} ({loc['lat']}, {loc['lng']})
 
 === MODO NORMAL (ASISTENTE RÁPIDO) ===
-HERRAMIENTAS disponibles:
-- Calendario, Email, Tareas, Drive
-- Lugares cercanos (restaurantes, ferreterías, etc.)
-- Llamadas telefónicas
-
 INSTRUCCIONES:
-1. Sé CONCISO - respuestas breves y útiles
-2. Usa herramientas proactivamente
-3. Para lugares: search_nearby_places
-4. Para llamadas: make_phone_call con número
-5. Incluye links de Drive y Maps
-6. Año 2026 para todas las fechas
-
-Los 40 modelos mentales CORE están disponibles - úsalos cuando detectes decisiones/dilemas.
-Si Pablo pide análisis profundo, sugiere /profundo."""
+1. Sé CONCISO.
+2. Usa herramientas proactivamente.
+3. Para buscar lugares usa search_nearby_places.
+"""
 
         messages = get_history(chat_id).copy()
         
@@ -672,20 +673,17 @@ Si Pablo pide análisis profundo, sugiere /profundo."""
         add_to_history(chat_id, "assistant", final_response)
         
         # ===========================================
-        # RESPUESTA AL USUARIO (Lógica Smart Voice)
+        # RESPUESTA AL USUARIO
         # ===========================================
         
         # Caso 1: Usuario usó VOZ y tenemos ElevenLabs activo
         if is_voice and elevenlabs_client:
-            # Si hay demasiados números (ej: precios, coordenadas), mejor mandar texto para leer
             if has_many_numbers(final_response):
                 await update.message.reply_text("📝 *Te envío texto porque hay muchos datos numéricos:*\n\n" + final_response, parse_mode='Markdown')
             else:
                 try:
-                    # Notificar acción de grabar voz
                     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="record_voice")
                     
-                    # Generar audio
                     audio_stream = elevenlabs_client.text_to_speech.convert(
                         text=final_response,
                         voice_id=ELEVENLABS_VOICE_ID,
@@ -693,16 +691,14 @@ Si Pablo pide análisis profundo, sugiere /profundo."""
                         output_format="mp3_44100_128"
                     )
                     
-                    # Convertir a bytes y enviar SOLO el audio
                     audio_bytes = b"".join(audio_stream)
                     await update.message.reply_voice(voice=audio_bytes)
                     
                 except Exception as e:
                     logger.error(f"❌ Error generando voz ElevenLabs: {e}")
-                    # Fallback: Si falla la generación de voz, enviamos texto para no dejar sin respuesta
                     await update.message.reply_text(final_response, parse_mode='Markdown')
 
-        # Caso 2: Usuario escribió TEXTO o no hay ElevenLabs
+        # Caso 2: Usuario escribió TEXTO
         else:
             await update.message.reply_text(final_response, parse_mode='Markdown')
         
