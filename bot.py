@@ -24,12 +24,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Environment variables
+# ============================================
+# ENVIRONMENT VARIABLES
+# ============================================
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY')
-# Si no pusiste el ID en Render, usará el default. Asegúrate de poner el ID de Paloma en Render.
+# ID de la voz (Paloma u otra). Si no está en Render, usa un default.
 ELEVENLABS_VOICE_ID = os.environ.get('ELEVENLABS_VOICE_ID', 'JBFqnCBsd6RMkjVDRZzb') 
 
 if not TELEGRAM_BOT_TOKEN or not ANTHROPIC_API_KEY:
@@ -298,10 +300,10 @@ def execute_tool(tool_name: str, tool_input: dict, chat_id: int):
     
     elif tool_name == "create_calendar_event":
         return google_calendar.create_calendar_event(
-    summary=tool_input.get('summary'),
-    start_time=tool_input.get('start_time'),
-    end_time=tool_input.get('end_time'),
-    location=tool_input.get('location')
+            summary=tool_input.get('summary'),
+            start_time=tool_input.get('start_time'),
+            end_time=tool_input.get('end_time'),
+            location=tool_input.get('location')
         )
     
     # Tasks
@@ -685,11 +687,12 @@ Si Pablo pide análisis profundo, sugiere /profundo."""
                     # Notificar que está "grabando audio"
                     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="record_voice")
                     
-                    # Generar el audio usando el método stream (más rápido)
-                    audio_stream = elevenlabs_client.generate(
+                    # Generar el audio usando el método nuevo (.convert)
+                    audio_stream = elevenlabs_client.text_to_speech.convert(
                         text=final_response,
-                        voice=ELEVENLABS_VOICE_ID,  # Usa la variable global que definimos arriba
-                        model="eleven_multilingual_v2"
+                        voice_id=ELEVENLABS_VOICE_ID,
+                        model_id="eleven_multilingual_v2",
+                        output_format="mp3_44100_128"
                     )
                     
                     # Convertir el stream a bytes para Telegram
