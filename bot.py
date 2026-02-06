@@ -29,6 +29,8 @@ TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY')
+# Si no pusiste el ID en Render, usará el default. Asegúrate de poner el ID de Paloma en Render.
+ELEVENLABS_VOICE_ID = os.environ.get('ELEVENLABS_VOICE_ID', 'JBFqnCBsd6RMkjVDRZzb') 
 
 if not TELEGRAM_BOT_TOKEN or not ANTHROPIC_API_KEY:
     raise ValueError("Missing required environment variables")
@@ -466,34 +468,6 @@ async def transcribe_voice(audio_path: str) -> str:
         logger.error(f"Transcription error: {e}")
         return ""
 
-async def text_to_speech(text: str) -> str:
-    """Convert text to speech using ElevenLabs."""
-    if not elevenlabs_client:
-        return None
-    
-    try:
-        # Generate audio
-        audio = elevenlabs_client.generate(
-            text=text,
-            voice="Rachel",
-            model="eleven_multilingual_v2"
-        )
-        
-        # Save to temp file
-        temp = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
-        
-        # Write audio chunks
-        for chunk in audio:
-            if chunk:
-                temp.write(chunk)
-        
-        temp.close()
-        return temp.name
-        
-    except Exception as e:
-        logger.error(f"TTS error: {e}")
-        return None
-
 def has_many_numbers(text: str) -> bool:
     """Check if text has many numbers (don't read those aloud)."""
     numbers = re.findall(r'\d+', text)
@@ -694,46 +668,39 @@ Si Pablo pide análisis profundo, sugiere /profundo."""
         
         add_to_history(chat_id, "assistant", final_response)
         
-        # Send response
-        if is_voice and elevenlabs_client and not has_many_numbers(final_response):
-            voice_file = await text_to_speech(final_response)
-            if voice_file:
-                await update.message.reply_voice(voice=open(voice_file, 'rb'))
-                os.unlink(voice_file)
-            else:
-                await update.message.reply_text(final_response, parse_mode='Markdown')
-        else:
-            if is_voice and has_many_numbers(final_response):
-                await update.message.reply_text("📝 *Te envío esto por escrito porque tiene datos numéricos:*\n\n" + final_response, parse_mode='Markdown')
-            else:
-                # 1. Enviar respuesta de TEXTO (siempre útil)
-    await update.message.reply_text(final_response, parse_mode='Markdown')
+        # ===========================================
+        # RESPUESTA AL USUARIO (Texto + Audio)
+        # ===========================================
+        
+        # 1. SIEMPRE enviar respuesta de TEXTO
+        await update.message.reply_text(final_response, parse_mode='Markdown')
 
-    # 2. Generar y enviar AUDIO (solo si el usuario usó voz y tenemos ElevenLabs activado)
-    if is_voice and elevenlabs_client:
-        try:
-            # Notificar que está grabando audio (acción 'record_voice')
-            await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="record_voice")
-            
-            # Generar audio
-            voice_id = os.environ.get('ELEVENLABS_VOICE_ID', 'JBFqnCBsd6RMkjVDRZzb') # Default ID
-            
-            # Generar el audio (devuelve un generador)
-            audio_stream = elevenlabs_client.generate(
-                text=final_response,
-                voice=voice_id,
-                model="eleven_multilingual_v2" # Mejor para español
-            )
-            
-            # Convertir el stream a bytes para Telegram
-            audio_bytes = b"".join(audio_stream)
-            
-            # Enviar la nota de voz
-            await update.message.reply_voice(voice=audio_bytes)
-            
-        except Exception as e:
-            logger.error(f"❌ Error generando voz ElevenLabs: {e}")
-            # No enviamos error al usuario para no molestar, solo log
+        # 2. SI FUE VOZ y tenemos ElevenLabs activado, enviar AUDIO
+        if is_voice and elevenlabs_client:
+            # Si hay demasiados números, mejor no leerlo (es molesto)
+            if has_many_numbers(final_response):
+                await update.message.reply_text("ℹ️ (Audio omitido porque hay demasiados datos numéricos)")
+            else:
+                try:
+                    # Notificar que está "grabando audio"
+                    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="record_voice")
+                    
+                    # Generar el audio usando el método stream (más rápido)
+                    audio_stream = elevenlabs_client.generate(
+                        text=final_response,
+                        voice=ELEVENLABS_VOICE_ID,  # Usa la variable global que definimos arriba
+                        model="eleven_multilingual_v2"
+                    )
+                    
+                    # Convertir el stream a bytes para Telegram
+                    audio_bytes = b"".join(audio_stream)
+                    
+                    # Enviar la nota de voz
+                    await update.message.reply_voice(voice=audio_bytes)
+                    
+                except Exception as e:
+                    logger.error(f"❌ Error generando voz ElevenLabs: {e}")
+                    # No enviamos error al usuario, ya recibió el texto.
         
     except Exception as e:
         logger.error(f"❌ Error: {e}", exc_info=True)
