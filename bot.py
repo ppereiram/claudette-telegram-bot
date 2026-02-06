@@ -15,7 +15,7 @@ import google_places
 from memory_manager import setup_database, save_fact, get_fact, get_all_facts
 from openai import OpenAI
 from elevenlabs.client import ElevenLabs
-from duckduckgo_search import DDGS  # <--- NUEVA LIBRERÍA DE BÚSQUEDA
+from duckduckgo_search import DDGS
 import tempfile
 
 # Configure logging
@@ -53,14 +53,13 @@ DEFAULT_LOCATION = {"lat": 9.9281, "lng": -84.0907, "name": "San José, Costa Ri
 DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
 # ============================================
-# LOAD CORE & MEMORY
+# LOAD FILES
 # ============================================
 
 def load_file_content(filename, default_text=""):
     try:
         path = f'prompts/{filename}'
-        if not os.path.exists(path):
-            path = filename
+        if not os.path.exists(path): path = filename
         if os.path.exists(path):
             with open(path, 'r', encoding='utf-8') as f:
                 logger.info(f"📚 Loaded {filename}")
@@ -73,60 +72,68 @@ CLAUDETTE_CORE = load_file_content('CLAUDETTE_CORE.md', "Eres Claudette, asisten
 USER_PROFILE = load_file_content('user_profile.md', "") 
 
 # ============================================
-# SEARCH HELPER (DuckDuckGo)
+# HELPERS (Dates & Search)
 # ============================================
+
+def clean_date_iso(date_str, is_end=False):
+    """Google Calendar exige formato ISO con zona horaria (RFC3339)."""
+    if 'T' not in date_str:
+        # Si es solo fecha YYYY-MM-DD, agregar hora y zona horaria CR (-06:00)
+        time_part = "T23:59:59" if is_end else "T00:00:00"
+        return f"{date_str}{time_part}-06:00"
+    return date_str
 
 def search_web_ddg(query: str, max_results=5):
-    """Realiza búsquedas en internet usando DuckDuckGo."""
+    """Búsqueda en web con manejo de errores."""
     try:
+        # Forzar búsqueda de "hoy" si la query tiene fecha futura (evitar error 2026)
+        if "2026" in query:
+            query = query.replace("2026", "").strip()
+            query += " actual hoy"
+            
         results = []
         with DDGS() as ddgs:
-            # Usamos 'text' para búsqueda general/noticias recientes
             search_gen = ddgs.text(query, region='wt-wt', safesearch='off', timelimit='d', max_results=max_results)
             for r in search_gen:
-                results.append(f"Titulo: {r['title']}\nLink: {r['href']}\nResumen: {r['body']}\n")
+                results.append(f"📰 {r['title']}\n🔗 {r['href']}\n📝 {r['body']}\n")
         
-        if not results:
-            return "No se encontraron resultados recientes."
-        return "\n---\n".join(results)
+        if not results: return "No encontré noticias recientes."
+        return "\n".join(results)
     except Exception as e:
-        logger.error(f"Error en DuckDuckGo: {e}")
-        return f"Error buscando en la web: {str(e)}"
+        logger.error(f"Search Error: {e}")
+        return f"Error buscando: {str(e)}"
 
 # ============================================
-# TOOLS DEFINITION
+# TOOLS
 # ============================================
 
 TOOLS = [
-    # === CAPA 0: WEB & NOTICIAS (NUEVO) ===
     {
         "name": "search_web",
-        "description": "Buscar noticias actuales, hechos recientes o información en internet. Úsalo cuando te pregunten 'qué pasó hoy', 'noticias', 'precio de X', o información que no está en tu base de datos.",
+        "description": "Buscar noticias y actualidad. Si preguntan por 'noticias de hoy', usa esto. Ignora el año 2026 del sistema, busca información del 'mundo real' actual.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Término de búsqueda (ej: 'Noticias internacionales hoy', 'Precio Bitcoin hoy')"}
+                "query": {"type": "string", "description": "Término de búsqueda (ej: 'Noticias Costa Rica hoy', 'Precio Bitcoin hoy')"}
             },
             "required": ["query"]
         }
     },
-
-    # === CAPA 1: Asistente Diario ===
     {
         "name": "get_calendar_events",
         "description": "Ver eventos del calendario.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "start_date": {"type": "string"},
-                "end_date": {"type": "string"}
+                "start_date": {"type": "string", "description": "Fecha YYYY-MM-DD"},
+                "end_date": {"type": "string", "description": "Fecha YYYY-MM-DD"}
             },
             "required": ["start_date", "end_date"]
         }
     },
     {
         "name": "create_calendar_event",
-        "description": "Crear evento en calendario.",
+        "description": "Crear evento.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -140,19 +147,16 @@ TOOLS = [
     },
     {
         "name": "list_tasks",
-        "description": "Listar tareas pendientes.",
+        "description": "Listar tareas.",
         "input_schema": {
             "type": "object",
-            "properties": {
-                "show_completed": {"type": "boolean"},
-                "max_results": {"type": "integer"}
-            },
+            "properties": {"show_completed": {"type": "boolean"}},
             "required": []
         }
     },
     {
         "name": "create_task",
-        "description": "Crear nueva tarea.",
+        "description": "Crear tarea.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -165,7 +169,7 @@ TOOLS = [
     },
     {
         "name": "complete_task",
-        "description": "Completar tarea por ID.",
+        "description": "Completar tarea.",
         "input_schema": {
             "type": "object",
             "properties": {"task_id": {"type": "string"}},
@@ -174,7 +178,7 @@ TOOLS = [
     },
     {
         "name": "delete_task",
-        "description": "Eliminar tarea.",
+        "description": "Borrar tarea.",
         "input_schema": {
             "type": "object",
             "properties": {"task_id": {"type": "string"}},
@@ -186,16 +190,13 @@ TOOLS = [
         "description": "Buscar emails.",
         "input_schema": {
             "type": "object",
-            "properties": {
-                "query": {"type": "string"},
-                "max_results": {"type": "integer"}
-            },
+            "properties": {"query": {"type": "string"}},
             "required": ["query"]
         }
     },
     {
         "name": "read_email",
-        "description": "Leer email completo por ID.",
+        "description": "Leer email.",
         "input_schema": {
             "type": "object",
             "properties": {"email_id": {"type": "string"}},
@@ -210,27 +211,23 @@ TOOLS = [
             "properties": {
                 "to": {"type": "string"},
                 "subject": {"type": "string"},
-                "body": {"type": "string"},
-                "reply_to_id": {"type": "string"}
+                "body": {"type": "string"}
             },
             "required": ["to", "subject", "body"]
         }
     },
     {
         "name": "search_drive",
-        "description": "Buscar archivos en Drive.",
+        "description": "Buscar archivos.",
         "input_schema": {
             "type": "object",
-            "properties": {
-                "query": {"type": "string"},
-                "max_results": {"type": "integer"}
-            },
+            "properties": {"query": {"type": "string"}},
             "required": ["query"]
         }
     },
     {
         "name": "list_recent_files",
-        "description": "Archivos recientes en Drive.",
+        "description": "Archivos recientes.",
         "input_schema": {
             "type": "object",
             "properties": {"max_results": {"type": "integer"}},
@@ -239,31 +236,16 @@ TOOLS = [
     },
     {
         "name": "search_nearby_places",
-        "description": "Buscar lugares cercanos.",
+        "description": "Buscar lugares.",
         "input_schema": {
             "type": "object",
-            "properties": {
-                "query": {"type": "string"},
-                "radius": {"type": "integer"}
-            },
+            "properties": {"query": {"type": "string"}},
             "required": ["query"]
         }
     },
     {
-        "name": "make_phone_call",
-        "description": "Generar link de llamada.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "phone_number": {"type": "string"},
-                "contact_name": {"type": "string"}
-            },
-            "required": ["phone_number"]
-        }
-    },
-    {
         "name": "save_user_fact",
-        "description": "Aprender/Guardar dato nuevo sobre el usuario.",
+        "description": "Aprender dato del usuario.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -275,27 +257,12 @@ TOOLS = [
         }
     },
     {
-        "name": "get_user_fact",
-        "description": "Recuperar dato guardado.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "category": {"type": "string"},
-                "key": {"type": "string"}
-            },
-            "required": ["category", "key"]
-        }
-    },
-    {
         "name": "read_knowledge_file",
-        "description": "Leer modelos mentales (MODELS_DEEP.md, etc).",
+        "description": "Leer modelos mentales (Jarvis).",
         "input_schema": {
             "type": "object",
             "properties": {
-                "filename": {
-                    "type": "string",
-                    "enum": ["MODELS_DEEP.md", "FRAMEWORK.md", "ANTIPATTERNS.md", "TEMPLATES.md"]
-                }
+                "filename": {"type": "string", "enum": ["MODELS_DEEP.md", "FRAMEWORK.md", "ANTIPATTERNS.md", "TEMPLATES.md"]}
             },
             "required": ["filename"]
         }
@@ -303,21 +270,19 @@ TOOLS = [
 ]
 
 # ============================================
-# TOOL EXECUTION
+# EXECUTION LOGIC
 # ============================================
 
 def execute_tool(tool_name: str, tool_input: dict, chat_id: int):
-    """Execute tool and return result."""
-    
-    # === NUEVA HERRAMIENTA DE BÚSQUEDA ===
+    # 🌍 WEB SEARCH
     if tool_name == "search_web":
         return search_web_ddg(tool_input['query'])
     
-    # Calendar
+    # 📅 CALENDAR (FIXED DATES)
     elif tool_name == "get_calendar_events":
         return google_calendar.get_calendar_events(
-            start_date=tool_input['start_date'],
-            end_date=tool_input['end_date']
+            start_date=clean_date_iso(tool_input['start_date']),
+            end_date=clean_date_iso(tool_input['end_date'], is_end=True)
         )
     elif tool_name == "create_calendar_event":
         return google_calendar.create_calendar_event(
@@ -327,12 +292,9 @@ def execute_tool(tool_name: str, tool_input: dict, chat_id: int):
             location=tool_input.get('location')
         )
     
-    # Tasks
+    # ✅ TASKS
     elif tool_name == "list_tasks":
-        return google_tasks.list_tasks(
-            show_completed=tool_input.get('show_completed', False),
-            max_results=tool_input.get('max_results', 10)
-        )
+        return google_tasks.list_tasks(show_completed=tool_input.get('show_completed', False))
     elif tool_name == "create_task":
         return google_tasks.create_task(
             title=tool_input['title'],
@@ -341,73 +303,48 @@ def execute_tool(tool_name: str, tool_input: dict, chat_id: int):
         )
     elif tool_name == "complete_task":
         return google_tasks.complete_task(tool_input['task_id'])
-    elif tool_name == "delete_task":
-        return google_tasks.delete_task(tool_input['task_id'])
     
-    # Email
+    # 📧 EMAIL
     elif tool_name == "search_emails":
-        return gmail_service.search_emails(
-            query=tool_input['query'],
-            max_results=tool_input.get('max_results', 10)
-        )
+        return gmail_service.search_emails(query=tool_input['query'])
     elif tool_name == "read_email":
         return gmail_service.read_email(tool_input['email_id'])
     elif tool_name == "send_email":
         return gmail_service.send_email(
-            to=tool_input['to'],
-            subject=tool_input['subject'],
-            body=tool_input['body'],
-            reply_to_id=tool_input.get('reply_to_id')
+            to=tool_input['to'], 
+            subject=tool_input['subject'], 
+            body=tool_input['body']
         )
     
-    # Drive
+    # 📁 DRIVE
     elif tool_name == "search_drive":
-        return google_drive.search_files(
-            query=tool_input['query'],
-            max_results=tool_input.get('max_results', 10)
-        )
+        return google_drive.search_files(query=tool_input['query'])
     elif tool_name == "list_recent_files":
-        return google_drive.list_recent_files(
-            max_results=tool_input.get('max_results', 10)
-        )
+        return google_drive.list_recent_files()
     
-    # Places
+    # 📍 PLACES
     elif tool_name == "search_nearby_places":
         loc = get_user_location(chat_id)
         result = google_places.search_nearby_places(
             query=tool_input['query'],
             latitude=loc['lat'],
-            longitude=loc['lng'],
-            radius=tool_input.get('radius', 2000)
+            longitude=loc['lng']
         )
         if result.get('success') and result.get('places'):
             return google_places.format_places_response(result['places'])
-        elif result.get('success'):
-            return result.get('message', 'No encontré lugares.')
-        else:
-            return f"Error: {result.get('error')}"
+        return "No encontré lugares."
     
-    # Phone
-    elif tool_name == "make_phone_call":
-        phone = tool_input['phone_number']
-        return f"📞 Link: [Llamar]({f'tel:{phone}'})"
-    
-    # Memory
+    # 🧠 MEMORY & JARVIS
     elif tool_name == "save_user_fact":
         save_fact(chat_id, tool_input['category'], tool_input['key'], tool_input['value'])
-        return f"✅ Guardado: {tool_input['key']}"
-    elif tool_name == "get_user_fact":
-        return get_fact(chat_id, tool_input['category'], tool_input['key']) or "No encontrado."
-    
-    # Jarvis
+        return f"✅ Aprendido: {tool_input['key']}"
     elif tool_name == "read_knowledge_file":
         return load_file_content(tool_input['filename'], "No encontrado.")
     
-    else:
-        return f"Tool '{tool_name}' no existe."
+    return "Tool desconocido."
 
 # ============================================
-# LOGIC
+# BOT HANDLERS
 # ============================================
 
 def get_history(chat_id):
@@ -420,8 +357,6 @@ def add_to_history(chat_id, role, content):
     if len(hist) > MAX_HISTORY_LENGTH * 2: conversation_history[chat_id] = hist[-(MAX_HISTORY_LENGTH * 2):]
 
 def clear_history(chat_id): conversation_history[chat_id] = []
-def get_mode(chat_id): return user_modes.get(chat_id, "normal")
-def set_mode(chat_id, mode): user_modes[chat_id] = mode
 def get_user_location(chat_id): return user_locations.get(chat_id, DEFAULT_LOCATION.copy())
 def set_user_location(chat_id, lat, lng, name): user_locations[chat_id] = {"lat": lat, "lng": lng, "name": name}
 
@@ -432,90 +367,59 @@ async def transcribe_voice(audio_path):
             return openai_client.audio.transcriptions.create(model="whisper-1", file=audio, language="es").text
     except Exception: return ""
 
-def has_many_numbers(text): return len(re.findall(r'\d+', text)) > 5
-
-# ============================================
-# HANDLERS
-# ============================================
-
-async def start(update, context):
-    await update.message.reply_text('👋 Soy Claudette. Comandos: /profundo, /normal, /clear, /ubicacion.')
-
-async def clear_cmd(update, context):
+async def start(update, context): await update.message.reply_text('👋 Soy Claudette. Lista para ayudar.')
+async def clear_cmd(update, context): 
     clear_history(update.message.chat_id)
-    await update.message.reply_text('✅ Memoria borrada.')
-
-async def profundo_cmd(update, context):
-    set_mode(update.message.chat_id, "profundo")
-    await update.message.reply_text('🧠 Modo Profundo (Jarvis) activado.')
-
-async def normal_cmd(update, context):
-    set_mode(update.message.chat_id, "normal")
-    await update.message.reply_text('⚡ Modo Normal activado.')
-
-async def ubicacion_cmd(update, context):
-    loc = get_user_location(update.message.chat_id)
-    await update.message.reply_text(f'📍 Ubicación: {loc.get("name")}')
-
-async def handle_location(update, context):
-    loc = update.message.location
-    set_user_location(update.message.chat_id, loc.latitude, loc.longitude, "Ubicación actual")
-    await update.message.reply_text('✅ Ubicación actualizada.')
+    await update.message.reply_text('✅ Memoria limpia.')
 
 async def handle_voice(update, context):
-    if not openai_client: return await update.message.reply_text("Voz no disponible.")
+    if not openai_client: return await update.message.reply_text("Voz no configurada.")
     try:
         voice = await update.message.voice.get_file()
         temp = tempfile.NamedTemporaryFile(delete=False, suffix='.ogg')
         await voice.download_to_drive(temp.name)
         transcript = await transcribe_voice(temp.name)
         os.unlink(temp.name)
-        if not transcript: return await update.message.reply_text("No escuché nada.")
-        logger.info(f"🎤 Voice: {transcript}")
+        if not transcript: return await update.message.reply_text("No entendí el audio.")
         await process_message(update, context, transcript, is_voice=True)
     except Exception as e:
-        logger.error(e)
-        await update.message.reply_text("Error de voz.")
+        logger.error(f"Voice error: {e}")
+        await update.message.reply_text("Error de audio.")
 
 async def process_message(update, context, text, is_voice=False):
     chat_id = update.message.chat_id
-    mode = get_mode(chat_id)
-    logger.info(f"💬 {text}")
     add_to_history(chat_id, "user", text)
-
+    
     try:
-        # Memoria Dinámica
+        # Contexto Dinámico
         try:
             db_facts = get_all_facts()
-            dynamic_mem = "\n".join([f"- {k}: {v}" for k, v in db_facts.items()]) if db_facts else "Sin datos."
-        except: dynamic_mem = "Error memoria."
+            mem_str = "\n".join([f"- {k}: {v}" for k, v in db_facts.items()]) if db_facts else "Vacío"
+        except: mem_str = "Error BD"
 
-        # Contexto
         tz = pytz.timezone('America/Costa_Rica')
         now = datetime.now(tz)
         loc = get_user_location(chat_id)
-        
+
         system_prompt = f"""{CLAUDETTE_CORE}
 === MEMORIA ===
-PERFIL: {USER_PROFILE}
-APRENDIDO: {dynamic_mem}
+PERFIL ESTÁTICO: {USER_PROFILE}
+MEMORIA APRENDIDA: {mem_str}
 
 === CONTEXTO ===
-FECHA: {now.strftime("%A %d-%m-%Y %H:%M")}
-UBICACIÓN: {loc['name']} ({loc['lat']}, {loc['lng']})
-MODO: {mode.upper()}
+FECHA SISTEMA: {now.strftime("%A %d-%m-%Y %H:%M")} (Año simulado: 2026)
+UBICACIÓN: {loc['name']}
 
-INSTRUCCIONES ADICIONALES:
-1. Si te piden NOTICIAS o ACTUALIDAD, usa la herramienta 'search_web'.
-2. Si te piden RESUMEN, lee los resultados de la búsqueda y sintetiza.
-3. Si te piden ANÁLISIS PROFUNDO de una noticia, usa 'search_web' + tus modelos mentales.
-4. Para agenda, revisa SIEMPRE 'get_calendar_events' Y 'list_tasks'.
+=== REGLAS NOTICIAS Y ACTUALIDAD ===
+1. Si el usuario pide NOTICIAS, PRECIOS o ACTUALIDAD, usa la herramienta 'search_web'.
+2. IMPORTANTE: Al usar 'search_web', ignora que es el año 2026. Busca términos como "Noticias hoy" o "Precio actual" para obtener datos reales de internet.
+3. Para la agenda personal, revisa SIEMPRE 'get_calendar_events' Y 'list_tasks'.
 """
         messages = get_history(chat_id).copy()
         final_response = ""
 
-        # Thinking Loop
-        for i in range(5):
+        # Thinking Loop (Max 5 pasos)
+        for _ in range(5):
             response = client.messages.create(
                 model=DEFAULT_MODEL, max_tokens=4096, system=system_prompt, tools=TOOLS, messages=messages
             )
@@ -536,24 +440,26 @@ INSTRUCCIONES ADICIONALES:
         if not final_response: final_response = "✅ Listo."
         add_to_history(chat_id, "assistant", final_response)
 
-        # Respuesta (Voz/Texto)
+        # Output Handler
         if is_voice and elevenlabs_client:
-            if has_many_numbers(final_response):
-                await update.message.reply_text("📝 *Texto (datos complejos):*\n\n" + final_response, parse_mode='Markdown')
+            # Si tiene muchos números o tablas, enviar texto
+            if len(re.findall(r'\d+', final_response)) > 6:
+                await update.message.reply_text("📝 *Respuesta detallada:*\n\n" + final_response, parse_mode='Markdown')
             else:
+                await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="record_voice")
                 try:
-                    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="record_voice")
                     audio = elevenlabs_client.text_to_speech.convert(
                         text=final_response, voice_id=ELEVENLABS_VOICE_ID, model_id="eleven_multilingual_v2", output_format="mp3_44100_128"
                     )
                     await update.message.reply_voice(voice=b"".join(audio))
-                except: await update.message.reply_text(final_response, parse_mode='Markdown')
+                except Exception:
+                    await update.message.reply_text(final_response, parse_mode='Markdown')
         else:
             await update.message.reply_text(final_response, parse_mode='Markdown')
 
     except Exception as e:
         logger.error(f"Error: {e}")
-        await update.message.reply_text("Ocurrió un error procesando tu mensaje.")
+        await update.message.reply_text("Ocurrió un error inesperado.")
 
 async def handle_text(update, context):
     await process_message(update, context, update.message.text, is_voice=False)
@@ -563,13 +469,9 @@ def main():
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("clear", clear_cmd))
-    app.add_handler(CommandHandler("profundo", profundo_cmd))
-    app.add_handler(CommandHandler("normal", normal_cmd))
-    app.add_handler(CommandHandler("ubicacion", ubicacion_cmd))
-    app.add_handler(MessageHandler(filters.LOCATION, handle_location))
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-    logger.info("✅ Claudette lista.")
+    logger.info("✅ Claudette Online")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
