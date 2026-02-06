@@ -81,9 +81,11 @@ def create_calendar_event(summary, start_time, end_time, location=None):
             'summary': summary,
             'start': {
                 'dateTime': start_time,
+                'timeZone': 'America/Costa_Rica',
             },
             'end': {
                 'dateTime': end_time,
+                'timeZone': 'America/Costa_Rica',
             },
         }
         
