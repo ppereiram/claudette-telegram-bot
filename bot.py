@@ -82,7 +82,7 @@ def clean_date_iso(date_str, is_end=False):
         return f"{date_str}{time_part}-06:00"
     return date_str
 
-def search_web_ddg(query: str, max_results=4):
+def search_web_ddg(query: str, max_results=5):
     """Búsqueda general en la web."""
     try:
         if "2026" in query: query = query.replace("2026", "").strip()
@@ -103,20 +103,18 @@ def get_news_dashboard():
     
     try:
         with DDGS() as ddgs:
-            # 1. Costa Rica - La Nación (Búsqueda específica en News)
+            # 1. Costa Rica - La Nación
             try:
-                # region='cr-cr' fuerza noticias locales
                 cr_news = ddgs.news(keywords="Costa Rica La Nación", region='cr-cr', safesearch='off', max_results=4)
                 if cr_news:
                     summary += "🇨🇷 **COSTA RICA (La Nación & Locales):**\n"
                     for r in cr_news:
-                        # r keys: date, title, body, url, image, source
                         summary += f"• [{r['title']}]({r['url']}) - _{r['source']}_\n"
                     summary += "\n"
             except Exception as e:
                 logger.error(f"Error Nacion: {e}")
 
-            # 2. CNN en Español (Internacional Latino)
+            # 2. CNN en Español
             try:
                 cnn_news = ddgs.news(keywords="CNN en Español últimas noticias", region='wt-wt', safesearch='off', max_results=3)
                 if cnn_news:
@@ -127,7 +125,7 @@ def get_news_dashboard():
             except Exception as e:
                 logger.error(f"Error CNN: {e}")
 
-            # 3. Reuters (Global / Finanzas)
+            # 3. Reuters
             try:
                 reu_news = ddgs.news(keywords="Reuters World News", region='us-en', safesearch='off', max_results=3)
                 if reu_news:
@@ -140,9 +138,8 @@ def get_news_dashboard():
     except Exception as e:
         return f"Error generando dashboard: {str(e)}"
     
-    if len(summary) < 60: # Si fallaron todas
+    if len(summary) < 60: 
         return "⚠️ No pude conectar con los servicios de noticias en este momento."
-        
     return summary
 
 # ============================================
@@ -150,20 +147,14 @@ def get_news_dashboard():
 # ============================================
 
 TOOLS = [
-    # === HERRAMIENTA NUEVA: NEWS DASHBOARD ===
     {
         "name": "get_news_dashboard",
-        "description": "Obtener el resumen ejecutivo de titulares de hoy (La Nación, CNN, Reuters). Úsalo para 'noticias', 'resumen del día', 'titulares'.",
-        "input_schema": {
-            "type": "object",
-            "properties": {},
-            "required": []
-        }
+        "description": "Resumen ejecutivo de titulares (La Nación, CNN, Reuters).",
+        "input_schema": {"type": "object", "properties": {}, "required": []}
     },
-    # === HERRAMIENTA EXISTENTE: BÚSQUEDA GENERAL ===
     {
         "name": "search_web",
-        "description": "Búsqueda libre. Úsalo para profundizar en un tema específico (ej: 'precio dólar hoy', 'detalle accidente X').",
+        "description": "Búsqueda libre en Google/Web. Úsalo SIEMPRE para: 1) Cultura pop, cine, farándula. 2) Investigar temas específicos. 3) Verificar datos 'triviales' que no están en tu memoria.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -172,16 +163,12 @@ TOOLS = [
             "required": ["query"]
         }
     },
-    # === HERRAMIENTAS DE SIEMPRE ===
     {
         "name": "get_calendar_events",
         "description": "Ver eventos del calendario.",
         "input_schema": {
             "type": "object",
-            "properties": {
-                "start_date": {"type": "string"},
-                "end_date": {"type": "string"}
-            },
+            "properties": {"start_date": {"type": "string"}, "end_date": {"type": "string"}},
             "required": ["start_date", "end_date"]
         }
     },
@@ -190,123 +177,74 @@ TOOLS = [
         "description": "Crear evento.",
         "input_schema": {
             "type": "object",
-            "properties": {
-                "summary": {"type": "string"},
-                "start_time": {"type": "string"},
-                "end_time": {"type": "string"},
-                "location": {"type": "string"}
-            },
+            "properties": {"summary": {"type": "string"}, "start_time": {"type": "string"}, "end_time": {"type": "string"}, "location": {"type": "string"}},
             "required": ["summary", "start_time", "end_time"]
         }
     },
     {
         "name": "list_tasks",
         "description": "Listar tareas.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"show_completed": {"type": "boolean"}},
-            "required": []
-        }
+        "input_schema": {"type": "object", "properties": {"show_completed": {"type": "boolean"}}, "required": []}
     },
     {
         "name": "create_task",
         "description": "Crear tarea.",
         "input_schema": {
             "type": "object",
-            "properties": {
-                "title": {"type": "string"},
-                "notes": {"type": "string"},
-                "due_date": {"type": "string"}
-            },
+            "properties": {"title": {"type": "string"}, "notes": {"type": "string"}, "due_date": {"type": "string"}},
             "required": ["title"]
         }
     },
     {
         "name": "complete_task",
         "description": "Completar tarea.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"task_id": {"type": "string"}},
-            "required": ["task_id"]
-        }
+        "input_schema": {"type": "object", "properties": {"task_id": {"type": "string"}}, "required": ["task_id"]}
     },
     {
         "name": "delete_task",
         "description": "Borrar tarea.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"task_id": {"type": "string"}},
-            "required": ["task_id"]
-        }
+        "input_schema": {"type": "object", "properties": {"task_id": {"type": "string"}}, "required": ["task_id"]}
     },
     {
         "name": "search_emails",
         "description": "Buscar emails.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"query": {"type": "string"}},
-            "required": ["query"]
-        }
+        "input_schema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}
     },
     {
         "name": "read_email",
         "description": "Leer email.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"email_id": {"type": "string"}},
-            "required": ["email_id"]
-        }
+        "input_schema": {"type": "object", "properties": {"email_id": {"type": "string"}}, "required": ["email_id"]}
     },
     {
         "name": "send_email",
         "description": "Enviar email.",
         "input_schema": {
             "type": "object",
-            "properties": {
-                "to": {"type": "string"},
-                "subject": {"type": "string"},
-                "body": {"type": "string"}
-            },
+            "properties": {"to": {"type": "string"}, "subject": {"type": "string"}, "body": {"type": "string"}},
             "required": ["to", "subject", "body"]
         }
     },
     {
         "name": "search_drive",
         "description": "Buscar archivos.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"query": {"type": "string"}},
-            "required": ["query"]
-        }
+        "input_schema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}
     },
     {
         "name": "list_recent_files",
         "description": "Archivos recientes.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"max_results": {"type": "integer"}},
-            "required": []
-        }
+        "input_schema": {"type": "object", "properties": {"max_results": {"type": "integer"}}, "required": []}
     },
     {
         "name": "search_nearby_places",
         "description": "Buscar lugares.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"query": {"type": "string"}},
-            "required": ["query"]
-        }
+        "input_schema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}
     },
     {
         "name": "save_user_fact",
         "description": "Aprender dato del usuario.",
         "input_schema": {
             "type": "object",
-            "properties": {
-                "category": {"type": "string"},
-                "key": {"type": "string"},
-                "value": {"type": "string"}
-            },
+            "properties": {"category": {"type": "string"}, "key": {"type": "string"}, "value": {"type": "string"}},
             "required": ["category", "key", "value"]
         }
     },
@@ -315,9 +253,7 @@ TOOLS = [
         "description": "Leer modelos mentales (Jarvis).",
         "input_schema": {
             "type": "object",
-            "properties": {
-                "filename": {"type": "string", "enum": ["MODELS_DEEP.md", "FRAMEWORK.md", "ANTIPATTERNS.md", "TEMPLATES.md"]}
-            },
+            "properties": {"filename": {"type": "string", "enum": ["MODELS_DEEP.md", "FRAMEWORK.md", "ANTIPATTERNS.md", "TEMPLATES.md"]}},
             "required": ["filename"]
         }
     }
@@ -328,11 +264,9 @@ TOOLS = [
 # ============================================
 
 def execute_tool(tool_name: str, tool_input: dict, chat_id: int):
-    # 🗞️ NEWS DASHBOARD (NUEVO)
+    # 🗞️ NEWS & WEB
     if tool_name == "get_news_dashboard":
         return get_news_dashboard()
-        
-    # 🌍 WEB SEARCH
     elif tool_name == "search_web":
         return search_web_ddg(tool_input['query'])
     
@@ -361,6 +295,8 @@ def execute_tool(tool_name: str, tool_input: dict, chat_id: int):
         )
     elif tool_name == "complete_task":
         return google_tasks.complete_task(tool_input['task_id'])
+    elif tool_name == "delete_task":
+        return google_tasks.delete_task(tool_input['task_id'])
     
     # 📧 EMAIL
     elif tool_name == "search_emails":
@@ -468,10 +404,19 @@ HECHOS APRENDIDOS: {mem_str}
 FECHA: {now.strftime("%A %d-%m-%Y %H:%M")} (Año simulado: 2026)
 UBICACIÓN: {loc['name']}
 
-=== REGLAS IMPORTANTES ===
-1. NOTICIAS: Si te piden "Noticias", "Titulares", "Qué pasa hoy" o "Resumen diario" -> USA EXCLUSIVAMENTE LA HERRAMIENTA `get_news_dashboard`. No uses búsqueda genérica.
-2. INVESTIGACIÓN: Si te piden profundizar en una noticia específica -> USA `search_web`.
-3. AGENDA: Revisa siempre `get_calendar_events` Y `list_tasks`.
+=== INSTRUCCIONES DE RESPUESTA (SEGUNDO CEREBRO) ===
+1. **VERSATILIDAD TOTAL:** Eres el "Segundo Cerebro" de Pablo. No hay tema "demasiado trivial".
+   - Si pregunta por **Euphoria, farándula, chismes o TV**: USA `search_web` INMEDIATAMENTE. No juzgues la importancia del tema.
+   - Si pregunta por algo que parece un rumor (ej: "Euphoria Temporada 4"), no asumas que es falso. Búscalo. Puede ser noticia de última hora.
+   
+2. **MODO NOTICIAS:**
+   - Si pide "Noticias" o "Titulares" -> Usa `get_news_dashboard`.
+   
+3. **AGENDA:** Revisa siempre `get_calendar_events` Y `list_tasks`.
+
+4. **TONO:**
+   - Para negocios: Ejecutiva, precisa.
+   - Para trivialidades: Curiosa, conversacional, servicial. "Googlealo por él" y dale el resumen.
 """
         messages = get_history(chat_id).copy()
         final_response = ""
