@@ -4,6 +4,7 @@ import json
 import pytz
 import re
 import base64
+import io
 from datetime import datetime, timedelta
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
@@ -18,6 +19,12 @@ from openai import OpenAI
 from elevenlabs.client import ElevenLabs
 from duckduckgo_search import DDGS
 import tempfile
+
+# LIBRERIAS PARA LIBROS
+import pypdf
+import ebooklib
+from ebooklib import epub
+from bs4 import BeautifulSoup
 
 # Configure logging
 logging.basicConfig(
@@ -77,19 +84,16 @@ USER_PROFILE = load_file_content('user_profile.md', "")
 # ============================================
 
 def clean_date_iso(date_str, is_end=False):
-    """Google Calendar exige formato ISO con zona horaria."""
     if 'T' not in date_str:
         time_part = "T23:59:59" if is_end else "T00:00:00"
         return f"{date_str}{time_part}-06:00"
     return date_str
 
 def search_web_ddg(query: str, max_results=5):
-    """Búsqueda general en la web."""
     try:
         if "2026" in query: query = query.replace("2026", "").strip()
         results = []
         with DDGS() as ddgs:
-            # Búsqueda de texto general
             search_gen = ddgs.text(query, region='wt-wt', safesearch='off', timelimit='d', max_results=max_results)
             for r in search_gen:
                 results.append(f"📰 {r['title']}\n🔗 {r['href']}\n📝 {r['body']}\n")
@@ -99,23 +103,20 @@ def search_web_ddg(query: str, max_results=5):
         return f"Error: {str(e)}"
 
 def get_news_dashboard():
-    """Obtiene titulares usando el motor de NOTICIAS de DDG."""
     summary = "🗞️ **DASHBOARD DE NOTICIAS (En Tiempo Real)**\n\n"
-    
     try:
         with DDGS() as ddgs:
-            # 1. Costa Rica - La Nación
+            # 1. Costa Rica
             try:
                 cr_news = ddgs.news(keywords="Costa Rica La Nación", region='cr-cr', safesearch='off', max_results=4)
                 if cr_news:
-                    summary += "🇨🇷 **COSTA RICA (La Nación & Locales):**\n"
+                    summary += "🇨🇷 **COSTA RICA:**\n"
                     for r in cr_news:
                         summary += f"• [{r['title']}]({r['url']}) - _{r['source']}_\n"
                     summary += "\n"
-            except Exception as e:
-                logger.error(f"Error Nacion: {e}")
+            except Exception: pass
 
-            # 2. CNN en Español
+            # 2. CNN
             try:
                 cnn_news = ddgs.news(keywords="CNN en Español últimas noticias", region='wt-wt', safesearch='off', max_results=3)
                 if cnn_news:
@@ -123,8 +124,7 @@ def get_news_dashboard():
                     for r in cnn_news:
                         summary += f"• [{r['title']}]({r['url']})\n"
                     summary += "\n"
-            except Exception as e:
-                logger.error(f"Error CNN: {e}")
+            except Exception: pass
 
             # 3. Reuters
             try:
@@ -133,15 +133,92 @@ def get_news_dashboard():
                     summary += "🌐 **REUTERS (Global):**\n"
                     for r in reu_news:
                         summary += f"• [{r['title']}]({r['url']})\n"
-            except Exception as e:
-                logger.error(f"Error Reuters: {e}")
+            except Exception: pass
 
     except Exception as e:
-        return f"Error generando dashboard: {str(e)}"
+        return f"Error dashboard: {str(e)}"
     
-    if len(summary) < 60: 
-        return "⚠️ No pude conectar con los servicios de noticias en este momento."
+    if len(summary) < 60: return "⚠️ No pude conectar con los servicios de noticias."
     return summary
+
+# --- FUNCIONES DE LECTURA DE LIBROS ---
+
+def extract_text_from_pdf(file_path):
+    text = ""
+    try:
+        reader = pypdf.PdfReader(file_path)
+        # Leemos primeras 100 páginas para no saturar tokens si el libro es gigante
+        # O podemos leer todo si el usuario pide algo específico, pero cuidado con el límite.
+        max_pages = min(len(reader.pages), 100) 
+        for i in range(max_pages):
+            text += reader.pages[i].extract_text() + "\n"
+    except Exception as e:
+        return f"Error leyendo PDF: {e}"
+    return text
+
+def extract_text_from_epub(file_path):
+    text = ""
+    try:
+        book = epub.read_epub(file_path)
+        for item in book.get_items():
+            if item.get_type() == ebooklib.ITEM_DOCUMENT:
+                soup = BeautifulSoup(item.get_content(), 'html.parser')
+                text += soup.get_text() + "\n"
+        # Truncar para no explotar memoria (aprox 200k caracteres iniciales)
+        return text[:200000] 
+    except Exception as e:
+        return f"Error leyendo EPUB: {e}"
+
+def read_book_from_drive_tool(query):
+    """Busca un libro en Drive, lo descarga y extrae su texto."""
+    # 1. Buscar archivo
+    files = google_drive.search_files(query)
+    if not files or "No se encontraron" in str(files):
+        return "No encontré ese libro en tu Google Drive."
+    
+    # Tomar el primer resultado (asumiendo que es el más relevante)
+    # google_drive.search_files devuelve un string formateado, necesitamos el ID real.
+    # Para simplificar, asumimos que google_drive tiene una función interna o modificamos la logica.
+    # Aquí usaremos una búsqueda directa para obtener el ID.
+    
+    service = google_drive.get_drive_service()
+    if not service: return "Error conectando a Drive."
+    
+    results = service.files().list(q=f"name contains '{query}' and mimeType != 'application/vnd.google-apps.folder'", pageSize=1).execute()
+    items = results.get('files', [])
+    
+    if not items:
+        return f"No encontré ningún libro con el nombre '{query}' en Drive."
+        
+    file_id = items[0]['id']
+    file_name = items[0]['name']
+    mime_type = items[0]['mimeType']
+    
+    # 2. Descargar
+    try:
+        request = service.files().get_media(fileId=file_id)
+        file_content = request.execute()
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file_name}") as temp_file:
+            temp_file.write(file_content)
+            temp_path = temp_file.name
+            
+        # 3. Extraer Texto
+        content = ""
+        if file_name.lower().endswith('.pdf'):
+            content = extract_text_from_pdf(temp_path)
+        elif file_name.lower().endswith('.epub'):
+            content = extract_text_from_epub(temp_path)
+        else:
+            content = "Formato no soportado para lectura profunda (solo PDF/EPUB)."
+            
+        os.unlink(temp_path)
+        
+        # Retornar un resumen o el inicio para que Claude lo procese
+        return f"📖 LIBRO: {file_name}\n\nCONTENIDO EXTRÍDO (Fragmento):\n{content[:50000]}..." # Limitamos caracteres para Telegram
+        
+    except Exception as e:
+        return f"Error procesando el libro: {e}"
 
 # ============================================
 # TOOLS
@@ -149,38 +226,45 @@ def get_news_dashboard():
 
 TOOLS = [
     {
+        "name": "call_contact",
+        "description": "Llamar a una persona o número. Genera una tarjeta de contacto.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Nombre del contacto"},
+                "phone_number": {"type": "string", "description": "Número de teléfono"}
+            },
+            "required": ["name", "phone_number"]
+        }
+    },
+    {
+        "name": "read_book_from_drive",
+        "description": "Buscar un libro en Google Drive, descargarlo y leer su contenido para responder preguntas.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"query": {"type": "string", "description": "Título del libro o palabras clave"}},
+            "required": ["query"]
+        }
+    },
+    {
         "name": "get_news_dashboard",
         "description": "Resumen ejecutivo de titulares (La Nación, CNN, Reuters).",
         "input_schema": {"type": "object", "properties": {}, "required": []}
     },
     {
         "name": "search_web",
-        "description": "Búsqueda libre en Google/Web. Úsalo SIEMPRE para: 1) Cultura pop, cine, farándula. 2) Investigar temas específicos. 3) Verificar datos 'triviales' que no están en tu memoria.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "Término de búsqueda"}
-            },
-            "required": ["query"]
-        }
+        "description": "Búsqueda libre en Google/Web.",
+        "input_schema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}
     },
     {
         "name": "get_calendar_events",
         "description": "Ver eventos del calendario.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"start_date": {"type": "string"}, "end_date": {"type": "string"}},
-            "required": ["start_date", "end_date"]
-        }
+        "input_schema": {"type": "object", "properties": {"start_date": {"type": "string"}, "end_date": {"type": "string"}}, "required": ["start_date", "end_date"]}
     },
     {
         "name": "create_calendar_event",
         "description": "Crear evento.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"summary": {"type": "string"}, "start_time": {"type": "string"}, "end_time": {"type": "string"}, "location": {"type": "string"}},
-            "required": ["summary", "start_time", "end_time"]
-        }
+        "input_schema": {"type": "object", "properties": {"summary": {"type": "string"}, "start_time": {"type": "string"}, "end_time": {"type": "string"}, "location": {"type": "string"}}, "required": ["summary", "start_time", "end_time"]}
     },
     {
         "name": "list_tasks",
@@ -190,11 +274,7 @@ TOOLS = [
     {
         "name": "create_task",
         "description": "Crear tarea.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"title": {"type": "string"}, "notes": {"type": "string"}, "due_date": {"type": "string"}},
-            "required": ["title"]
-        }
+        "input_schema": {"type": "object", "properties": {"title": {"type": "string"}, "notes": {"type": "string"}, "due_date": {"type": "string"}}, "required": ["title"]}
     },
     {
         "name": "complete_task",
@@ -219,15 +299,11 @@ TOOLS = [
     {
         "name": "send_email",
         "description": "Enviar email.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"to": {"type": "string"}, "subject": {"type": "string"}, "body": {"type": "string"}},
-            "required": ["to", "subject", "body"]
-        }
+        "input_schema": {"type": "object", "properties": {"to": {"type": "string"}, "subject": {"type": "string"}, "body": {"type": "string"}}, "required": ["to", "subject", "body"]}
     },
     {
         "name": "search_drive",
-        "description": "Buscar archivos.",
+        "description": "Buscar archivos (solo nombres).",
         "input_schema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}
     },
     {
@@ -242,21 +318,13 @@ TOOLS = [
     },
     {
         "name": "save_user_fact",
-        "description": "Aprender dato del usuario. ÚSALO SIEMPRE que extraigas información importante de una IMAGEN o DOCUMENTO.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"category": {"type": "string"}, "key": {"type": "string"}, "value": {"type": "string"}},
-            "required": ["category", "key", "value"]
-        }
+        "description": "Aprender dato del usuario.",
+        "input_schema": {"type": "object", "properties": {"category": {"type": "string"}, "key": {"type": "string"}, "value": {"type": "string"}}, "required": ["category", "key", "value"]}
     },
     {
         "name": "read_knowledge_file",
         "description": "Leer modelos mentales (Jarvis).",
-        "input_schema": {
-            "type": "object",
-            "properties": {"filename": {"type": "string", "enum": ["MODELS_DEEP.md", "FRAMEWORK.md", "ANTIPATTERNS.md", "TEMPLATES.md"]}},
-            "required": ["filename"]
-        }
+        "input_schema": {"type": "object", "properties": {"filename": {"type": "string", "enum": ["MODELS_DEEP.md", "FRAMEWORK.md", "ANTIPATTERNS.md", "TEMPLATES.md"]}}, "required": ["filename"]}
     }
 ]
 
@@ -264,9 +332,24 @@ TOOLS = [
 # EXECUTION LOGIC
 # ============================================
 
-def execute_tool(tool_name: str, tool_input: dict, chat_id: int):
+# Variable global para guardar el contexto de la llamada (si Telegram permitiera iniciarla, pero usaremos send_contact)
+async def execute_tool_async(tool_name: str, tool_input: dict, chat_id: int, context: ContextTypes.DEFAULT_TYPE):
+    """Ejecutor de herramientas que soporta acciones asíncronas de Telegram."""
+    
+    # 📞 LLAMADAS (NUEVO)
+    if tool_name == "call_contact":
+        phone = tool_input['phone_number']
+        name = tool_input['name']
+        await context.bot.send_contact(chat_id=chat_id, phone_number=phone, first_name=name)
+        return f"📞 Te he enviado el contacto de {name} para que toques y llames."
+
+    # 📚 LIBROS (NUEVO)
+    elif tool_name == "read_book_from_drive":
+        return read_book_from_drive_tool(tool_input['query'])
+
+    # RESTO DE HERRAMIENTAS (Sincronas por ahora, envueltas)
     # 🗞️ NEWS & WEB
-    if tool_name == "get_news_dashboard":
+    elif tool_name == "get_news_dashboard":
         return get_news_dashboard()
     elif tool_name == "search_web":
         return search_web_ddg(tool_input['query'])
@@ -331,7 +414,6 @@ def execute_tool(tool_name: str, tool_input: dict, chat_id: int):
     
     # 🧠 MEMORY & JARVIS
     elif tool_name == "save_user_fact":
-        # CORRECCION: Combinamos Categoria y Key para que memory_manager acepte solo 2 argumentos
         full_key = f"{tool_input.get('category', 'General')}: {tool_input.get('key', 'Dato')}"
         save_fact(full_key, tool_input['value'])
         return f"✅ Aprendido: {full_key}"
@@ -351,7 +433,6 @@ def get_history(chat_id):
 
 def add_to_history(chat_id, role, content):
     hist = get_history(chat_id)
-    # Si el contenido es una lista (imagen + texto), guardar solo un resumen texto para el historial local
     if isinstance(content, list):
         text_part = next((item['text'] for item in content if item['type'] == 'text'), "[Foto enviada]")
         hist.append({"role": role, "content": text_part})
@@ -371,7 +452,7 @@ async def transcribe_voice(audio_path):
             return openai_client.audio.transcriptions.create(model="whisper-1", file=audio, language="es").text
     except Exception: return ""
 
-async def start(update, context): await update.message.reply_text('👋 Soy Claudette. Tengo ojos (envíame fotos) y oídos (audio).')
+async def start(update, context): await update.message.reply_text('👋 Soy Claudette. Tengo ojos, oídos y ahora acceso a tu biblioteca y teléfono.')
 async def clear_cmd(update, context): 
     clear_history(update.message.chat_id)
     await update.message.reply_text('✅ Memoria limpia.')
@@ -391,43 +472,29 @@ async def handle_voice(update, context):
         await update.message.reply_text("Error de audio.")
 
 async def handle_photo(update, context):
-    """Maneja imágenes enviadas al bot."""
     chat_id = update.message.chat_id
     try:
-        # 1. Obtener la foto de mayor resolución
         photo_file = await update.message.photo[-1].get_file()
-        
-        # 2. Descargar a memoria/temporal
         with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_img:
             await photo_file.download_to_drive(temp_img.name)
             temp_path = temp_img.name
         
-        # 3. Leer y codificar en Base64
         with open(temp_path, "rb") as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+        os.unlink(temp_path)
         
-        os.unlink(temp_path) # Limpiar
-        
-        # 4. Obtener caption o usar texto default
-        caption = update.message.caption or "Analiza esta imagen. Si es un documento, extrae los datos. Si es un lugar, dime qué es."
-        
-        # 5. Procesar con Visión
+        caption = update.message.caption or "Analiza esta imagen."
         await process_message(update, context, caption, is_voice=False, image_data=encoded_string)
-
     except Exception as e:
         logger.error(f"Photo error: {e}")
         await update.message.reply_text("❌ Error procesando la imagen.")
 
-
 async def process_message(update, context, text, is_voice=False, image_data=None):
     chat_id = update.message.chat_id
-    
-    # Historial: Si hay imagen, guardamos un indicador
     log_text = f"[IMAGEN] {text}" if image_data else text
     add_to_history(chat_id, "user", log_text)
     
     try:
-        # Contexto Dinámico
         try:
             db_facts = get_all_facts()
             mem_str = "\n".join([f"- {k}: {v}" for k, v in db_facts.items()]) if db_facts else "Vacío"
@@ -446,47 +513,24 @@ HECHOS APRENDIDOS: {mem_str}
 FECHA: {now.strftime("%A %d-%m-%Y %H:%M")} (Año simulado: 2026)
 UBICACIÓN: {loc['name']}
 
-=== PROTOCOLO DE VISIÓN (OJOS) ===
-Si recibes una imagen:
-1. **DOCUMENTOS (Pasaportes, IDs, Recibos):** Extrae TODOS los datos clave (números, fechas, nombres). 
-   - IMPORTANTE: Usa la herramienta `save_user_fact` para guardar esa información en la memoria (ej: Category: "Documentos", Key: "Pasaporte Numero", Value: "12345").
-2. **LUGARES/MONUMENTOS:** Identifica el lugar, su historia y contexto (ej: Camino de Santiago).
-3. **LIBROS/TEXTO:** Lee el texto, resúmelo o analízalo según pida el usuario.
-
-=== PROTOCOLO DE RESPUESTA ===
-1. Eres versátil: Farándula, Negocios, Filosofía o Análisis de Imágenes. Todo es importante.
-2. Si no sabes algo trivial (ej: chismes), BÚSCALO (`search_web`).
+=== PROTOCOLO DE LIBROS Y LLAMADAS ===
+1. **LIBROS:** Si el usuario pregunta por un libro, usa `read_book_from_drive`. NO inventes citas. Lee el archivo.
+2. **LLAMADAS:** Si pide llamar a alguien, usa `call_contact`. Asegúrate de tener el número (búscalo en memoria o pídelo si no está).
 """
         messages = get_history(chat_id).copy()
         
-        # SI HAY IMAGEN, REEMPLAZAMOS EL ÚLTIMO MENSAJE DEL USER CON EL PAYLOAD MULTIMODAL
         if image_data:
             messages[-1] = {
                 "role": "user",
-                "content": [
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "image/jpeg",
-                            "data": image_data
-                        }
-                    },
-                    {
-                        "type": "text",
-                        "text": text
-                    }
-                ]
+                "content": [{"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": image_data}}, {"type": "text", "text": text}]
             }
 
         final_response = ""
 
-        # Thinking Loop (Max 5 pasos)
         for _ in range(5):
             response = client.messages.create(
                 model=DEFAULT_MODEL, max_tokens=4096, system=system_prompt, tools=TOOLS, messages=messages
             )
-            
             messages.append({"role": "assistant", "content": response.content})
             
             if response.stop_reason == "tool_use":
@@ -494,17 +538,17 @@ Si recibes una imagen:
                 for block in response.content:
                     if block.type == "tool_use":
                         logger.info(f"🔧 Tool: {block.name}")
-                        res = execute_tool(block.name, block.input, chat_id)
+                        # Notar el "await" aquí para la función asíncrona
+                        res = await execute_tool_async(block.name, block.input, chat_id, context)
                         tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": str(res)})
                 messages.append({"role": "user", "content": tool_results})
             else:
                 final_response = "\n".join([b.text for b in response.content if hasattr(b, "text")])
                 break
 
-        if not final_response: final_response = "✅ Procesado."
+        if not final_response: final_response = "✅ Listo."
         add_to_history(chat_id, "assistant", final_response)
 
-        # Output Handler
         if is_voice and elevenlabs_client:
             if len(re.findall(r'\d+', final_response)) > 8:
                 await update.message.reply_text("📝 *Respuesta detallada:*\n\n" + final_response, parse_mode='Markdown')
