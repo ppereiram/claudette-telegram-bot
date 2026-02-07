@@ -11,3 +11,4 @@ pypdf
 EbookLib
 beautifulsoup4
 requests
+pytz
