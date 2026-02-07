@@ -331,8 +331,11 @@ def execute_tool(tool_name: str, tool_input: dict, chat_id: int):
     
     # 🧠 MEMORY & JARVIS
     elif tool_name == "save_user_fact":
-        save_fact(chat_id, tool_input['category'], tool_input['key'], tool_input['value'])
-        return f"✅ Aprendido: {tool_input['key']}"
+        # CORRECCION: Combinamos Categoria y Key para que memory_manager acepte solo 2 argumentos
+        full_key = f"{tool_input.get('category', 'General')}: {tool_input.get('key', 'Dato')}"
+        save_fact(full_key, tool_input['value'])
+        return f"✅ Aprendido: {full_key}"
+
     elif tool_name == "read_knowledge_file":
         return load_file_content(tool_input['filename'], "No encontrado.")
     
@@ -458,7 +461,6 @@ Si recibes una imagen:
         
         # SI HAY IMAGEN, REEMPLAZAMOS EL ÚLTIMO MENSAJE DEL USER CON EL PAYLOAD MULTIMODAL
         if image_data:
-            # Reemplazar la entrada de texto simple por la estructura de imagen
             messages[-1] = {
                 "role": "user",
                 "content": [
@@ -485,9 +487,6 @@ Si recibes una imagen:
                 model=DEFAULT_MODEL, max_tokens=4096, system=system_prompt, tools=TOOLS, messages=messages
             )
             
-            # Guardamos respuesta en historial (para el loop)
-            # Nota: Si Claude responde con texto + tool, messages debe manejarlo.
-            # Simplificación: guardamos contenido tal cual
             messages.append({"role": "assistant", "content": response.content})
             
             if response.stop_reason == "tool_use":
@@ -534,7 +533,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("clear", clear_cmd))
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
-    app.add_handler(MessageHandler(filters.PHOTO, handle_photo)) # <--- NUEVO HANDLER FOTO
+    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     logger.info("✅ Claudette Online")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
