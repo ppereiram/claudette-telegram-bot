@@ -55,7 +55,7 @@ user_locations = {}
 user_modes = {} # <--- NUEVO: Para guardar el modo (normal/profundo)
 MAX_HISTORY_LENGTH = 15
 DEFAULT_LOCATION = {"lat": 9.9281, "lng": -84.0907, "name": "San José, Costa Rica"}
-DEFAULT_MODEL = "claude-3-5-sonnet-20240620"
+DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
 # --- CARGADORES ---
 def load_file_content(filename, default_text=""):
