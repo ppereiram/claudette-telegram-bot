@@ -1,306 +1,118 @@
-"""
-Google Tasks Service para Claudette Bot.
-Funciones para listar, crear, completar y eliminar tareas.
-"""
-
 import os
+import os.path
+import json
 import logging
-from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 logger = logging.getLogger(__name__)
 
-# Tasks API scopes
-TASKS_SCOPES = ['https://www.googleapis.com/auth/tasks']
-
-def get_tasks_credentials():
-    """Get OAuth credentials from environment variables."""
-    client_id = os.environ.get('GOOGLE_CLIENT_ID')
-    client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
-    refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN')
-    
-    if not all([client_id, client_secret, refresh_token]):
-        logger.error("Missing Google OAuth credentials in environment")
-        return None
-    
-    creds = Credentials(
-        token=None,
-        refresh_token=refresh_token,
-        token_uri='https://oauth2.googleapis.com/token',
-        client_id=client_id,
-        client_secret=client_secret,
-        scopes=TASKS_SCOPES
-    )
-    
-    try:
-        creds.refresh(Request())
-        return creds
-    except Exception as e:
-        logger.error(f"Error refreshing Tasks credentials: {e}")
-        return None
+# SCOPES necesarios para Tasks
+SCOPES = ['https://www.googleapis.com/auth/tasks']
 
 def get_tasks_service():
-    """Build and return Tasks API service."""
-    creds = get_tasks_credentials()
-    if not creds:
-        return None
+    creds = None
     
+    # 1. Intentar cargar desde archivo token.json (Prioridad 1)
+    # Buscamos en varias rutas posibles por si Render lo movió
+    possible_paths = [
+        'token.json',
+        '/etc/secrets/token.json', 
+        '/opt/render/project/src/token.json'
+    ]
+    
+    token_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            token_path = path
+            logger.info(f"✅ Token encontrado en: {path}")
+            break
+
+    if token_path:
+        try:
+            creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+        except Exception as e:
+            logger.error(f"Error leyendo token.json: {e}")
+
+    # 2. Si no hay archivo, intentar desde Variables de Entorno (Legacy)
+    if not creds and os.environ.get('GOOGLE_REFRESH_TOKEN'):
+        try:
+            creds_info = {
+                "token": "DUMMY_ACCESS_TOKEN",
+                "refresh_token": os.environ.get('GOOGLE_REFRESH_TOKEN'),
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "client_id": os.environ.get('GOOGLE_CLIENT_ID'),
+                "client_secret": os.environ.get('GOOGLE_CLIENT_SECRET'),
+                "scopes": SCOPES
+            }
+            creds = Credentials.from_authorized_user_info(creds_info, SCOPES)
+        except Exception as e:
+            logger.error(f"Error creando credenciales desde ENV: {e}")
+
+    # 3. Refrescar token si es necesario
+    if creds and creds.expired and creds.refresh_token:
+        try:
+            creds.refresh(Request())
+        except Exception as e:
+            logger.error(f"Error refrescando token: {e}")
+            return None
+
+    if not creds or not creds.valid:
+        logger.error("❌ No se encontraron credenciales válidas para Tasks.")
+        return None
+
     try:
         service = build('tasks', 'v1', credentials=creds)
         return service
     except Exception as e:
-        logger.error(f"Error building Tasks service: {e}")
+        logger.error(f"Error construyendo servicio Tasks: {e}")
         return None
 
-def get_task_lists() -> dict:
-    """
-    Get all task lists.
-    
-    Returns:
-        dict with 'success', 'lists' array, and 'error' if any
-    """
-    service = get_tasks_service()
-    if not service:
-        return {"success": False, "error": "No se pudo conectar a Google Tasks."}
-    
-    try:
-        results = service.tasklists().list(maxResults=10).execute()
-        task_lists = results.get('items', [])
-        
-        lists = []
-        for tl in task_lists:
-            lists.append({
-                "id": tl['id'],
-                "title": tl['title']
-            })
-        
-        return {"success": True, "lists": lists}
-    
-    except Exception as e:
-        logger.error(f"Error getting task lists: {e}")
-        return {"success": False, "error": f"Error obteniendo listas: {str(e)}"}
+# --- FUNCIONES DE TAREAS ---
 
-def list_tasks(tasklist_id: str = "@default", show_completed: bool = False, max_results: int = 20) -> dict:
-    """
-    List tasks from a task list.
-    
-    Args:
-        tasklist_id: The task list ID (use "@default" for primary list)
-        show_completed: Whether to include completed tasks
-        max_results: Maximum number of tasks to return
-    
-    Returns:
-        dict with 'success', 'tasks' array, and 'error' if any
-    """
+def list_tasks(show_completed=False):
     service = get_tasks_service()
-    if not service:
-        return {"success": False, "error": "No se pudo conectar a Google Tasks."}
+    if not service: return "Error de conexión con Google Tasks."
     
     try:
-        results = service.tasks().list(
-            tasklist=tasklist_id,
-            maxResults=max_results,
-            showCompleted=show_completed,
-            showHidden=show_completed
-        ).execute()
+        # Obtener lista por defecto
+        lists = service.tasklists().list(maxResults=1).execute()
+        if not lists.get('items'): return "No tienes listas de tareas."
+        tasklist_id = lists['items'][0]['id']
         
-        tasks = results.get('items', [])
+        results = service.tasks().list(tasklist=tasklist_id, showCompleted=show_completed, maxResults=10).execute()
+        items = results.get('items', [])
         
-        if not tasks:
-            return {"success": True, "tasks": [], "message": "No hay tareas pendientes."}
+        if not items: return "No hay tareas pendientes."
         
-        task_list = []
-        for task in tasks:
-            task_info = {
-                "id": task['id'],
-                "title": task.get('title', '(Sin título)'),
-                "status": task.get('status', 'needsAction'),
-                "due": task.get('due', None),
-                "notes": task.get('notes', '')
-            }
-            
-            # Format due date if exists
-            if task_info['due']:
-                # Due date comes as '2026-02-10T00:00:00.000Z'
-                task_info['due_formatted'] = task_info['due'][:10]
-            
-            task_list.append(task_info)
-        
-        return {"success": True, "tasks": task_list, "count": len(task_list)}
-    
+        msg = "📝 **Tus Tareas:**\n"
+        for task in items:
+            status = "✅" if task['status'] == 'completed' else "⬜"
+            msg += f"{status} {task['title']}\n"
+        return msg
     except Exception as e:
-        logger.error(f"Error listing tasks: {e}")
-        return {"success": False, "error": f"Error listando tareas: {str(e)}"}
+        return f"Error listando tareas: {e}"
 
-def create_task(title: str, notes: str = None, due_date: str = None, tasklist_id: str = "@default") -> dict:
-    """
-    Create a new task.
-    
-    Args:
-        title: Task title
-        notes: Optional task notes/description
-        due_date: Optional due date in ISO format (e.g., '2026-02-10')
-        tasklist_id: The task list ID (use "@default" for primary list)
-    
-    Returns:
-        dict with 'success', task details, and 'error' if any
-    """
+def create_task(title, notes=None, due_date=None):
     service = get_tasks_service()
-    if not service:
-        return {"success": False, "error": "No se pudo conectar a Google Tasks."}
+    if not service: return "Error de conexión con Google Tasks."
     
     try:
-        task_body = {
-            'title': title,
-            'status': 'needsAction'
-        }
+        lists = service.tasklists().list(maxResults=1).execute()
+        if not lists.get('items'): return "No hay listas de tareas."
+        tasklist_id = lists['items'][0]['id']
         
-        if notes:
-            task_body['notes'] = notes
+        task_body = {'title': title}
+        if notes: task_body['notes'] = notes
+        # Fecha formato RFC 3339 (YYYY-MM-DDTHH:MM:SSZ) si hiciera falta
         
-        if due_date:
-            # Ensure proper format for due date (RFC 3339)
-            if 'T' not in due_date:
-                due_date = f"{due_date}T00:00:00.000Z"
-            elif not due_date.endswith('Z'):
-                due_date = f"{due_date}Z"
-            task_body['due'] = due_date
-        
-        result = service.tasks().insert(
-            tasklist=tasklist_id,
-            body=task_body
-        ).execute()
-        
-        return {
-            "success": True,
-            "task_id": result['id'],
-            "title": result['title'],
-            "message": f"Tarea '{title}' creada exitosamente."
-        }
-    
+        result = service.tasks().insert(tasklist=tasklist_id, body=task_body).execute()
+        return f"✅ Tarea creada: {result['title']}"
     except Exception as e:
-        logger.error(f"Error creating task: {e}")
-        return {"success": False, "error": f"Error creando tarea: {str(e)}"}
+        return f"Error creando tarea: {e}"
 
-def complete_task(task_id: str, tasklist_id: str = "@default") -> dict:
-    """
-    Mark a task as completed.
-    
-    Args:
-        task_id: The task ID to complete
-        tasklist_id: The task list ID
-    
-    Returns:
-        dict with 'success' and 'message' or 'error'
-    """
-    service = get_tasks_service()
-    if not service:
-        return {"success": False, "error": "No se pudo conectar a Google Tasks."}
-    
-    try:
-        # First get the task to preserve its data
-        task = service.tasks().get(
-            tasklist=tasklist_id,
-            task=task_id
-        ).execute()
-        
-        # Update status to completed
-        task['status'] = 'completed'
-        
-        result = service.tasks().update(
-            tasklist=tasklist_id,
-            task=task_id,
-            body=task
-        ).execute()
-        
-        return {
-            "success": True,
-            "message": f"Tarea '{result.get('title', '')}' marcada como completada."
-        }
-    
-    except Exception as e:
-        logger.error(f"Error completing task: {e}")
-        return {"success": False, "error": f"Error completando tarea: {str(e)}"}
-
-def delete_task(task_id: str, tasklist_id: str = "@default") -> dict:
-    """
-    Delete a task.
-    
-    Args:
-        task_id: The task ID to delete
-        tasklist_id: The task list ID
-    
-    Returns:
-        dict with 'success' and 'message' or 'error'
-    """
-    service = get_tasks_service()
-    if not service:
-        return {"success": False, "error": "No se pudo conectar a Google Tasks."}
-    
-    try:
-        service.tasks().delete(
-            tasklist=tasklist_id,
-            task=task_id
-        ).execute()
-        
-        return {
-            "success": True,
-            "message": "Tarea eliminada exitosamente."
-        }
-    
-    except Exception as e:
-        logger.error(f"Error deleting task: {e}")
-        return {"success": False, "error": f"Error eliminando tarea: {str(e)}"}
-
-def update_task(task_id: str, title: str = None, notes: str = None, due_date: str = None, tasklist_id: str = "@default") -> dict:
-    """
-    Update an existing task.
-    
-    Args:
-        task_id: The task ID to update
-        title: New title (optional)
-        notes: New notes (optional)
-        due_date: New due date (optional)
-        tasklist_id: The task list ID
-    
-    Returns:
-        dict with 'success' and updated task info or 'error'
-    """
-    service = get_tasks_service()
-    if not service:
-        return {"success": False, "error": "No se pudo conectar a Google Tasks."}
-    
-    try:
-        # Get current task
-        task = service.tasks().get(
-            tasklist=tasklist_id,
-            task=task_id
-        ).execute()
-        
-        # Update fields if provided
-        if title:
-            task['title'] = title
-        if notes is not None:
-            task['notes'] = notes
-        if due_date:
-            if 'T' not in due_date:
-                due_date = f"{due_date}T00:00:00.000Z"
-            task['due'] = due_date
-        
-        result = service.tasks().update(
-            tasklist=tasklist_id,
-            task=task_id,
-            body=task
-        ).execute()
-        
-        return {
-            "success": True,
-            "task_id": result['id'],
-            "title": result['title'],
-            "message": f"Tarea actualizada exitosamente."
-        }
-    
-    except Exception as e:
-        logger.error(f"Error updating task: {e}")
-        return {"success": False, "error": f"Error actualizando tarea: {str(e)}"}
+def complete_task(task_query):
+    # Simplificado para el ejemplo
+    return "Función completar pendiente de implementar búsqueda exacta."
