@@ -432,6 +432,8 @@ def main():
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.LOCATION, handle_location_update))
+    app.add_handler(MessageHandler(filters.LOCATION, handle_location_update)) 
+    app.add_handler(MessageHandler(filters.LOCATION, handle_location_update), group=1)
 
     print("✅ Claudette Online")
     app.run_polling()
