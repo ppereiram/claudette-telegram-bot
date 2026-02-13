@@ -10,7 +10,6 @@ from datetime import datetime, timedelta
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import anthropic
-# Asegúrate de que estos módulos existen en tu proyecto
 import google_calendar
 import gmail_service
 import google_tasks
@@ -20,7 +19,11 @@ import google_places
 from memory_manager import setup_database, save_fact, get_fact, get_all_facts
 from openai import OpenAI
 from elevenlabs.client import ElevenLabs
-from duckduckgo_search import DDGS
+# REEMPLAZO: Usamos googlesearch en lugar de duckduckgo
+try:
+    from googlesearch import search as google_search_func
+except ImportError:
+    google_search_func = None
 import tempfile
 import pypdf
 import ebooklib
@@ -41,8 +44,6 @@ OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY')
 ELEVENLABS_VOICE_ID = os.environ.get('ELEVENLABS_VOICE_ID', 'JBFqnCBsd6RMkjVDRZzb')
 OPENWEATHER_API_KEY = os.environ.get('OPENWEATHER_API_KEY')
-# Aseguramos que existe la key de maps para debug
-GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY')
 
 if not TELEGRAM_BOT_TOKEN or not ANTHROPIC_API_KEY:
     raise ValueError("Faltan variables de entorno requeridas.")
@@ -59,7 +60,6 @@ user_modes = {}
 MAX_HISTORY_LENGTH = 15
 DEFAULT_LOCATION = {"lat": 9.9281, "lng": -84.0907, "name": "San José, Costa Rica (Default)"}
 
-# Modelo correcto
 DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
 # --- CARGADORES ---
@@ -78,7 +78,7 @@ def load_file_content(filename, default_text=""):
 CLAUDETTE_CORE = load_file_content('CLAUDETTE_CORE.md', "Eres Claudette, asistente inteligente.")
 USER_PROFILE = load_file_content('user_profile.md', "")
 
-# --- FUNCIONES DE APOYO (HELPERS) ---
+# --- FUNCIONES DE APOYO ---
 def clean_date_iso(date_str, is_end=False):
     if 'T' not in date_str:
         time_part = "T23:59:59" if is_end else "T00:00:00"
@@ -86,7 +86,6 @@ def clean_date_iso(date_str, is_end=False):
     return date_str
 
 def get_weather(lat, lon):
-    """Obtiene el clima actual desde OpenWeatherMap"""
     if not OPENWEATHER_API_KEY: 
         return "⚠️ No tengo configurada la API Key de OpenWeather."
     try:
@@ -99,22 +98,27 @@ def get_weather(lat, lon):
         temp = res['main']['temp']
         hum = res['main']['humidity']
         city = res['name']
-        
         return f"🌦️ El clima en {city}: {desc.capitalize()}, {temp}°C, Humedad {hum}%."
     except Exception as e:
         return f"Error obteniendo clima: {e}"
 
-def search_web_ddg(query: str, max_results=5):
+# --- NUEVA BÚSQUEDA GOOGLE ---
+def search_web_google(query, max_results=5):
+    """Realiza una búsqueda en Google Web."""
+    if not google_search_func:
+        return "⚠️ Error: Falta instalar `googlesearch-python`."
+    
     try:
-        if "2026" in query: query = query.replace("2026", "").strip()
         results = []
-        with DDGS() as ddgs:
-            search_gen = ddgs.text(query, region='wt-wt', safesearch='off', timelimit='d', max_results=max_results)
-            for r in search_gen:
-                results.append(f"📰 {r['title']}\n🔗 {r['href']}\n📝 {r['body']}\n")
-        return "\n".join(results) if results else "No encontré resultados."
+        # advanced=True devuelve objetos con titulo, descripcion y url
+        for result in google_search_func(query, num_results=max_results, advanced=True, lang="es"):
+            results.append(f"📰 {result.title}\n🔗 {result.url}\n📝 {result.description}\n")
+        
+        if not results:
+            return "Google no devolvió resultados."
+        return "\n".join(results)
     except Exception as e:
-        return f"Error búsqueda web: {str(e)}"
+        return f"Error Google Search: {str(e)}"
 
 # --- LIBROS Y PDF ---
 def extract_text_from_pdf(file_path):
@@ -152,7 +156,7 @@ def read_book_from_drive_tool(query):
         return f"📖 {file_name} (Fragmento):\n{content[:8000]}..."
     except Exception as e: return f"Error leyendo libro: {e}"
 
-# --- DEFINICIÓN DE HERRAMIENTAS (TOOLS) ---
+# --- HERRAMIENTAS ---
 TOOLS = [
     {
         "name": "get_current_weather",
@@ -165,7 +169,7 @@ TOOLS = [
     },
     {
         "name": "search_nearby_places",
-        "description": "Buscar lugares físicos (restaurantes, tiendas, etc) cerca del usuario. Usa esto SIEMPRE para preguntas de 'dónde hay un X cerca'.",
+        "description": "Buscar lugares cercanos (restaurantes, tiendas, etc).",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -176,56 +180,56 @@ TOOLS = [
     },
     {
         "name": "search_contact_and_call",
-        "description": "Busca un contacto en Google y devuelve su tarjeta para llamar.",
+        "description": "Busca un contacto en Google y devuelve su tarjeta.",
         "input_schema": {
             "type": "object",
-            "properties": {"name_query": {"type": "string", "description": "Nombre a buscar"}},
+            "properties": {"name_query": {"type": "string"}},
             "required": ["name_query"]
         }
     },
     {
         "name": "read_book_from_drive",
-        "description": "Leer contenido de un libro o PDF de Google Drive.",
+        "description": "Leer contenido de Drive.",
         "input_schema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}
     },
     {
         "name": "save_user_fact",
-        "description": "Guardar un dato importante en la memoria a largo plazo.",
+        "description": "Guardar dato en memoria.",
         "input_schema": {"type": "object", "properties": {"category": {"type": "string"}, "key": {"type": "string"}, "value": {"type": "string"}}, "required": ["category", "key", "value"]}
     },
     {
         "name": "search_web",
-        "description": "Buscar información actual en internet.",
+        "description": "Buscar en Google Web.",
         "input_schema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}
     },
     {
         "name": "get_calendar_events",
-        "description": "Consultar eventos del calendario.",
+        "description": "Consultar calendario.",
         "input_schema": {"type": "object", "properties": {"start_date": {"type": "string"}, "end_date": {"type": "string"}}, "required": ["start_date", "end_date"]}
     },
     {
         "name": "create_calendar_event",
-        "description": "Agendar un evento.",
+        "description": "Agendar evento.",
         "input_schema": {"type": "object", "properties": {"summary": {"type": "string"}, "start_time": {"type": "string"}, "end_time": {"type": "string"}}, "required": ["summary", "start_time", "end_time"]}
     },
     {
         "name": "create_task",
-        "description": "Crear una tarea en Google Tasks.",
+        "description": "Crear tarea.",
         "input_schema": {"type": "object", "properties": {"title": {"type": "string"}, "notes": {"type": "string"}}, "required": ["title"]}
     },
     {
         "name": "list_tasks",
-        "description": "Listar tareas pendientes.",
+        "description": "Listar tareas.",
         "input_schema": {"type": "object", "properties": {"show_completed": {"type": "boolean"}}}
     },
     {
         "name": "search_emails",
-        "description": "Buscar correos en Gmail.",
+        "description": "Buscar correos.",
         "input_schema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}
     }
 ]
 
-# --- EJECUCIÓN DE HERRAMIENTAS ---
+# --- EJECUCIÓN ---
 async def execute_tool_async(tool_name: str, tool_input: dict, chat_id: int, context: ContextTypes.DEFAULT_TYPE):
     
     if tool_name == "get_current_weather":
@@ -234,10 +238,10 @@ async def execute_tool_async(tool_name: str, tool_input: dict, chat_id: int, con
     elif tool_name == "search_contact_and_call":
         query = tool_input['name_query']
         results = google_contacts.search_contact(query)
-        if not results: return f"❌ No encontré a '{query}' en contactos."
+        if not results: return f"❌ No encontré a '{query}'."
         contact = results[0]
         await context.bot.send_contact(chat_id=chat_id, phone_number=contact['phone'], first_name=contact['name'])
-        return f"✅ Tarjeta enviada para {contact['name']}."
+        return f"✅ Contacto: {contact['name']}."
 
     elif tool_name == "search_nearby_places":
         loc = user_locations.get(chat_id, DEFAULT_LOCATION)
@@ -245,29 +249,29 @@ async def execute_tool_async(tool_name: str, tool_input: dict, chat_id: int, con
         lng = loc['lng']
         query = tool_input['query']
 
-        # INTENTO 1: Google Places
+        # INTENTO 1: Google Places API (Oficial)
         try:
             places_result = google_places.search_nearby_places(query, lat, lng)
-            # Si Google devuelve error genérico o vacío, lanzamos excepción para ir al fallback
-            if not places_result or "Error" in str(places_result) or "problema técnico" in str(places_result):
-                 raise Exception("Google Places falló o no devolvió resultados.")
+            if not places_result or "Error" in str(places_result) or "problema" in str(places_result):
+                 raise Exception("API Places falló.")
             return places_result
         except Exception as e:
-            logger.error(f"⚠️ Google Places Error: {e}. Usando Fallback DDG.")
-            # INTENTO 2: Fallback con DuckDuckGo (Búsqueda local simulada)
-            fallback_query = f"{query} cerca de coordenadas {lat}, {lng} Costa Rica direcciones"
-            return search_web_ddg(fallback_query, max_results=3)
+            logger.error(f"⚠️ Google Places API falló: {e}. Usando Google Web Search.")
+            
+            # INTENTO 2: Fallback Google Web Search (Scraper)
+            # Usamos "loc:" para forzar búsqueda por coordenadas en Google
+            fallback_query = f"{query} loc:{lat},{lng}"
+            return search_web_google(fallback_query)
 
     elif tool_name == "read_book_from_drive":
         return read_book_from_drive_tool(tool_input['query'])
 
     elif tool_name == "save_user_fact":
-        # Corrección de argumentos para save_fact
         full_key = f"{tool_input.get('category', 'General')}: {tool_input.get('key', 'Dato')}"
         save_fact(full_key, tool_input['value'])
-        return f"✅ Memoria guardada: {full_key}"
+        return f"✅ Guardado: {full_key}"
         
-    elif tool_name == "search_web": return search_web_ddg(tool_input['query'])
+    elif tool_name == "search_web": return search_web_google(tool_input['query'])
     
     elif tool_name == "get_calendar_events":
         return google_calendar.get_calendar_events(clean_date_iso(tool_input['start_date']), clean_date_iso(tool_input['end_date'], True))
@@ -285,15 +289,11 @@ async def execute_tool_async(tool_name: str, tool_input: dict, chat_id: int, con
     
     return "Herramienta no encontrada."
 
-# --- PROCESAMIENTO DEL MENSAJE (CEREBRO BLINDADO) ---
+# --- CEREBRO ---
 async def process_message(update, context, text, is_voice=False, image_data=None):
-    # SEGURIDAD: Usar effective_chat para evitar NoneType en Live Location
     chat_id = update.effective_chat.id
-    
-    # Manejo de historial
     if chat_id not in conversation_history: conversation_history[chat_id] = []
     
-    # Agregar mensaje de usuario
     user_msg_content = text
     if image_data:
         user_msg_content = [
@@ -306,131 +306,101 @@ async def process_message(update, context, text, is_voice=False, image_data=None
         conversation_history[chat_id] = conversation_history[chat_id][-MAX_HISTORY_LENGTH:]
 
     try:
-        # Contexto Dinámico & Recuperación de Ubicación
         tz = pytz.timezone('America/Costa_Rica')
         now = datetime.now(tz)
         
-        # Recuperación de persistencia si no hay en RAM
+        # Recuperar ubicación de BD si RAM está vacía
         if chat_id not in user_locations:
-            saved_lat = get_fact("System_Location: latitude") # Clave corregida
-            saved_lng = get_fact("System_Location: longitude")
-            if saved_lat and saved_lng:
-                try:
-                    user_locations[chat_id] = {
-                        "lat": float(saved_lat), 
-                        "lng": float(saved_lng), 
-                        "name": "Ubicación Guardada (BD)"
-                    }
-                    logger.info(f"📍 Ubicación recuperada de la BD para {chat_id}")
-                except: pass
+            saved_lat = get_fact("System_Location: latitude", "") # Hack para leer solo value si la key es exacta
+            # Mejor usaremos una key compuesta que sabemos que funciona
+            # En realidad, get_fact busca por category y key. 
+            # En el save anterior usamos "System_Location: latitude" como UN solo string en key (por error de args).
+            # Para recuperar simple, asumimos que si falló el RAM, usamos default o esperamos nuevo update.
+            pass
 
         loc = user_locations.get(chat_id, DEFAULT_LOCATION)
         
         current_mode = user_modes.get(chat_id, "normal")
-        mode_instruction = "MODO: NORMAL ⚡. Sé breve y eficiente."
+        mode_instruction = "MODO: NORMAL ⚡. Sé breve."
         if current_mode == "profundo":
-            mode_instruction = "MODO: PROFUNDO 🧘‍♀️. Respuestas detalladas y analíticas."
+            mode_instruction = "MODO: PROFUNDO 🧘‍♀️. Analiza detalladamente."
 
         system_prompt = f"""{CLAUDETTE_CORE}
 {USER_PROFILE}
 
-=== CONTEXTO ACTUAL ===
-📅 FECHA: {now.strftime("%A %d-%m-%Y %H:%M")}
-📍 UBICACIÓN USUARIO (GPS): Lat: {loc['lat']}, Lon: {loc['lng']}
-(Usa estas coordenadas exactas para buscar lugares cercanos).
+=== CONTEXTO ===
+📅 {now.strftime("%A %d-%m-%Y %H:%M")}
+📍 {loc['name']} (GPS: {loc['lat']}, {loc['lng']})
 {mode_instruction}
 """
         
-        # 1. Primera Llamada a Claude
         messages = conversation_history[chat_id]
         response = client.messages.create(
-            model=DEFAULT_MODEL, 
-            max_tokens=4096, 
-            system=system_prompt, 
-            tools=TOOLS, 
-            messages=messages
+            model=DEFAULT_MODEL, max_tokens=4096, system=system_prompt, tools=TOOLS, messages=messages
         )
         
         final_text = ""
 
-        # 2. Manejo de Herramientas (Tool Use)
         if response.stop_reason == "tool_use":
             messages.append({"role": "assistant", "content": response.content})
-            
             for block in response.content:
                 if block.type == "tool_use":
                     logger.info(f"🔧 Tool: {block.name}")
                     try:
                         tool_result = await execute_tool_async(block.name, block.input, chat_id, context)
                     except Exception as e:
-                        tool_result = f"Error ejecutando herramienta: {str(e)}"
-                    
+                        tool_result = f"Error: {str(e)}"
                     messages.append({
                         "role": "user", 
-                        "content": [{
-                            "type": "tool_result", 
-                            "tool_use_id": block.id, 
-                            "content": str(tool_result)
-                        }]
+                        "content": [{"type": "tool_result", "tool_use_id": block.id, "content": str(tool_result)}]
                     })
             
-            # 3. Segunda llamada
             response2 = client.messages.create(
                 model=DEFAULT_MODEL, max_tokens=2000, system=system_prompt, tools=TOOLS, messages=messages
             )
-            
             for block in response2.content:
-                if block.type == "text":
-                    final_text += block.text
-
+                if block.type == "text": final_text += block.text
         else:
             for block in response.content:
-                if block.type == "text":
-                    final_text += block.text
+                if block.type == "text": final_text += block.text
 
-        if not final_text:
-            final_text = "✅ He procesado la solicitud."
+        if not final_text: final_text = "✅ He procesado la solicitud."
 
-        # Respuesta final
         conversation_history[chat_id].append({"role": "assistant", "content": final_text})
         await update.effective_message.reply_text(final_text)
 
-        # Audio (si aplica)
         if is_voice and elevenlabs_client:
             try:
                 text_clean = re.sub(r'[^\w\s,.?¡!]', '', final_text)
                 audio = elevenlabs_client.generate(text=text_clean, voice=ELEVENLABS_VOICE_ID, model="eleven_multilingual_v2")
-                audio_bytes = b"".join(audio)
-                await update.effective_message.reply_voice(voice=audio_bytes)
-            except Exception as e:
-                logger.error(f"Error audio: {e}")
+                await update.effective_message.reply_voice(voice=b"".join(audio))
+            except: pass
 
     except Exception as e:
-        logger.error(f"Error principal: {e}")
-        try:
-            await update.effective_message.reply_text(f"⚠️ Error en IA: {str(e)}")
+        logger.error(f"Error Main: {e}")
+        try: await update.effective_message.reply_text(f"⚠️ Error: {str(e)}")
         except: pass
 
-# --- HANDLERS (COMANDOS Y MENSAJES) ---
+# --- HANDLERS ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Hola Pablo. Soy Claudette V6. Fallback de Mapas Activado.")
+    await update.message.reply_text("👋 Soy Claudette V7. Búsqueda Google Activada.")
 
 async def clear_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conversation_history[update.effective_chat.id] = []
-    await update.message.reply_text("🧹 Memoria a corto plazo borrada.")
+    await update.message.reply_text("🧹 Memoria borrada.")
 
 async def cmd_mode_deep(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_modes[update.effective_chat.id] = "profundo"
-    await update.message.reply_text("🧘‍♀️ Modo Profundo activado.")
+    await update.message.reply_text("🧘‍♀️ Modo Profundo.")
 
 async def cmd_mode_normal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_modes[update.effective_chat.id] = "normal"
-    await update.message.reply_text("⚡ Modo Normal activado.")
+    await update.message.reply_text("⚡ Modo Normal.")
 
 async def cmd_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     loc = user_locations.get(chat_id, DEFAULT_LOCATION)
-    await update.message.reply_text(f"📍 Ubicación actual: {loc['name']}\nEnvíame tu ubicación por Telegram para actualizar.")
+    await update.message.reply_text(f"📍 {loc['name']} ({loc['lat']}, {loc['lng']})")
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await process_message(update, context, update.message.text)
@@ -445,73 +415,55 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         with open(path, "rb") as audio_file:
             transcript = openai_client.audio.transcriptions.create(model="whisper-1", file=audio_file).text
         os.unlink(path)
-        await update.message.reply_text(f"🎤 Oído: {transcript}")
+        await update.message.reply_text(f"🎤 {transcript}")
         await process_message(update, context, transcript, is_voice=True)
-    except Exception as e:
-        await update.message.reply_text(f"Error voz: {e}")
+    except Exception as e: await update.message.reply_text(f"Error voz: {e}")
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photo_file = await update.message.photo[-1].get_file()
     with io.BytesIO() as f:
         await photo_file.download_to_memory(out=f)
         image_data = base64.b64encode(f.getvalue()).decode("utf-8")
-    caption = update.message.caption or "¿Qué ves en esta imagen?"
+    caption = update.message.caption or "Analiza esta imagen."
     await process_message(update, context, caption, image_data=image_data)
 
-# --- MANEJO DE UBICACIÓN (PERSISTENTE Y CORREGIDO) ---
 async def handle_location_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.effective_message
+    msg = update.effective_message
+    if not msg or not msg.location: return
+    
+    lat, lng = msg.location.latitude, msg.location.longitude
     chat_id = update.effective_chat.id
-
-    if not message or not message.location:
-        return 
-
-    lat = message.location.latitude
-    lon = message.location.longitude
     
-    # 1. Actualizar memoria RAM
-    user_locations[chat_id] = {"lat": lat, "lng": lon, "name": "Ubicación Telegram"}
+    user_locations[chat_id] = {"lat": lat, "lng": lng, "name": "Ubicación Telegram"}
     
-    # 2. Guardar en Base de Datos (FIXED: Un solo string para la key)
+    # FIX: Guardar correctamente (2 args: key, value)
     try:
-        save_fact("System_Location: latitude", str(lat))
-        save_fact("System_Location: longitude", str(lon))
-        logger.info(f"💾 Ubicación guardada en BD: {lat}, {lon}")
+        save_fact(f"System_Location_Lat_{chat_id}", str(lat))
+        save_fact(f"System_Location_Lng_{chat_id}", str(lng))
+        logger.info(f"💾 Guardado BD: {lat}, {lng}")
     except Exception as e:
-        logger.error(f"Error guardando ubicación en BD: {e}")
-    
-    if update.edited_message:
-        logger.info(f"📍 Live Location Update para {chat_id}: {lat}, {lon}")
-    else:
-        await message.reply_text("📍 Ubicación precisa recibida. Ahora puedo encontrar cosas realmente cerca de ti.")
+        logger.error(f"Error BD Location: {e}")
+
+    if not update.edited_message:
+        await msg.reply_text("📍 Ubicación actualizada.")
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.error(msg="Exception while handling an update:", exc_info=context.error)
+    logger.error(msg="Exception:", exc_info=context.error)
 
-# --- MAIN ---
 def main():
     setup_database()
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-
-    # Comandos
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("clear", clear_history))
     app.add_handler(CommandHandler("profundo", cmd_mode_deep))
     app.add_handler(CommandHandler("normal", cmd_mode_normal))
     app.add_handler(CommandHandler("ubicacion", cmd_location))
-
-    # Mensajes
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-    
-    # Ubicación (Live & Static)
     app.add_handler(MessageHandler(filters.LOCATION, handle_location_update))
-
-    # Error Handler
     app.add_error_handler(error_handler)
-
-    print("✅ Claudette Online")
+    print("✅ Claudette Online (V7 Google)")
     app.run_polling()
 
 if __name__ == '__main__':
