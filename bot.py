@@ -247,21 +247,34 @@ async def execute_tool_async(tool_name: str, tool_input: dict, chat_id: int, con
         loc = user_locations.get(chat_id, DEFAULT_LOCATION)
         lat = loc['lat']
         lng = loc['lng']
+        loc_name = loc.get('name', 'San José, Costa Rica')
         query = tool_input['query']
 
         # INTENTO 1: Google Places API (Oficial)
         try:
             places_result = google_places.search_nearby_places(query, lat, lng)
-            if not places_result or "Error" in str(places_result) or "problema" in str(places_result):
-                 raise Exception("API Places falló.")
+            
+            # Solo caer al fallback si hay un error real (⚠️ indica problema)
+            if not places_result or "⚠️" in str(places_result):
+                logger.warning(f"Places API problema: {places_result}")
+                raise Exception(str(places_result))
+            
             return places_result
+            
         except Exception as e:
             logger.error(f"⚠️ Google Places API falló: {e}. Usando Google Web Search.")
             
-            # INTENTO 2: Fallback Google Web Search (Scraper)
-            # Usamos "loc:" para forzar búsqueda por coordenadas en Google
-            fallback_query = f"{query} loc:{lat},{lng}"
-            return search_web_google(fallback_query)
+            # INTENTO 2: Fallback con búsqueda geolocalizada real
+            # Usamos "near" + nombre de zona, NO el operador ficticio "loc:"
+            fallback_query = f"{query} near {loc_name}"
+            web_result = search_web_google(fallback_query)
+            
+            if web_result and "no devolvió resultados" not in web_result:
+                return f"🔍 (Búsqueda web, Places API no disponible):\n{web_result}"
+            
+            # INTENTO 3: Query más simple
+            fallback_query2 = f"{query} Costa Rica"
+            return f"🔍 (Búsqueda general):\n{search_web_google(fallback_query2)}"
 
     elif tool_name == "read_book_from_drive":
         return read_book_from_drive_tool(tool_input['query'])
