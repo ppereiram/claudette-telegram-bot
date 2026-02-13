@@ -56,7 +56,9 @@ user_locations = {}
 user_modes = {} 
 MAX_HISTORY_LENGTH = 15
 DEFAULT_LOCATION = {"lat": 9.9281, "lng": -84.0907, "name": "San José, Costa Rica"}
-DEFAULT_MODEL = "claude-3-5-sonnet-20240620" # Ajustado a un modelo válido actual, verifica tu acceso
+
+# CORRECCIÓN: Usamos exactamente el modelo que indicaste en la imagen
+DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
 # --- CARGADORES ---
 def load_file_content(filename, default_text=""):
@@ -236,7 +238,6 @@ async def execute_tool_async(tool_name: str, tool_input: dict, chat_id: int, con
         return f"✅ Tarjeta enviada para {contact['name']}."
 
     elif tool_name == "search_nearby_places":
-        # Obtenemos la ubicación actual del usuario de la memoria
         loc = user_locations.get(chat_id, DEFAULT_LOCATION)
         return google_places.search_nearby_places(tool_input['query'], loc['lat'], loc['lng'])
         
@@ -268,7 +269,7 @@ async def execute_tool_async(tool_name: str, tool_input: dict, chat_id: int, con
 
 # --- PROCESAMIENTO DEL MENSAJE (CEREBRO BLINDADO) ---
 async def process_message(update, context, text, is_voice=False, image_data=None):
-    # CORRECCIÓN: Usar effective_chat.id para evitar errores con mensajes editados
+    # SEGURIDAD: Usar effective_chat para evitar NoneType en Live Location
     chat_id = update.effective_chat.id
     
     # Manejo de historial
@@ -293,15 +294,10 @@ async def process_message(update, context, text, is_voice=False, image_data=None
         now = datetime.now(tz)
         loc = user_locations.get(chat_id, DEFAULT_LOCATION)
         
-        # Modo (Normal vs Profundo)
         current_mode = user_modes.get(chat_id, "normal")
         mode_instruction = "MODO: NORMAL ⚡. Sé breve y eficiente."
         if current_mode == "profundo":
-            mode_instruction = """
-MODO: PROFUNDO 🧘‍♀️
-- Respuestas detalladas, filosóficas y analíticas.
-- Conecta ideas, usa analogías y profundiza en el contexto.
-"""
+            mode_instruction = "MODO: PROFUNDO 🧘‍♀️. Respuestas detalladas y analíticas."
 
         system_prompt = f"""{CLAUDETTE_CORE}
 {USER_PROFILE}
@@ -309,14 +305,7 @@ MODO: PROFUNDO 🧘‍♀️
 === CONTEXTO ACTUAL ===
 📅 FECHA: {now.strftime("%A %d-%m-%Y %H:%M")}
 📍 UBICACIÓN: {loc['name']} (Lat: {loc['lat']}, Lon: {loc['lng']})
-🌡️ CLIMA: Usa `get_current_weather` con estas coordenadas si preguntan.
 {mode_instruction}
-
-=== CAPACIDADES ===
-1. **Llamadas:** Usa `Contacts_and_call`.
-2. **Agenda:** Calendar y Tasks.
-3. **Lectura:** Libros de Drive (`read_book_from_drive`).
-4. **Internet:** `search_web` para datos en tiempo real.
 """
         
         # 1. Primera Llamada a Claude
@@ -333,16 +322,17 @@ MODO: PROFUNDO 🧘‍♀️
 
         # 2. Manejo de Herramientas (Tool Use)
         if response.stop_reason == "tool_use":
-            # Guardamos la intención de la herramienta en el historial
             messages.append({"role": "assistant", "content": response.content})
             
-            # Ejecutamos todas las herramientas solicitadas
             for block in response.content:
                 if block.type == "tool_use":
                     logger.info(f"🔧 Tool: {block.name}")
-                    tool_result = await execute_tool_async(block.name, block.input, chat_id, context)
+                    # Ejecutar herramienta de forma segura
+                    try:
+                        tool_result = await execute_tool_async(block.name, block.input, chat_id, context)
+                    except Exception as e:
+                        tool_result = f"Error ejecutando herramienta: {str(e)}"
                     
-                    # Agregamos el resultado al historial
                     messages.append({
                         "role": "user", 
                         "content": [{
@@ -352,30 +342,25 @@ MODO: PROFUNDO 🧘‍♀️
                         }]
                     })
             
-            # 3. Segunda llamada (respuesta final tras herramientas)
+            # 3. Segunda llamada
             response2 = client.messages.create(
                 model=DEFAULT_MODEL, max_tokens=2000, system=system_prompt, tools=TOOLS, messages=messages
             )
             
-            # EXTRACTOR SEGURO DE TEXTO
             for block in response2.content:
                 if block.type == "text":
                     final_text += block.text
 
         else:
-            # Si no hubo herramientas, extraemos texto normal
             for block in response.content:
                 if block.type == "text":
                     final_text += block.text
 
-        # Si por alguna razón no hay texto (ej. solo herramienta), poner fallback
         if not final_text:
-            final_text = "✅ He procesado la solicitud (sin respuesta de texto)."
+            final_text = "✅ He procesado la solicitud."
 
         # Respuesta final
         conversation_history[chat_id].append({"role": "assistant", "content": final_text})
-        
-        # CORRECCIÓN: reply_text en effective_message para mayor seguridad
         await update.effective_message.reply_text(final_text)
 
         # Audio (si aplica)
@@ -390,15 +375,14 @@ MODO: PROFUNDO 🧘‍♀️
 
     except Exception as e:
         logger.error(f"Error principal: {e}")
-        # Intentar notificar al usuario, protegido contra fallos de red/chat_id
+        # Informar al usuario del error específico
         try:
-            await update.effective_message.reply_text(f"⚠️ Error: {str(e)}")
-        except:
-            pass
+            await update.effective_message.reply_text(f"⚠️ Error en IA: {str(e)}")
+        except: pass
 
 # --- HANDLERS (COMANDOS Y MENSAJES) ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Hola Pablo. Soy Claudette V3. Sistemas de Clima y Modos activos.")
+    await update.message.reply_text("👋 Hola Pablo. Soy Claudette V4. Sistemas listos.")
 
 async def clear_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conversation_history[update.effective_chat.id] = []
@@ -406,11 +390,11 @@ async def clear_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_mode_deep(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_modes[update.effective_chat.id] = "profundo"
-    await update.message.reply_text("🧘‍♀️ Modo Profundo activado. Lista para análisis complejos.")
+    await update.message.reply_text("🧘‍♀️ Modo Profundo activado.")
 
 async def cmd_mode_normal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_modes[update.effective_chat.id] = "normal"
-    await update.message.reply_text("⚡ Modo Normal activado. Eficiencia máxima.")
+    await update.message.reply_text("⚡ Modo Normal activado.")
 
 async def cmd_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -443,33 +427,29 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     caption = update.message.caption or "¿Qué ves en esta imagen?"
     await process_message(update, context, caption, image_data=image_data)
 
-# --- CORRECCIÓN CRÍTICA PARA UBICACIÓN EN VIVO ---
+# --- MANEJO DE UBICACIÓN (LIVE & STATIC) ---
 async def handle_location_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Usamos effective_message y effective_chat para soportar Edited Messages (Live Location)
+    # Usar effective_message es CLAVE para soportar Live Locations (Edited Messages)
     message = update.effective_message
     chat_id = update.effective_chat.id
 
     if not message or not message.location:
-        return # Datos inválidos, salimos
+        return 
 
     lat = message.location.latitude
     lon = message.location.longitude
     
-    # Guardar ubicación en memoria
-    user_locations[chat_id] = {"lat": lat, "lng": lon, "name": "Ubicación Telegram (Live/Static)"}
+    # Actualizar memoria
+    user_locations[chat_id] = {"lat": lat, "lng": lon, "name": "Ubicación Telegram"}
     
-    # Lógica Anti-Spam: 
-    # Si es 'edited_message', es una actualización de Live Location (se mueve el GPS).
-    # No respondemos con texto para no llenar el chat, solo logueamos.
+    # Si es un mensaje editado (Live Location), SOLO logueamos, NO respondemos con texto
     if update.edited_message:
         logger.info(f"📍 Live Location Update para {chat_id}: {lat}, {lon}")
     else:
-        # Si es un mensaje nuevo (ubicación estática enviada manualmente), confirmamos.
-        await message.reply_text("📍 Ubicación actualizada. Ahora sé el clima exacto donde estás.")
+        # Solo respondemos si el usuario envió manualmente el mapa (mensaje estático)
+        await message.reply_text("📍 Ubicación actualizada. Sistemas sincronizados.")
 
-# --- MANEJADOR DE ERRORES GLOBAL ---
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Logea el error en lugar de crashear la app."""
     logger.error(msg="Exception while handling an update:", exc_info=context.error)
 
 # --- MAIN ---
@@ -484,17 +464,15 @@ def main():
     app.add_handler(CommandHandler("normal", cmd_mode_normal))
     app.add_handler(CommandHandler("ubicacion", cmd_location))
 
-    # Mensajes de Texto (ignora comandos)
+    # Mensajes
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-
-    # Mensajes Multimedia
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-
-    # Ubicación (Detecta mensajes normales Y editados de ubicación)
+    
+    # Ubicación (Live & Static)
     app.add_handler(MessageHandler(filters.LOCATION, handle_location_update))
 
-    # Registrar el manejador de errores para evitar crashes totales
+    # Error Handler
     app.add_error_handler(error_handler)
 
     print("✅ Claudette Online")
