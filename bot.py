@@ -55,9 +55,9 @@ conversation_history = {}
 user_locations = {}
 user_modes = {} 
 MAX_HISTORY_LENGTH = 15
-DEFAULT_LOCATION = {"lat": 9.9281, "lng": -84.0907, "name": "San José, Costa Rica"}
+DEFAULT_LOCATION = {"lat": 9.9281, "lng": -84.0907, "name": "San José, Costa Rica (Default)"}
 
-# CORRECCIÓN: Usamos exactamente el modelo que indicaste en la imagen
+# Modelo correcto según tu entorno
 DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
 # --- CARGADORES ---
@@ -284,14 +284,29 @@ async def process_message(update, context, text, is_voice=False, image_data=None
         ]
     conversation_history[chat_id].append({"role": "user", "content": user_msg_content})
     
-    # Limitar historial
     if len(conversation_history[chat_id]) > MAX_HISTORY_LENGTH:
         conversation_history[chat_id] = conversation_history[chat_id][-MAX_HISTORY_LENGTH:]
 
     try:
-        # Contexto Dinámico
+        # Contexto Dinámico & Recuperación de Ubicación
         tz = pytz.timezone('America/Costa_Rica')
         now = datetime.now(tz)
+        
+        # Lógica de Recuperación: Si no hay ubicación en RAM, buscar en BD
+        if chat_id not in user_locations:
+            saved_lat = get_fact("System_Location", "latitude")
+            saved_lng = get_fact("System_Location", "longitude")
+            if saved_lat and saved_lng:
+                try:
+                    user_locations[chat_id] = {
+                        "lat": float(saved_lat), 
+                        "lng": float(saved_lng), 
+                        "name": "Ubicación Guardada (BD)"
+                    }
+                    logger.info(f"📍 Ubicación recuperada de la BD para {chat_id}")
+                except:
+                    pass # Si falla conversión, usa default
+
         loc = user_locations.get(chat_id, DEFAULT_LOCATION)
         
         current_mode = user_modes.get(chat_id, "normal")
@@ -327,7 +342,6 @@ async def process_message(update, context, text, is_voice=False, image_data=None
             for block in response.content:
                 if block.type == "tool_use":
                     logger.info(f"🔧 Tool: {block.name}")
-                    # Ejecutar herramienta de forma segura
                     try:
                         tool_result = await execute_tool_async(block.name, block.input, chat_id, context)
                     except Exception as e:
@@ -375,14 +389,13 @@ async def process_message(update, context, text, is_voice=False, image_data=None
 
     except Exception as e:
         logger.error(f"Error principal: {e}")
-        # Informar al usuario del error específico
         try:
             await update.effective_message.reply_text(f"⚠️ Error en IA: {str(e)}")
         except: pass
 
 # --- HANDLERS (COMANDOS Y MENSAJES) ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Hola Pablo. Soy Claudette V4. Sistemas listos.")
+    await update.message.reply_text("👋 Hola Pablo. Soy Claudette V5. Persistencia de ubicación activa.")
 
 async def clear_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conversation_history[update.effective_chat.id] = []
@@ -427,9 +440,8 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     caption = update.message.caption or "¿Qué ves en esta imagen?"
     await process_message(update, context, caption, image_data=image_data)
 
-# --- MANEJO DE UBICACIÓN (LIVE & STATIC) ---
+# --- MANEJO DE UBICACIÓN (PERSISTENTE) ---
 async def handle_location_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Usar effective_message es CLAVE para soportar Live Locations (Edited Messages)
     message = update.effective_message
     chat_id = update.effective_chat.id
 
@@ -439,15 +451,21 @@ async def handle_location_update(update: Update, context: ContextTypes.DEFAULT_T
     lat = message.location.latitude
     lon = message.location.longitude
     
-    # Actualizar memoria
+    # 1. Actualizar memoria RAM
     user_locations[chat_id] = {"lat": lat, "lng": lon, "name": "Ubicación Telegram"}
     
-    # Si es un mensaje editado (Live Location), SOLO logueamos, NO respondemos con texto
+    # 2. Guardar en Base de Datos (Persistencia)
+    try:
+        save_fact("System_Location", "latitude", str(lat))
+        save_fact("System_Location", "longitude", str(lon))
+        logger.info(f"💾 Ubicación guardada en BD: {lat}, {lon}")
+    except Exception as e:
+        logger.error(f"Error guardando ubicación en BD: {e}")
+    
     if update.edited_message:
         logger.info(f"📍 Live Location Update para {chat_id}: {lat}, {lon}")
     else:
-        # Solo respondemos si el usuario envió manualmente el mapa (mensaje estático)
-        await message.reply_text("📍 Ubicación actualizada. Sistemas sincronizados.")
+        await message.reply_text("📍 Ubicación actualizada y guardada en memoria permanente.")
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error(msg="Exception while handling an update:", exc_info=context.error)
