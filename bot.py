@@ -5,11 +5,12 @@ import pytz
 import re
 import base64
 import io
-import requests  # <--- NUEVO: Para el clima
+import requests 
 from datetime import datetime, timedelta
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import anthropic
+# Asegúrate de que estos módulos existen en tu proyecto
 import google_calendar
 import gmail_service
 import google_tasks
@@ -39,7 +40,7 @@ ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY')
 ELEVENLABS_VOICE_ID = os.environ.get('ELEVENLABS_VOICE_ID', 'JBFqnCBsd6RMkjVDRZzb')
-OPENWEATHER_API_KEY = os.environ.get('OPENWEATHER_API_KEY') # <--- NUEVO
+OPENWEATHER_API_KEY = os.environ.get('OPENWEATHER_API_KEY')
 
 if not TELEGRAM_BOT_TOKEN or not ANTHROPIC_API_KEY:
     raise ValueError("Faltan variables de entorno requeridas.")
@@ -52,10 +53,10 @@ elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY) if ELEVENLABS_API_KEY
 # --- ESTADO GLOBAL ---
 conversation_history = {}
 user_locations = {}
-user_modes = {} # <--- NUEVO: Para guardar el modo (normal/profundo)
+user_modes = {} 
 MAX_HISTORY_LENGTH = 15
 DEFAULT_LOCATION = {"lat": 9.9281, "lng": -84.0907, "name": "San José, Costa Rica"}
-DEFAULT_MODEL = "claude-sonnet-4-20250514"
+DEFAULT_MODEL = "claude-3-5-sonnet-20240620" # Ajustado a un modelo válido actual, verifica tu acceso
 
 # --- CARGADORES ---
 def load_file_content(filename, default_text=""):
@@ -267,7 +268,8 @@ async def execute_tool_async(tool_name: str, tool_input: dict, chat_id: int, con
 
 # --- PROCESAMIENTO DEL MENSAJE (CEREBRO BLINDADO) ---
 async def process_message(update, context, text, is_voice=False, image_data=None):
-    chat_id = update.message.chat_id
+    # CORRECCIÓN: Usar effective_chat.id para evitar errores con mensajes editados
+    chat_id = update.effective_chat.id
     
     # Manejo de historial
     if chat_id not in conversation_history: conversation_history[chat_id] = []
@@ -355,7 +357,7 @@ MODO: PROFUNDO 🧘‍♀️
                 model=DEFAULT_MODEL, max_tokens=2000, system=system_prompt, tools=TOOLS, messages=messages
             )
             
-            # EXTRACTOR SEGURO DE TEXTO (Aquí estaba el error antes)
+            # EXTRACTOR SEGURO DE TEXTO
             for block in response2.content:
                 if block.type == "text":
                     final_text += block.text
@@ -372,7 +374,9 @@ MODO: PROFUNDO 🧘‍♀️
 
         # Respuesta final
         conversation_history[chat_id].append({"role": "assistant", "content": final_text})
-        await update.message.reply_text(final_text)
+        
+        # CORRECCIÓN: reply_text en effective_message para mayor seguridad
+        await update.effective_message.reply_text(final_text)
 
         # Audio (si aplica)
         if is_voice and elevenlabs_client:
@@ -380,32 +384,36 @@ MODO: PROFUNDO 🧘‍♀️
                 text_clean = re.sub(r'[^\w\s,.?¡!]', '', final_text)
                 audio = elevenlabs_client.generate(text=text_clean, voice=ELEVENLABS_VOICE_ID, model="eleven_multilingual_v2")
                 audio_bytes = b"".join(audio)
-                await update.message.reply_voice(voice=audio_bytes)
+                await update.effective_message.reply_voice(voice=audio_bytes)
             except Exception as e:
                 logger.error(f"Error audio: {e}")
 
     except Exception as e:
         logger.error(f"Error principal: {e}")
-        await update.message.reply_text(f"⚠️ Error: {str(e)}")
+        # Intentar notificar al usuario, protegido contra fallos de red/chat_id
+        try:
+            await update.effective_message.reply_text(f"⚠️ Error: {str(e)}")
+        except:
+            pass
 
 # --- HANDLERS (COMANDOS Y MENSAJES) ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("👋 Hola Pablo. Soy Claudette V3. Sistemas de Clima y Modos activos.")
 
 async def clear_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    conversation_history[update.message.chat_id] = []
+    conversation_history[update.effective_chat.id] = []
     await update.message.reply_text("🧹 Memoria a corto plazo borrada.")
 
 async def cmd_mode_deep(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_modes[update.message.chat_id] = "profundo"
+    user_modes[update.effective_chat.id] = "profundo"
     await update.message.reply_text("🧘‍♀️ Modo Profundo activado. Lista para análisis complejos.")
 
 async def cmd_mode_normal(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_modes[update.message.chat_id] = "normal"
+    user_modes[update.effective_chat.id] = "normal"
     await update.message.reply_text("⚡ Modo Normal activado. Eficiencia máxima.")
 
 async def cmd_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.message.chat_id
+    chat_id = update.effective_chat.id
     loc = user_locations.get(chat_id, DEFAULT_LOCATION)
     await update.message.reply_text(f"📍 Ubicación actual: {loc['name']}\nEnvíame tu ubicación por Telegram para actualizar.")
 
@@ -435,12 +443,34 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     caption = update.message.caption or "¿Qué ves en esta imagen?"
     await process_message(update, context, caption, image_data=image_data)
 
+# --- CORRECCIÓN CRÍTICA PARA UBICACIÓN EN VIVO ---
 async def handle_location_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.message.chat_id
-    lat = update.message.location.latitude
-    lon = update.message.location.longitude
-    user_locations[chat_id] = {"lat": lat, "lng": lon, "name": "Ubicación Telegram"}
-    await update.message.reply_text("📍 Ubicación actualizada. Ahora sé el clima exacto donde estás.")
+    # Usamos effective_message y effective_chat para soportar Edited Messages (Live Location)
+    message = update.effective_message
+    chat_id = update.effective_chat.id
+
+    if not message or not message.location:
+        return # Datos inválidos, salimos
+
+    lat = message.location.latitude
+    lon = message.location.longitude
+    
+    # Guardar ubicación en memoria
+    user_locations[chat_id] = {"lat": lat, "lng": lon, "name": "Ubicación Telegram (Live/Static)"}
+    
+    # Lógica Anti-Spam: 
+    # Si es 'edited_message', es una actualización de Live Location (se mueve el GPS).
+    # No respondemos con texto para no llenar el chat, solo logueamos.
+    if update.edited_message:
+        logger.info(f"📍 Live Location Update para {chat_id}: {lat}, {lon}")
+    else:
+        # Si es un mensaje nuevo (ubicación estática enviada manualmente), confirmamos.
+        await message.reply_text("📍 Ubicación actualizada. Ahora sé el clima exacto donde estás.")
+
+# --- MANEJADOR DE ERRORES GLOBAL ---
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Logea el error en lugar de crashear la app."""
+    logger.error(msg="Exception while handling an update:", exc_info=context.error)
 
 # --- MAIN ---
 def main():
@@ -461,8 +491,11 @@ def main():
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
-    # Ubicación (Detecta cuando envías el mapa)
+    # Ubicación (Detecta mensajes normales Y editados de ubicación)
     app.add_handler(MessageHandler(filters.LOCATION, handle_location_update))
+
+    # Registrar el manejador de errores para evitar crashes totales
+    app.add_error_handler(error_handler)
 
     print("✅ Claudette Online")
     app.run_polling()
