@@ -1,9 +1,10 @@
 """
 Google Drive Service para Claudette Bot.
-Funciones para buscar y listar archivos en Google Drive.
+Usa token.json (igual que Calendar y Tasks) con auto-refresh robusto.
 """
 
 import os
+import json
 import logging
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
@@ -11,33 +12,50 @@ from googleapiclient.discovery import build
 
 logger = logging.getLogger(__name__)
 
-# Drive API scopes
-DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+# Todos los scopes que necesita el bot (deben coincidir con los del token.json)
+SCOPES = [
+    'https://www.googleapis.com/auth/drive.readonly',
+    'https://www.googleapis.com/auth/drive.file',
+]
+
+TOKEN_FILE = 'token.json'
 
 def get_drive_credentials():
-    """Get OAuth credentials from environment variables."""
-    client_id = os.environ.get('GOOGLE_CLIENT_ID')
-    client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
-    refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN')
-    
-    if not all([client_id, client_secret, refresh_token]):
-        logger.error("Missing Google OAuth credentials in environment")
+    """
+    Get OAuth credentials from token.json (mismo método que Calendar/Tasks).
+    Auto-refresh si el token expiró.
+    """
+    if not os.path.exists(TOKEN_FILE):
+        logger.error(f"❌ No se encontró {TOKEN_FILE}")
         return None
     
-    creds = Credentials(
-        token=None,
-        refresh_token=refresh_token,
-        token_uri='https://oauth2.googleapis.com/token',
-        client_id=client_id,
-        client_secret=client_secret,
-        scopes=DRIVE_SCOPES
-    )
-    
     try:
-        creds.refresh(Request())
+        creds = Credentials.from_authorized_user_file(TOKEN_FILE)
+        
+        # Auto-refresh si expiró
+        if creds and creds.expired and creds.refresh_token:
+            logger.info("🔄 Token expirado, renovando automáticamente...")
+            creds.refresh(Request())
+            
+            # Guardar el token renovado para que no expire de nuevo
+            with open(TOKEN_FILE, 'w') as f:
+                f.write(creds.to_json())
+            logger.info("✅ Token renovado y guardado exitosamente")
+        
+        if not creds or not creds.valid:
+            # Último intento: forzar refresh
+            if creds and creds.refresh_token:
+                creds.refresh(Request())
+                with open(TOKEN_FILE, 'w') as f:
+                    f.write(creds.to_json())
+            else:
+                logger.error("❌ Token inválido y sin refresh_token")
+                return None
+        
         return creds
+        
     except Exception as e:
-        logger.error(f"Error refreshing Drive credentials: {e}")
+        logger.error(f"❌ Error con credenciales Drive: {e}")
         return None
 
 def get_drive_service():
@@ -47,33 +65,20 @@ def get_drive_service():
         return None
     
     try:
-        service = build('drive', 'v3', credentials=creds)
+        service = build('drive', 'v3', credentials=creds, cache_discovery=False)
         return service
     except Exception as e:
-        logger.error(f"Error building Drive service: {e}")
+        logger.error(f"❌ Error building Drive service: {e}")
         return None
 
 def search_files(query: str, max_results: int = 10) -> dict:
-    """
-    Search files in Google Drive.
-    
-    Args:
-        query: Search query (file name or content keywords)
-        max_results: Maximum number of files to return (default 10)
-    
-    Returns:
-        dict with 'success', 'files' array, and 'error' if any
-    """
+    """Search files in Google Drive."""
     service = get_drive_service()
     if not service:
-        return {"success": False, "error": "No se pudo conectar a Google Drive."}
+        return {"success": False, "error": "No se pudo conectar a Google Drive. Verificar token.json"}
     
     try:
-        # Build search query for Drive API
-        # Search in file name and full text
         search_query = f"name contains '{query}' or fullText contains '{query}'"
-        
-        # Exclude trashed files
         search_query += " and trashed = false"
         
         results = service.files().list(
@@ -90,15 +95,10 @@ def search_files(query: str, max_results: int = 10) -> dict:
         
         file_list = []
         for f in files:
-            # Get file type in readable format
             mime_type = f.get('mimeType', '')
             file_type = get_readable_file_type(mime_type)
-            
-            # Format size
             size = f.get('size')
             size_formatted = format_file_size(int(size)) if size else "N/A"
-            
-            # Get owner
             owners = f.get('owners', [])
             owner = owners[0].get('displayName', 'Desconocido') if owners else 'Desconocido'
             
@@ -107,7 +107,7 @@ def search_files(query: str, max_results: int = 10) -> dict:
                 "name": f['name'],
                 "type": file_type,
                 "mime_type": mime_type,
-                "modified": f.get('modifiedTime', '')[:10],  # Just date
+                "modified": f.get('modifiedTime', '')[:10],
                 "link": f.get('webViewLink', ''),
                 "size": size_formatted,
                 "owner": owner
@@ -116,19 +116,11 @@ def search_files(query: str, max_results: int = 10) -> dict:
         return {"success": True, "files": file_list, "count": len(file_list)}
     
     except Exception as e:
-        logger.error(f"Error searching files: {e}")
+        logger.error(f"❌ Error searching files: {e}")
         return {"success": False, "error": f"Error buscando archivos: {str(e)}"}
 
 def list_recent_files(max_results: int = 10) -> dict:
-    """
-    List recently modified files in Google Drive.
-    
-    Args:
-        max_results: Maximum number of files to return
-    
-    Returns:
-        dict with 'success', 'files' array, and 'error' if any
-    """
+    """List recently modified files in Google Drive."""
     service = get_drive_service()
     if not service:
         return {"success": False, "error": "No se pudo conectar a Google Drive."}
@@ -142,43 +134,29 @@ def list_recent_files(max_results: int = 10) -> dict:
         ).execute()
         
         files = results.get('files', [])
-        
         if not files:
             return {"success": True, "files": [], "message": "No hay archivos recientes."}
         
         file_list = []
         for f in files:
             mime_type = f.get('mimeType', '')
-            file_type = get_readable_file_type(mime_type)
-            
             size = f.get('size')
-            size_formatted = format_file_size(int(size)) if size else "N/A"
-            
             file_list.append({
                 "id": f['id'],
                 "name": f['name'],
-                "type": file_type,
+                "type": get_readable_file_type(mime_type),
                 "modified": f.get('modifiedTime', '')[:10],
                 "link": f.get('webViewLink', ''),
-                "size": size_formatted
+                "size": format_file_size(int(size)) if size else "N/A"
             })
         
         return {"success": True, "files": file_list, "count": len(file_list)}
-    
     except Exception as e:
-        logger.error(f"Error listing recent files: {e}")
+        logger.error(f"❌ Error listing recent files: {e}")
         return {"success": False, "error": f"Error listando archivos: {str(e)}"}
 
 def get_file_info(file_id: str) -> dict:
-    """
-    Get detailed information about a specific file.
-    
-    Args:
-        file_id: The Google Drive file ID
-    
-    Returns:
-        dict with file details
-    """
+    """Get detailed information about a specific file."""
     service = get_drive_service()
     if not service:
         return {"success": False, "error": "No se pudo conectar a Google Drive."}
@@ -189,7 +167,6 @@ def get_file_info(file_id: str) -> dict:
             fields="id, name, mimeType, modifiedTime, createdTime, webViewLink, size, owners, shared, description"
         ).execute()
         
-        mime_type = file.get('mimeType', '')
         size = file.get('size')
         owners = file.get('owners', [])
         
@@ -197,8 +174,8 @@ def get_file_info(file_id: str) -> dict:
             "success": True,
             "id": file['id'],
             "name": file['name'],
-            "type": get_readable_file_type(mime_type),
-            "mime_type": mime_type,
+            "type": get_readable_file_type(file.get('mimeType', '')),
+            "mime_type": file.get('mimeType', ''),
             "created": file.get('createdTime', '')[:10],
             "modified": file.get('modifiedTime', '')[:10],
             "link": file.get('webViewLink', ''),
@@ -207,81 +184,51 @@ def get_file_info(file_id: str) -> dict:
             "shared": file.get('shared', False),
             "description": file.get('description', '')
         }
-    
     except Exception as e:
-        logger.error(f"Error getting file info: {e}")
+        logger.error(f"❌ Error getting file info: {e}")
         return {"success": False, "error": f"Error obteniendo información: {str(e)}"}
 
 def list_files_in_folder(folder_name: str, max_results: int = 20) -> dict:
-    """
-    List files inside a specific folder.
-    
-    Args:
-        folder_name: Name of the folder to search
-        max_results: Maximum number of files to return
-    
-    Returns:
-        dict with 'success', 'files' array, and 'error' if any
-    """
+    """List files inside a specific folder."""
     service = get_drive_service()
     if not service:
         return {"success": False, "error": "No se pudo conectar a Google Drive."}
     
     try:
-        # First, find the folder
         folder_query = f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
-        folder_results = service.files().list(
-            q=folder_query,
-            fields="files(id, name)"
-        ).execute()
-        
+        folder_results = service.files().list(q=folder_query, fields="files(id, name)").execute()
         folders = folder_results.get('files', [])
         
         if not folders:
             return {"success": False, "error": f"No se encontró la carpeta '{folder_name}'."}
         
         folder_id = folders[0]['id']
-        
-        # Now list files in that folder
         files_query = f"'{folder_id}' in parents and trashed = false"
         results = service.files().list(
-            q=files_query,
-            pageSize=max_results,
+            q=files_query, pageSize=max_results,
             fields="files(id, name, mimeType, modifiedTime, webViewLink, size)",
             orderBy="name"
         ).execute()
         
         files = results.get('files', [])
-        
         if not files:
             return {"success": True, "files": [], "message": f"La carpeta '{folder_name}' está vacía."}
         
         file_list = []
         for f in files:
-            mime_type = f.get('mimeType', '')
-            file_type = get_readable_file_type(mime_type)
-            
             size = f.get('size')
-            size_formatted = format_file_size(int(size)) if size else "N/A"
-            
             file_list.append({
                 "id": f['id'],
                 "name": f['name'],
-                "type": file_type,
+                "type": get_readable_file_type(f.get('mimeType', '')),
                 "modified": f.get('modifiedTime', '')[:10],
                 "link": f.get('webViewLink', ''),
-                "size": size_formatted
+                "size": format_file_size(int(size)) if size else "N/A"
             })
         
-        return {
-            "success": True,
-            "folder": folder_name,
-            "files": file_list,
-            "count": len(file_list)
-        }
-    
+        return {"success": True, "folder": folder_name, "files": file_list, "count": len(file_list)}
     except Exception as e:
-        logger.error(f"Error listing folder contents: {e}")
+        logger.error(f"❌ Error listing folder contents: {e}")
         return {"success": False, "error": f"Error listando carpeta: {str(e)}"}
 
 def get_readable_file_type(mime_type: str) -> str:
@@ -297,15 +244,14 @@ def get_readable_file_type(mime_type: str) -> str:
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📊 Excel',
         'application/vnd.openxmlformats-officedocument.presentationml.presentation': '📽️ PowerPoint',
         'application/zip': '🗜️ ZIP',
-        'image/jpeg': '🖼️ Imagen JPEG',
-        'image/png': '🖼️ Imagen PNG',
-        'image/gif': '🖼️ GIF',
-        'video/mp4': '🎬 Video MP4',
-        'audio/mpeg': '🎵 Audio MP3',
+        'application/epub+zip': '📚 EPUB',
+        'image/jpeg': '🖼️ JPEG',
+        'image/png': '🖼️ PNG',
+        'video/mp4': '🎬 MP4',
+        'audio/mpeg': '🎵 MP3',
         'text/plain': '📝 Texto',
         'text/csv': '📊 CSV',
     }
-    
     return type_map.get(mime_type, '📎 Archivo')
 
 def format_file_size(size_bytes: int) -> str:
