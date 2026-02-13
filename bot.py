@@ -19,7 +19,6 @@ import google_places
 from memory_manager import setup_database, save_fact, get_fact, get_all_facts
 from openai import OpenAI
 from elevenlabs.client import ElevenLabs
-# REEMPLAZO: Usamos googlesearch en lugar de duckduckgo
 try:
     from googlesearch import search as google_search_func
 except ImportError:
@@ -102,18 +101,14 @@ def get_weather(lat, lon):
     except Exception as e:
         return f"Error obteniendo clima: {e}"
 
-# --- NUEVA BÚSQUEDA GOOGLE ---
+# --- BÚSQUEDA GOOGLE ---
 def search_web_google(query, max_results=5):
-    """Realiza una búsqueda en Google Web."""
     if not google_search_func:
         return "⚠️ Error: Falta instalar `googlesearch-python`."
-    
     try:
         results = []
-        # advanced=True devuelve objetos con titulo, descripcion y url
         for result in google_search_func(query, num_results=max_results, advanced=True, lang="es"):
             results.append(f"📰 {result.title}\n🔗 {result.url}\n📝 {result.description}\n")
-        
         if not results:
             return "Google no devolvió resultados."
         return "\n".join(results)
@@ -156,7 +151,56 @@ def read_book_from_drive_tool(query):
         return f"📖 {file_name} (Fragmento):\n{content[:8000]}..."
     except Exception as e: return f"Error leyendo libro: {e}"
 
-# --- HERRAMIENTAS ---
+# =====================================================
+# SAFE HISTORY TRIMMING (evita error 400 tool_use/tool_result)
+# =====================================================
+def _is_tool_result_message(msg):
+    """Verifica si un mensaje contiene tool_result."""
+    content = msg.get('content', [])
+    if isinstance(content, list):
+        return any(
+            isinstance(block, dict) and block.get('type') == 'tool_result'
+            for block in content
+        )
+    return False
+
+def _is_tool_use_message(msg):
+    """Verifica si un mensaje contiene tool_use."""
+    content = msg.get('content', [])
+    if isinstance(content, list):
+        return any(
+            (isinstance(block, dict) and block.get('type') == 'tool_use') or
+            (hasattr(block, 'type') and block.type == 'tool_use')
+            for block in content
+        )
+    return False
+
+def _next_is_tool_result(messages, index):
+    """Verifica si el siguiente mensaje es tool_result."""
+    if index + 1 < len(messages):
+        return _is_tool_result_message(messages[index + 1])
+    return False
+
+def trim_history_safe(messages, max_length=15):
+    """Recorta historial sin romper pares tool_use/tool_result."""
+    if len(messages) <= max_length:
+        return messages
+    
+    trimmed = messages[-max_length:]
+    
+    # Eliminar tool_result huérfanos al inicio
+    while trimmed and _is_tool_result_message(trimmed[0]):
+        trimmed = trimmed[1:]
+    
+    # Eliminar tool_use sin su tool_result al inicio
+    while trimmed and _is_tool_use_message(trimmed[0]) and not _next_is_tool_result(trimmed, 0):
+        trimmed = trimmed[1:]
+    
+    return trimmed if trimmed else messages[-2:]
+
+# =====================================================
+# HERRAMIENTAS (TOOLS)
+# =====================================================
 TOOLS = [
     {
         "name": "get_current_weather",
@@ -224,12 +268,37 @@ TOOLS = [
     },
     {
         "name": "search_emails",
-        "description": "Buscar correos.",
+        "description": "Buscar correos en Gmail. Usa sintaxis Gmail: from:, to:, subject:, is:unread, has:attachment, newer_than:2d, etc.",
         "input_schema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}
+    },
+    {
+        "name": "get_email",
+        "description": "Leer el contenido completo de un email específico por su ID (obtenido de search_emails).",
+        "input_schema": {
+            "type": "object",
+            "properties": {"email_id": {"type": "string", "description": "ID del email"}},
+            "required": ["email_id"]
+        }
+    },
+    {
+        "name": "send_email",
+        "description": "Enviar un email desde Gmail. Puede enviar correos nuevos o responder a existentes.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "to": {"type": "string", "description": "Email del destinatario"},
+                "subject": {"type": "string", "description": "Asunto del correo"},
+                "body": {"type": "string", "description": "Cuerpo del correo en texto plano"},
+                "reply_to_id": {"type": "string", "description": "ID del email al que responder (opcional)"}
+            },
+            "required": ["to", "subject", "body"]
+        }
     }
 ]
 
-# --- EJECUCIÓN ---
+# =====================================================
+# EJECUCIÓN DE HERRAMIENTAS
+# =====================================================
 async def execute_tool_async(tool_name: str, tool_input: dict, chat_id: int, context: ContextTypes.DEFAULT_TYPE):
     
     if tool_name == "get_current_weather":
@@ -250,29 +319,18 @@ async def execute_tool_async(tool_name: str, tool_input: dict, chat_id: int, con
         loc_name = loc.get('name', 'San José, Costa Rica')
         query = tool_input['query']
 
-        # INTENTO 1: Google Places API (Oficial)
         try:
             places_result = google_places.search_nearby_places(query, lat, lng)
-            
-            # Solo caer al fallback si hay un error real (⚠️ indica problema)
             if not places_result or "⚠️" in str(places_result):
                 logger.warning(f"Places API problema: {places_result}")
                 raise Exception(str(places_result))
-            
             return places_result
-            
         except Exception as e:
             logger.error(f"⚠️ Google Places API falló: {e}. Usando Google Web Search.")
-            
-            # INTENTO 2: Fallback con búsqueda geolocalizada real
-            # Usamos "near" + nombre de zona, NO el operador ficticio "loc:"
             fallback_query = f"{query} near {loc_name}"
             web_result = search_web_google(fallback_query)
-            
             if web_result and "no devolvió resultados" not in web_result:
                 return f"🔍 (Búsqueda web, Places API no disponible):\n{web_result}"
-            
-            # INTENTO 3: Query más simple
             fallback_query2 = f"{query} Costa Rica"
             return f"🔍 (Búsqueda general):\n{search_web_google(fallback_query2)}"
 
@@ -284,7 +342,8 @@ async def execute_tool_async(tool_name: str, tool_input: dict, chat_id: int, con
         save_fact(full_key, tool_input['value'])
         return f"✅ Guardado: {full_key}"
         
-    elif tool_name == "search_web": return search_web_google(tool_input['query'])
+    elif tool_name == "search_web":
+        return search_web_google(tool_input['query'])
     
     elif tool_name == "get_calendar_events":
         return google_calendar.get_calendar_events(clean_date_iso(tool_input['start_date']), clean_date_iso(tool_input['end_date'], True))
@@ -298,11 +357,25 @@ async def execute_tool_async(tool_name: str, tool_input: dict, chat_id: int, con
     elif tool_name == "list_tasks":
         return google_tasks.list_tasks(tool_input.get('show_completed', False))
         
-    elif tool_name == "search_emails": return gmail_service.search_emails(tool_input['query'])
+    elif tool_name == "search_emails":
+        return gmail_service.search_emails(tool_input['query'])
+    
+    elif tool_name == "get_email":
+        return gmail_service.get_email(tool_input['email_id'])
+    
+    elif tool_name == "send_email":
+        return gmail_service.send_email(
+            to=tool_input['to'],
+            subject=tool_input['subject'],
+            body=tool_input['body'],
+            reply_to_id=tool_input.get('reply_to_id')
+        )
     
     return "Herramienta no encontrada."
 
-# --- CEREBRO ---
+# =====================================================
+# CEREBRO PRINCIPAL
+# =====================================================
 async def process_message(update, context, text, is_voice=False, image_data=None):
     chat_id = update.effective_chat.id
     if chat_id not in conversation_history: conversation_history[chat_id] = []
@@ -315,20 +388,18 @@ async def process_message(update, context, text, is_voice=False, image_data=None
         ]
     conversation_history[chat_id].append({"role": "user", "content": user_msg_content})
     
+    # FIX: Safe history trimming (no rompe pares tool_use/tool_result)
     if len(conversation_history[chat_id]) > MAX_HISTORY_LENGTH:
-        conversation_history[chat_id] = conversation_history[chat_id][-MAX_HISTORY_LENGTH:]
+        conversation_history[chat_id] = trim_history_safe(conversation_history[chat_id], MAX_HISTORY_LENGTH)
 
     try:
         tz = pytz.timezone('America/Costa_Rica')
         now = datetime.now(tz)
         
-        # Recuperar ubicación de BD si RAM está vacía
         if chat_id not in user_locations:
             try:
-                # CORREGIDO: get_fact solo acepta 1 argumento (la key)
                 saved_lat = get_fact(f"System_Location_Lat_{chat_id}") 
                 saved_lng = get_fact(f"System_Location_Lng_{chat_id}")
-                
                 if saved_lat and saved_lng:
                     user_locations[chat_id] = {
                         "lat": float(saved_lat), 
@@ -404,7 +475,7 @@ async def process_message(update, context, text, is_voice=False, image_data=None
 
 # --- HANDLERS ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Soy Claudette V8. Corrección aplicada.")
+    await update.message.reply_text("👋 Soy Claudette V9. Gmail + Drive + History Fix.")
 
 async def clear_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conversation_history[update.effective_chat.id] = []
@@ -457,7 +528,6 @@ async def handle_location_update(update: Update, context: ContextTypes.DEFAULT_T
     
     user_locations[chat_id] = {"lat": lat, "lng": lng, "name": "Ubicación Telegram"}
     
-    # FIX: Guardar correctamente usando 2 argumentos
     try:
         save_fact(f"System_Location_Lat_{chat_id}", str(lat))
         save_fact(f"System_Location_Lng_{chat_id}", str(lng))
@@ -484,7 +554,7 @@ def main():
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.LOCATION, handle_location_update))
     app.add_error_handler(error_handler)
-    print("✅ Claudette Online (V8 Fixed)")
+    print("✅ Claudette Online (V9 - Gmail + Drive + History Fix)")
     app.run_polling()
 
 if __name__ == '__main__':
