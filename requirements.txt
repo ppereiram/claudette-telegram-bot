@@ -11,4 +11,5 @@ pypdf
 EbookLib
 beautifulsoup4
 requests
+googlesearch-python
 pytz
