@@ -41,6 +41,8 @@ OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY')
 ELEVENLABS_VOICE_ID = os.environ.get('ELEVENLABS_VOICE_ID', 'JBFqnCBsd6RMkjVDRZzb')
 OPENWEATHER_API_KEY = os.environ.get('OPENWEATHER_API_KEY')
+# Aseguramos que existe la key de maps para debug
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY')
 
 if not TELEGRAM_BOT_TOKEN or not ANTHROPIC_API_KEY:
     raise ValueError("Faltan variables de entorno requeridas.")
@@ -57,7 +59,7 @@ user_modes = {}
 MAX_HISTORY_LENGTH = 15
 DEFAULT_LOCATION = {"lat": 9.9281, "lng": -84.0907, "name": "San José, Costa Rica (Default)"}
 
-# Modelo correcto según tu entorno
+# Modelo correcto
 DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
 # --- CARGADORES ---
@@ -163,11 +165,11 @@ TOOLS = [
     },
     {
         "name": "search_nearby_places",
-        "description": "Buscar lugares físicos (restaurantes, tiendas, etc) cerca del usuario usando Google Maps.",
+        "description": "Buscar lugares físicos (restaurantes, tiendas, etc) cerca del usuario. Usa esto SIEMPRE para preguntas de 'dónde hay un X cerca'.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Qué buscar (ej: pizza, gasolinera)"}
+                "query": {"type": "string", "description": "Qué buscar (ej: pizza, veterinaria)"}
             },
             "required": ["query"]
         }
@@ -239,12 +241,28 @@ async def execute_tool_async(tool_name: str, tool_input: dict, chat_id: int, con
 
     elif tool_name == "search_nearby_places":
         loc = user_locations.get(chat_id, DEFAULT_LOCATION)
-        return google_places.search_nearby_places(tool_input['query'], loc['lat'], loc['lng'])
-        
+        lat = loc['lat']
+        lng = loc['lng']
+        query = tool_input['query']
+
+        # INTENTO 1: Google Places
+        try:
+            places_result = google_places.search_nearby_places(query, lat, lng)
+            # Si Google devuelve error genérico o vacío, lanzamos excepción para ir al fallback
+            if not places_result or "Error" in str(places_result) or "problema técnico" in str(places_result):
+                 raise Exception("Google Places falló o no devolvió resultados.")
+            return places_result
+        except Exception as e:
+            logger.error(f"⚠️ Google Places Error: {e}. Usando Fallback DDG.")
+            # INTENTO 2: Fallback con DuckDuckGo (Búsqueda local simulada)
+            fallback_query = f"{query} cerca de coordenadas {lat}, {lng} Costa Rica direcciones"
+            return search_web_ddg(fallback_query, max_results=3)
+
     elif tool_name == "read_book_from_drive":
         return read_book_from_drive_tool(tool_input['query'])
 
     elif tool_name == "save_user_fact":
+        # Corrección de argumentos para save_fact
         full_key = f"{tool_input.get('category', 'General')}: {tool_input.get('key', 'Dato')}"
         save_fact(full_key, tool_input['value'])
         return f"✅ Memoria guardada: {full_key}"
@@ -292,10 +310,10 @@ async def process_message(update, context, text, is_voice=False, image_data=None
         tz = pytz.timezone('America/Costa_Rica')
         now = datetime.now(tz)
         
-        # Lógica de Recuperación: Si no hay ubicación en RAM, buscar en BD
+        # Recuperación de persistencia si no hay en RAM
         if chat_id not in user_locations:
-            saved_lat = get_fact("System_Location", "latitude")
-            saved_lng = get_fact("System_Location", "longitude")
+            saved_lat = get_fact("System_Location: latitude") # Clave corregida
+            saved_lng = get_fact("System_Location: longitude")
             if saved_lat and saved_lng:
                 try:
                     user_locations[chat_id] = {
@@ -304,8 +322,7 @@ async def process_message(update, context, text, is_voice=False, image_data=None
                         "name": "Ubicación Guardada (BD)"
                     }
                     logger.info(f"📍 Ubicación recuperada de la BD para {chat_id}")
-                except:
-                    pass # Si falla conversión, usa default
+                except: pass
 
         loc = user_locations.get(chat_id, DEFAULT_LOCATION)
         
@@ -319,7 +336,8 @@ async def process_message(update, context, text, is_voice=False, image_data=None
 
 === CONTEXTO ACTUAL ===
 📅 FECHA: {now.strftime("%A %d-%m-%Y %H:%M")}
-📍 UBICACIÓN: {loc['name']} (Lat: {loc['lat']}, Lon: {loc['lng']})
+📍 UBICACIÓN USUARIO (GPS): Lat: {loc['lat']}, Lon: {loc['lng']}
+(Usa estas coordenadas exactas para buscar lugares cercanos).
 {mode_instruction}
 """
         
@@ -395,7 +413,7 @@ async def process_message(update, context, text, is_voice=False, image_data=None
 
 # --- HANDLERS (COMANDOS Y MENSAJES) ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Hola Pablo. Soy Claudette V5. Persistencia de ubicación activa.")
+    await update.message.reply_text("👋 Hola Pablo. Soy Claudette V6. Fallback de Mapas Activado.")
 
 async def clear_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conversation_history[update.effective_chat.id] = []
@@ -440,7 +458,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     caption = update.message.caption or "¿Qué ves en esta imagen?"
     await process_message(update, context, caption, image_data=image_data)
 
-# --- MANEJO DE UBICACIÓN (PERSISTENTE) ---
+# --- MANEJO DE UBICACIÓN (PERSISTENTE Y CORREGIDO) ---
 async def handle_location_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.effective_message
     chat_id = update.effective_chat.id
@@ -454,10 +472,10 @@ async def handle_location_update(update: Update, context: ContextTypes.DEFAULT_T
     # 1. Actualizar memoria RAM
     user_locations[chat_id] = {"lat": lat, "lng": lon, "name": "Ubicación Telegram"}
     
-    # 2. Guardar en Base de Datos (Persistencia)
+    # 2. Guardar en Base de Datos (FIXED: Un solo string para la key)
     try:
-        save_fact("System_Location", "latitude", str(lat))
-        save_fact("System_Location", "longitude", str(lon))
+        save_fact("System_Location: latitude", str(lat))
+        save_fact("System_Location: longitude", str(lon))
         logger.info(f"💾 Ubicación guardada en BD: {lat}, {lon}")
     except Exception as e:
         logger.error(f"Error guardando ubicación en BD: {e}")
@@ -465,7 +483,7 @@ async def handle_location_update(update: Update, context: ContextTypes.DEFAULT_T
     if update.edited_message:
         logger.info(f"📍 Live Location Update para {chat_id}: {lat}, {lon}")
     else:
-        await message.reply_text("📍 Ubicación actualizada y guardada en memoria permanente.")
+        await message.reply_text("📍 Ubicación precisa recibida. Ahora puedo encontrar cosas realmente cerca de ti.")
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error(msg="Exception while handling an update:", exc_info=context.error)
