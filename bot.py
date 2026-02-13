@@ -427,13 +427,15 @@ def main():
     app.add_handler(CommandHandler("normal", cmd_mode_normal))
     app.add_handler(CommandHandler("ubicacion", cmd_location))
 
-    # Mensajes
+    # Mensajes de Texto (ignora comandos)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+
+    # Mensajes Multimedia
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+
+    # Ubicación (Detecta cuando envías el mapa)
     app.add_handler(MessageHandler(filters.LOCATION, handle_location_update))
-    app.add_handler(MessageHandler(filters.LOCATION, handle_location_update)) 
-    app.add_handler(MessageHandler(filters.LOCATION, handle_location_update), group=1)
 
     print("✅ Claudette Online")
     app.run_polling()
