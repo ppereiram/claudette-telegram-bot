@@ -466,7 +466,8 @@ async def process_message(update, context, text, is_voice=False, image_data=None
                 text_clean = re.sub(r'[^\w\s,.?¡!]', '', final_text)
                 audio = elevenlabs_client.generate(text=text_clean, voice=ELEVENLABS_VOICE_ID, model="eleven_multilingual_v2")
                 await update.effective_message.reply_voice(voice=b"".join(audio))
-            except: pass
+            except Exception as e:
+                logger.error(f"❌ ElevenLabs Error: {e}")
 
     except Exception as e:
         logger.error(f"Error Main: {e}")
