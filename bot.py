@@ -159,6 +159,17 @@ TOOLS = [
         }
     },
     {
+        "name": "search_nearby_places",
+        "description": "Buscar lugares físicos (restaurantes, tiendas, etc) cerca del usuario usando Google Maps.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Qué buscar (ej: pizza, gasolinera)"}
+            },
+            "required": ["query"]
+        }
+    },
+    {
         "name": "search_contact_and_call",
         "description": "Busca un contacto en Google y devuelve su tarjeta para llamar.",
         "input_schema": {
@@ -223,6 +234,11 @@ async def execute_tool_async(tool_name: str, tool_input: dict, chat_id: int, con
         await context.bot.send_contact(chat_id=chat_id, phone_number=contact['phone'], first_name=contact['name'])
         return f"✅ Tarjeta enviada para {contact['name']}."
 
+    elif tool_name == "search_nearby_places":
+        # Obtenemos la ubicación actual del usuario de la memoria
+        loc = user_locations.get(chat_id, DEFAULT_LOCATION)
+        return google_places.search_nearby_places(tool_input['query'], loc['lat'], loc['lng'])
+        
     elif tool_name == "read_book_from_drive":
         return read_book_from_drive_tool(tool_input['query'])
 
