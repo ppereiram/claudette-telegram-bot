@@ -249,14 +249,14 @@ async def execute_tool_async(tool_name: str, tool_input: dict, chat_id: int, con
     
     return "Herramienta no encontrada."
 
-# --- PROCESAMIENTO DEL MENSAJE (CEREBRO) ---
+# --- PROCESAMIENTO DEL MENSAJE (CEREBRO BLINDADO) ---
 async def process_message(update, context, text, is_voice=False, image_data=None):
     chat_id = update.message.chat_id
     
     # Manejo de historial
     if chat_id not in conversation_history: conversation_history[chat_id] = []
     
-    # Agregar mensaje de usuario (con imagen si hay)
+    # Agregar mensaje de usuario
     user_msg_content = text
     if image_data:
         user_msg_content = [
@@ -283,7 +283,6 @@ async def process_message(update, context, text, is_voice=False, image_data=None
 MODO: PROFUNDO 🧘‍♀️
 - Respuestas detalladas, filosóficas y analíticas.
 - Conecta ideas, usa analogías y profundiza en el contexto.
-- Extiéndete lo necesario.
 """
 
         system_prompt = f"""{CLAUDETTE_CORE}
@@ -295,14 +294,14 @@ MODO: PROFUNDO 🧘‍♀️
 🌡️ CLIMA: Usa `get_current_weather` con estas coordenadas si preguntan.
 {mode_instruction}
 
-=== CAPACIDADES ACTIVAS ===
+=== CAPACIDADES ===
 1. **Llamadas:** Usa `Contacts_and_call`.
-2. **Agenda:** Calendar y Tasks (Google).
+2. **Agenda:** Calendar y Tasks.
 3. **Lectura:** Libros de Drive (`read_book_from_drive`).
-4. **Internet:** `search_web`.
+4. **Internet:** `search_web` para datos en tiempo real.
 """
         
-        # Llamada a Claude
+        # 1. Primera Llamada a Claude
         messages = conversation_history[chat_id]
         response = client.messages.create(
             model=DEFAULT_MODEL, 
@@ -314,11 +313,12 @@ MODO: PROFUNDO 🧘‍♀️
         
         final_text = ""
 
-        # Manejo de Herramientas
+        # 2. Manejo de Herramientas (Tool Use)
         if response.stop_reason == "tool_use":
             # Guardamos la intención de la herramienta en el historial
             messages.append({"role": "assistant", "content": response.content})
             
+            # Ejecutamos todas las herramientas solicitadas
             for block in response.content:
                 if block.type == "tool_use":
                     logger.info(f"🔧 Tool: {block.name}")
@@ -334,13 +334,25 @@ MODO: PROFUNDO 🧘‍♀️
                         }]
                     })
             
-            # Segunda llamada para obtener la respuesta final
+            # 3. Segunda llamada (respuesta final tras herramientas)
             response2 = client.messages.create(
                 model=DEFAULT_MODEL, max_tokens=2000, system=system_prompt, tools=TOOLS, messages=messages
             )
-            final_text = response2.content[0].text
+            
+            # EXTRACTOR SEGURO DE TEXTO (Aquí estaba el error antes)
+            for block in response2.content:
+                if block.type == "text":
+                    final_text += block.text
+
         else:
-            final_text = response.content[0].text
+            # Si no hubo herramientas, extraemos texto normal
+            for block in response.content:
+                if block.type == "text":
+                    final_text += block.text
+
+        # Si por alguna razón no hay texto (ej. solo herramienta), poner fallback
+        if not final_text:
+            final_text = "✅ He procesado la solicitud (sin respuesta de texto)."
 
         # Respuesta final
         conversation_history[chat_id].append({"role": "assistant", "content": final_text})
@@ -349,7 +361,6 @@ MODO: PROFUNDO 🧘‍♀️
         # Audio (si aplica)
         if is_voice and elevenlabs_client:
             try:
-                # Limpiar emojis para audio
                 text_clean = re.sub(r'[^\w\s,.?¡!]', '', final_text)
                 audio = elevenlabs_client.generate(text=text_clean, voice=ELEVENLABS_VOICE_ID, model="eleven_multilingual_v2")
                 audio_bytes = b"".join(audio)
