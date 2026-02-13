@@ -311,12 +311,20 @@ async def process_message(update, context, text, is_voice=False, image_data=None
         
         # Recuperar ubicación de BD si RAM está vacía
         if chat_id not in user_locations:
-            saved_lat = get_fact("System_Location: latitude", "") # Hack para leer solo value si la key es exacta
-            # Mejor usaremos una key compuesta que sabemos que funciona
-            # En realidad, get_fact busca por category y key. 
-            # En el save anterior usamos "System_Location: latitude" como UN solo string en key (por error de args).
-            # Para recuperar simple, asumimos que si falló el RAM, usamos default o esperamos nuevo update.
-            pass
+            try:
+                # CORREGIDO: get_fact solo acepta 1 argumento (la key)
+                saved_lat = get_fact(f"System_Location_Lat_{chat_id}") 
+                saved_lng = get_fact(f"System_Location_Lng_{chat_id}")
+                
+                if saved_lat and saved_lng:
+                    user_locations[chat_id] = {
+                        "lat": float(saved_lat), 
+                        "lng": float(saved_lng), 
+                        "name": "Ubicación Guardada"
+                    }
+                    logger.info(f"📍 Recuperado de BD: {saved_lat}, {saved_lng}")
+            except Exception as e:
+                logger.error(f"Error recuperando ubicación: {e}")
 
         loc = user_locations.get(chat_id, DEFAULT_LOCATION)
         
@@ -383,7 +391,7 @@ async def process_message(update, context, text, is_voice=False, image_data=None
 
 # --- HANDLERS ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Soy Claudette V7. Búsqueda Google Activada.")
+    await update.message.reply_text("👋 Soy Claudette V8. Corrección aplicada.")
 
 async def clear_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conversation_history[update.effective_chat.id] = []
@@ -436,7 +444,7 @@ async def handle_location_update(update: Update, context: ContextTypes.DEFAULT_T
     
     user_locations[chat_id] = {"lat": lat, "lng": lng, "name": "Ubicación Telegram"}
     
-    # FIX: Guardar correctamente (2 args: key, value)
+    # FIX: Guardar correctamente usando 2 argumentos
     try:
         save_fact(f"System_Location_Lat_{chat_id}", str(lat))
         save_fact(f"System_Location_Lng_{chat_id}", str(lng))
@@ -463,7 +471,7 @@ def main():
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.LOCATION, handle_location_update))
     app.add_error_handler(error_handler)
-    print("✅ Claudette Online (V7 Google)")
+    print("✅ Claudette Online (V8 Fixed)")
     app.run_polling()
 
 if __name__ == '__main__':
