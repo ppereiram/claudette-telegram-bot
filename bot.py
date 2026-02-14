@@ -128,16 +128,28 @@ def search_web_google(query, max_results=5):
 # NUEVO: NEWS DASHBOARD
 # =====================================================
 def search_news(topics=None):
-    """Busca noticias recientes en múltiples temas."""
+    """Busca noticias recientes usando DuckDuckGo."""
     if not topics:
         topics = NEWS_TOPICS
     all_news = []
-    for topic in topics:
-        query = f"{topic} hoy {datetime.now().strftime('%Y')}"
-        news = search_web_google(query, max_results=3)
-        # Limpiar el nombre del topic para el header
-        clean_topic = topic.replace(" noticias", "").strip().upper()
-        all_news.append(f"📌 {clean_topic}:\n{news}")
+    try:
+        from duckduckgo_search import DDGS
+        ddgs = DDGS()
+        for topic in topics:
+            clean_topic = topic.replace(" noticias", "").strip().upper()
+            try:
+                results = ddgs.news(topic, max_results=3, region="es-es")
+                lines = []
+                for r in results:
+                    lines.append(f"• {r['title']}\n  🔗 {r['url']}")
+                if lines:
+                    all_news.append(f"📌 {clean_topic}:\n" + "\n".join(lines))
+                else:
+                    all_news.append(f"📌 {clean_topic}: Sin resultados.")
+            except Exception as e:
+                all_news.append(f"📌 {clean_topic}: Error: {e}")
+    except ImportError:
+        return "⚠️ Falta instalar duckduckgo-search."
     return "\n\n".join(all_news)
 
 # =====================================================
