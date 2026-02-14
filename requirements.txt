@@ -1,4 +1,4 @@
-python-telegram-bot
+python-telegram-bot[job-queue]
 anthropic
 openai
 google-api-python-client
@@ -12,5 +12,4 @@ EbookLib
 beautifulsoup4
 requests
 googlesearch-python
-python-telegram-bot[job-queue]
 pytz
