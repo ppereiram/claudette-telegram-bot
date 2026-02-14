@@ -833,17 +833,20 @@ def main():
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.LOCATION, handle_location_update))
 
-    # NUEVO: Recordatorios proactivos cada 4 horas
-    if OWNER_CHAT_ID:
-        app.job_queue.run_repeating(
-            check_reminders,
-            interval=14400,     # Cada 4 horas (en segundos)
-            first=60,           # Primera ejecución 1 minuto después de iniciar
-            name="reminders"
-        )
-        logger.info(f"🔔 Recordatorios activados para chat_id: {OWNER_CHAT_ID}")
-    else:
-        logger.warning("⚠️ OWNER_CHAT_ID no configurado. Recordatorios desactivados.")
+    # Recordatorios proactivos (requiere job-queue)
+    try:
+        if OWNER_CHAT_ID and app.job_queue:
+            app.job_queue.run_repeating(
+                check_reminders,
+                interval=14400,
+                first=60,
+                name="reminders"
+            )
+            logger.info(f"🔔 Recordatorios activados para chat_id: {OWNER_CHAT_ID}")
+        else:
+            logger.warning("⚠️ Recordatorios desactivados (falta OWNER_CHAT_ID o job-queue).")
+    except Exception as e:
+        logger.warning(f"⚠️ Recordatorios no disponibles: {e}")
 
     app.add_error_handler(error_handler)
     print("✅ Claudette Online (V10 - EPUB + Noticias + Buenos Días + Recordatorios)")
