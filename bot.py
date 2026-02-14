@@ -238,7 +238,7 @@ TOOLS = [
     },
     {
         "name": "save_user_fact",
-        "description": "Guardar dato en memoria.",
+        "description": "Guardar dato importante en memoria persistente. USA SIEMPRE esta herramienta cuando el usuario mencione: datos personales (nombre, edad, familia), ubicaciones (dónde vive él o familiares), preferencias, datos de trabajo, nombres de mascotas, fechas importantes, o cuando diga 'recuerda', 'memoriza', 'anota'. Guarda proactivamente sin que te lo pidan.",
         "input_schema": {"type": "object", "properties": {"category": {"type": "string"}, "key": {"type": "string"}, "value": {"type": "string"}}, "required": ["category", "key", "value"]}
     },
     {
@@ -417,10 +417,20 @@ async def process_message(update, context, text, is_voice=False, image_data=None
         if current_mode == "profundo":
             mode_instruction = "MODO: PROFUNDO 🧘‍♀️. Analiza detalladamente."
 
+        # Cargar memoria persistente
+        all_facts = get_all_facts() or {}
+        memory_text = ""
+        if all_facts:
+            memory_lines = [f"- {k}: {v}" for k, v in all_facts.items() 
+                           if not k.startswith("System_Location")]
+            if memory_lines:
+                memory_text = "\n=== MEMORIA PERSISTENTE ===\n" + "\n".join(memory_lines) + "\n"
+
         system_prompt = f"""{CLAUDETTE_CORE}
 {USER_PROFILE}
-
+{memory_text}
 === CONTEXTO ===
+
 📅 {now.strftime("%A %d-%m-%Y %H:%M")}
 📍 {loc['name']} (GPS: {loc['lat']}, {loc['lng']})
 {mode_instruction}
