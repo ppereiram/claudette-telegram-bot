@@ -112,17 +112,31 @@ def get_weather(lat, lon):
 
 # --- BÚSQUEDA GOOGLE ---
 def search_web_google(query, max_results=5):
-    if not google_search_func:
-        return "⚠️ Error: Falta instalar `googlesearch-python`."
+    """Busca en web con fallback DuckDuckGo."""
+    # Intentar Google primero
+    if google_search_func:
+        try:
+            results = []
+            for result in google_search_func(query, num_results=max_results, advanced=True, lang="es"):
+                results.append(f"📰 {result.title}\n🔗 {result.url}\n📝 {result.description}\n")
+            if results:
+                return "\n".join(results)
+        except Exception as e:
+            logger.warning(f"Google Search falló: {e}, usando DuckDuckGo...")
+
+    # Fallback: DuckDuckGo
     try:
+        from duckduckgo_search import DDGS
+        ddgs = DDGS()
         results = []
-        for result in google_search_func(query, num_results=max_results, advanced=True, lang="es"):
-            results.append(f"📰 {result.title}\n🔗 {result.url}\n📝 {result.description}\n")
-        if not results:
-            return "Google no devolvió resultados."
-        return "\n".join(results)
+        for r in ddgs.text(query, max_results=max_results, region="es-es"):
+            results.append(f"📰 {r['title']}\n🔗 {r['href']}\n📝 {r['body']}\n")
+        if results:
+            return "\n".join(results)
     except Exception as e:
-        return f"Error Google Search: {str(e)}"
+        logger.error(f"DuckDuckGo también falló: {e}")
+
+    return "No se encontraron resultados."
 
 # =====================================================
 # NUEVO: NEWS DASHBOARD
