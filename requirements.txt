@@ -12,4 +12,5 @@ EbookLib
 beautifulsoup4
 requests
 googlesearch-python
+python-telegram-bot[job-queue]
 pytz
