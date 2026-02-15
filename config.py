@@ -21,5 +21,5 @@ OPENWEATHER_API_KEY = os.environ.get('OPENWEATHER_API_KEY')
 OWNER_CHAT_ID = os.environ.get('OWNER_CHAT_ID')
 
 # CONSTANTS
-DEFAULT_MODEL = "claude-3-5-sonnet-20240620" # Actualizado al más rápido/inteligente
+DEFAULT_MODEL = "claude-sonnet-4-20250514" # Actualizado al más rápido/inteligente
 MAX_HISTORY = 20
