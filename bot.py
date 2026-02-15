@@ -626,28 +626,45 @@ async def process_message(update, context, text, is_voice=False, image_data=None
 
         final_text = ""
 
-        if response.stop_reason == "tool_use":
-            messages.append({"role": "assistant", "content": response.content})
-            for block in response.content:
+       # Loop de herramientas (hasta 5 rondas)
+        max_tool_rounds = 5
+        current_response = response
+
+        for round_num in range(max_tool_rounds):
+            if current_response.stop_reason != "tool_use":
+                # Respuesta final de texto
+                for block in current_response.content:
+                    if block.type == "text":
+                        final_text += block.text
+                break
+
+            # Procesar herramientas
+            messages.append({"role": "assistant", "content": current_response.content})
+            tool_results = []
+            for block in current_response.content:
                 if block.type == "tool_use":
-                    logger.info(f"🔧 Tool: {block.name}")
+                    logger.info(f"🔧 Tool (ronda {round_num+1}): {block.name}")
                     try:
                         tool_result = await execute_tool_async(block.name, block.input, chat_id, context)
                     except Exception as e:
                         tool_result = f"Error: {str(e)}"
-                    messages.append({
-                        "role": "user",
-                        "content": [{"type": "tool_result", "tool_use_id": block.id, "content": str(tool_result)}]
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": str(tool_result)
                     })
 
-            response2 = client.messages.create(
-                model=DEFAULT_MODEL, max_tokens=2000, system=system_prompt, tools=TOOLS, messages=messages
+            messages.append({"role": "user", "content": tool_results})
+
+            # Siguiente ronda
+            current_response = client.messages.create(
+                model=DEFAULT_MODEL, max_tokens=4096, system=system_prompt, tools=TOOLS, messages=messages
             )
-            for block in response2.content:
-                if block.type == "text": final_text += block.text
         else:
-            for block in response.content:
-                if block.type == "text": final_text += block.text
+            # Si agotó las 5 rondas, extraer lo que haya
+            for block in current_response.content:
+                if block.type == "text":
+                    final_text += block.text
 
         if not final_text: final_text = "✅ He procesado la solicitud."
 
