@@ -3,40 +3,37 @@ from telegram import Update
 from config import OWNER_CHAT_ID, logger
 import re
 
-# --- 1. IMPORTACIÓN SEGURA DE YOUTUBE ---
+# --- 1. IMPORTACIÓN BLINDADA ---
+# Usamos un alias (YTApi) para que Python no confunda el módulo con la clase
 try:
-    from youtube_transcript_api import YouTubeTranscriptApi
+    import youtube_transcript_api
+    from youtube_transcript_api import YouTubeTranscriptApi as YTApi
 except ImportError:
-    YouTubeTranscriptApi = None
+    YTApi = None
     logger.error("⚠️ La librería youtube_transcript_api no está instalada.")
 
-# --- 2. DECORADOR DE SEGURIDAD (¡AQUÍ ESTÁ LO QUE FALTABA!) ---
+# --- 2. DECORADOR DE SEGURIDAD ---
 def restricted(func):
-    """Decorador para restringir el acceso solo al dueño del bot."""
     @wraps(func)
     async def wrapped(update: Update, context, *args, **kwargs):
-        # Verificar que update.effective_user existe (a veces es None en ciertos updates)
-        if not update.effective_user:
-            return
-            
-        user_id = str(update.effective_user.id)
-        owner_id = str(OWNER_CHAT_ID)
+        if not update.effective_user: return
         
-        if user_id != owner_id:
-            logger.warning(f"⛔ Acceso denegado a usuario: {user_id}")
-            return  # Ignoramos al intruso silenciosamente
+        user_id = str(update.effective_user.id)
+        if user_id != str(OWNER_CHAT_ID):
+            logger.warning(f"⛔ Acceso denegado a: {user_id}")
+            return
             
         return await func(update, context, *args, **kwargs)
     return wrapped
 
-# --- 3. FUNCIÓN DE YOUTUBE ---
+# --- 3. FUNCIÓN YOUTUBE (Robustecida) ---
 def get_youtube_transcript(url):
-    """Extrae texto de videos de YouTube de forma segura."""
-    if not YouTubeTranscriptApi:
-        return "[Sistema]: No puedo leer el video porque falta la librería 'youtube_transcript_api'."
+    """Extrae texto de videos de YouTube."""
+    if not YTApi:
+        return "[Sistema]: Error interno. La librería de YouTube no cargó correctamente."
 
     try:
-        # Regex para sacar el ID del video
+        # Extraer ID con Regex
         video_id = None
         patterns = [
             r'(?:v=|\/)([0-9A-Za-z_-]{11}).*',
@@ -51,17 +48,24 @@ def get_youtube_transcript(url):
                 break
         
         if not video_id: 
-            return None
+            return None # No es un video, no hacemos nada
         
         # Intentar obtener transcripción
         try:
-            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['es', 'en'])
-            full_text = " ".join([t['text'] for t in transcript_list])
-            return f"📺 TRANSCRIPCIÓN VIDEO ({url}):\n{full_text[:15000]}..."
-        except Exception as e:
-            logger.error(f"Error obteniendo transcripción de {video_id}: {e}")
-            return f"[Sistema]: No pude obtener la transcripción del video (quizás no tiene subtítulos). Error: {e}"
+            # Llamamos al alias YTApi que definimos arriba
+            transcript_list = YTApi.get_transcript(video_id, languages=['es', 'en'])
             
+            # Unir texto
+            full_text = " ".join([t['text'] for t in transcript_list])
+            
+            # Limitar caracteres para no saturar a Claude
+            return f"📺 TRANSCRIPCIÓN VIDEO ({url}):\n{full_text[:12000]}...\n(Fin de transcripción)"
+            
+        except Exception as e:
+            # Si falla (ej: el video no tiene subtítulos), devolvemos el error limpio
+            logger.error(f"YouTube Transcript Error: {e}")
+            return f"[Sistema]: Detecté un video de YouTube, pero no tiene subtítulos disponibles o es privado."
+
     except Exception as e:
-        logger.error(f"YouTube Error General: {e}")
+        logger.error(f"YouTube General Error: {e}")
         return None
