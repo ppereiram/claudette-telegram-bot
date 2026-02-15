@@ -158,40 +158,52 @@ def extract_text_from_epub(file_path):
 
 
 def read_book_from_drive(query):
-    """Busca y lee libros desde Drive — soporta PDF, EPUB y TXT."""
+    """Busca y lee documentos desde Drive — soporta Google Docs, PDF, EPUB, TXT, MD."""
     service = google_drive.get_drive_service()
     if not service:
         return "Error conectando a Drive."
     try:
         results = service.files().list(
             q=f"name contains '{query}' and mimeType != 'application/vnd.google-apps.folder'",
-            pageSize=1
+            pageSize=1,
+            fields="files(id, name, mimeType)"
         ).execute()
         items = results.get('files', [])
         if not items:
             return "No hallé el archivo."
 
-        file_id, file_name = items[0]['id'], items[0]['name']
-        request = service.files().get_media(fileId=file_id)
-        file_content = request.execute()
-
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file_name}") as temp_file:
-            temp_file.write(file_content)
-            temp_path = temp_file.name
+        file_id = items[0]['id']
+        file_name = items[0]['name']
+        mime_type = items[0].get('mimeType', '')
 
         content = ""
-        lower_name = file_name.lower()
-        if lower_name.endswith('.pdf'):
-            content = extract_text_from_pdf(temp_path)
-        elif lower_name.endswith('.epub'):
-            content = extract_text_from_epub(temp_path)
-        elif lower_name.endswith('.txt'):
-            with open(temp_path, 'r', encoding='utf-8', errors='ignore') as f:
-                content = f.read()
-        else:
-            content = f"Formato '{file_name.split('.')[-1]}' no soportado. Formatos válidos: PDF, EPUB, TXT."
 
-        os.unlink(temp_path)
+        # Google Docs → exportar como texto plano
+        if mime_type == 'application/vnd.google-apps.document':
+            export = service.files().export(fileId=file_id, mimeType='text/plain').execute()
+            content = export.decode('utf-8') if isinstance(export, bytes) else str(export)
+
+        else:
+            # Archivos binarios (PDF, EPUB, TXT, MD)
+            request = service.files().get_media(fileId=file_id)
+            file_content = request.execute()
+
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file_name}") as temp_file:
+                temp_file.write(file_content)
+                temp_path = temp_file.name
+
+            lower_name = file_name.lower()
+            if lower_name.endswith('.pdf'):
+                content = extract_text_from_pdf(temp_path)
+            elif lower_name.endswith('.epub'):
+                content = extract_text_from_epub(temp_path)
+            elif lower_name.endswith(('.txt', '.md')):
+                with open(temp_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+            else:
+                content = f"Formato '{file_name.split('.')[-1]}' no soportado. Válidos: Google Docs, PDF, EPUB, TXT, MD."
+
+            os.unlink(temp_path)
 
         if not content.strip():
             return f"📖 Encontré '{file_name}' pero no pude extraer texto."
@@ -271,7 +283,7 @@ TOOLS_SCHEMA = [
     },
     {
         "name": "read_book_from_drive",
-        "description": "Buscar y leer libros o documentos desde Google Drive. Soporta PDF, EPUB y TXT.",
+        "description": "Buscar y leer documentos desde Google Drive. Soporta: Google Docs (más liviano), PDF, EPUB, TXT, MD. Usa para leer escritos de Pablo, libros, el INDICE_BIBLIOTECA, o cualquier documento en Drive.",
         "input_schema": {
             "type": "object",
             "properties": {"query": {"type": "string", "description": "Nombre o parte del nombre del libro/archivo"}},
