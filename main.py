@@ -189,45 +189,45 @@ def generate_morning_summary(chat_id):
 # =====================================================
 
 async def check_reminders(context: ContextTypes.DEFAULT_TYPE):
-    """Se ejecuta periódicamente. Revisa tareas y eventos próximos."""
+    """Resumen matutino automático — UNA VEZ al día a las 9am CR."""
     if not OWNER_CHAT_ID:
         return
 
     chat_id = int(OWNER_CHAT_ID)
-    tz = pytz.timezone('America/Costa_Rica')
-    now = datetime.now(tz)
 
-    # Solo entre 7am y 10pm
-    if now.hour < 7 or now.hour > 22:
-        return
-
-    parts = []
-
-    # Eventos en las próximas 2 horas
     try:
-        start = now.strftime("%Y-%m-%dT%H:%M:%S-06:00")
-        end = (now + timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%S-06:00")
-        events = google_calendar.get_calendar_events(start, end)
-        if events and "No hay eventos" not in str(events):
-            parts.append(f"⏰ Próximos eventos (2h):\n{events}")
-    except Exception as e:
-        logger.error(f"Reminder calendar error: {e}")
+        parts = []
+        tz = pytz.timezone('America/Costa_Rica')
+        now = datetime.now(tz)
+        parts.append(f"☀️ Buenos días, Pablo. {now.strftime('%A %d de %B, %Y')}")
 
-    # Tareas pendientes
-    try:
-        tasks = google_tasks.list_tasks(False)
-        if tasks and "No hay tareas" not in str(tasks):
-            parts.append(f"📝 Tareas pendientes:\n{tasks}")
-    except Exception as e:
-        logger.error(f"Reminder tasks error: {e}")
-
-    if parts:
-        reminder_msg = f"🔔 Recordatorio ({now.strftime('%H:%M')}):\n\n" + "\n\n".join(parts)
+        # Agenda del día
         try:
-            await context.bot.send_message(chat_id=chat_id, text=reminder_msg)
-            logger.info(f"🔔 Recordatorio enviado a {chat_id}")
+            start = now.replace(hour=0, minute=0).strftime("%Y-%m-%dT%H:%M:%S-06:00")
+            end = now.replace(hour=23, minute=59).strftime("%Y-%m-%dT%H:%M:%S-06:00")
+            events = google_calendar.get_calendar_events(start, end)
+            if events and "No hay eventos" not in str(events):
+                parts.append(f"\n📅 Agenda:\n{events}")
+            else:
+                parts.append("\n📅 Sin eventos hoy.")
         except Exception as e:
-            logger.error(f"Error enviando recordatorio: {e}")
+            logger.error(f"Morning calendar error: {e}")
+
+        # Tareas pendientes
+        try:
+            tasks = google_tasks.list_tasks(False)
+            if tasks and "No hay tareas" not in str(tasks):
+                parts.append(f"\n📝 Tareas pendientes:\n{tasks}")
+        except Exception as e:
+            logger.error(f"Morning tasks error: {e}")
+
+        parts.append("\n— Claudette")
+        summary = "\n".join(parts)
+        await context.bot.send_message(chat_id=chat_id, text=summary)
+        logger.info(f"☀️ Resumen matutino enviado a {chat_id}")
+
+    except Exception as e:
+        logger.error(f"Error resumen matutino: {e}")
 
 
 # =====================================================
@@ -462,16 +462,18 @@ def main():
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     app.add_handler(MessageHandler(filters.LOCATION, handle_location))
 
-    # Recordatorios proactivos
+    # Recordatorio matutino — UNA SOLA VEZ al día a las 9:00 AM Costa Rica
     try:
         if OWNER_CHAT_ID and app.job_queue:
-            app.job_queue.run_repeating(
+            from datetime import time as dt_time
+            # 9:00 AM Costa Rica = 15:00 UTC (GMT-6)
+            morning_time = dt_time(hour=15, minute=0, second=0)
+            app.job_queue.run_daily(
                 check_reminders,
-                interval=14400,  # cada 4 horas
-                first=60,
-                name="reminders"
+                time=morning_time,
+                name="morning_reminder"
             )
-            logger.info(f"🔔 Recordatorios activados para chat_id: {OWNER_CHAT_ID}")
+            logger.info(f"🔔 Recordatorio matutino (9:00 AM CR) activado para chat_id: {OWNER_CHAT_ID}")
         else:
             logger.warning("⚠️ Recordatorios desactivados (falta OWNER_CHAT_ID o job-queue).")
     except Exception as e:
