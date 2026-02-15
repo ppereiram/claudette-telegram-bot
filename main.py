@@ -1,65 +1,486 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
-from config import TELEGRAM_BOT_TOKEN
-from brain import process_chat, conversation_history
-from utils_security import restricted, get_youtube_transcript
-import logging
+"""
+Claudette Bot - Entry Point Modular.
+Todos los handlers: texto, voz, foto, ubicación, comandos, recordatorios.
+"""
 
-# --- MENÚ VISUAL ---
+import os
+import io
+import re
+import base64
+import tempfile
+import pytz
+from datetime import datetime, timedelta
+
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    Application, CommandHandler, MessageHandler,
+    CallbackQueryHandler, filters, ContextTypes
+)
+
+from config import (
+    TELEGRAM_BOT_TOKEN, OPENAI_API_KEY, ELEVENLABS_API_KEY,
+    ELEVENLABS_VOICE_ID, OWNER_CHAT_ID, DEFAULT_LOCATION, logger
+)
+from brain import process_chat, conversation_history, user_modes, build_system_prompt
+from tools_registry import (
+    user_locations, get_weather, search_news, search_web_google
+)
+from utils_security import restricted, get_youtube_transcript
+from memory_manager import get_all_facts, save_fact, get_fact
+
+# --- Clients opcionales ---
+openai_client = None
+elevenlabs_client = None
+
+if OPENAI_API_KEY:
+    from openai import OpenAI
+    openai_client = OpenAI(api_key=OPENAI_API_KEY)
+
+if ELEVENLABS_API_KEY:
+    from elevenlabs.client import ElevenLabs
+    elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+
+# --- Google services (para funciones directas como morning summary) ---
+import google_calendar
+import google_tasks
+
+
+# =====================================================
+# MENÚ VISUAL
+# =====================================================
+
 async def show_menu(update, context):
     keyboard = [
-        [InlineKeyboardButton("☀️ Buenos Días", callback_data='btn_morning'), InlineKeyboardButton("🧘 Modo Profundo", callback_data='btn_deep')],
-        [InlineKeyboardButton("📰 Noticias", callback_data='btn_news'), InlineKeyboardButton("🎨 Crear Imagen", callback_data='btn_img')],
-        [InlineKeyboardButton("🧠 Ver Memoria", callback_data='btn_mem'), InlineKeyboardButton("🗑️ Borrar Chat", callback_data='btn_clear')]
+        [
+            InlineKeyboardButton("☀️ Buenos Días", callback_data='btn_morning'),
+            InlineKeyboardButton("🧘 Modo Profundo", callback_data='btn_deep'),
+        ],
+        [
+            InlineKeyboardButton("📰 Noticias", callback_data='btn_news'),
+            InlineKeyboardButton("🎨 Crear Imagen", callback_data='btn_img'),
+        ],
+        [
+            InlineKeyboardButton("🧠 Ver Memoria", callback_data='btn_mem'),
+            InlineKeyboardButton("🗑️ Borrar Chat", callback_data='btn_clear'),
+        ],
+        [
+            InlineKeyboardButton("⚡ Modo Normal", callback_data='btn_normal'),
+            InlineKeyboardButton("📍 Mi Ubicación", callback_data='btn_location'),
+        ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("🎛️ **Centro de Control Claudette**:", reply_markup=reply_markup)
 
+
 async def button_handler(update, context):
     query = update.callback_query
     await query.answer()
-    
-    # Simular comandos escribiendo texto como si fuera el usuario
-    if query.data == 'btn_morning': await handle_message(update, context, text_override="/buenosdias")
-    elif query.data == 'btn_news': await handle_message(update, context, text_override="/noticias")
-    elif query.data == 'btn_clear': 
-        conversation_history[str(update.effective_chat.id)] = []
-        await query.edit_message_text("🧹 Chat reiniciado.")
-
-# --- HANDLERS PRINCIPALES ---
-@restricted
-async def handle_message(update, context, text_override=None):
     chat_id = update.effective_chat.id
-    text = text_override or update.message.text
-    
-    # 1. Feedback visual (Escribiendo...)
+
+    if query.data == 'btn_morning':
+        await query.edit_message_text("☕ Preparando tu resumen matutino...")
+        try:
+            summary = generate_morning_summary(chat_id)
+            await context.bot.send_message(chat_id, summary)
+        except Exception as e:
+            await context.bot.send_message(chat_id, f"⚠️ Error: {e}")
+
+    elif query.data == 'btn_news':
+        await query.edit_message_text("📰 Buscando noticias...")
+        try:
+            news = search_news()
+            if len(news) > 4000:
+                news = news[:4000] + "\n\n[... Truncado.]"
+            await context.bot.send_message(chat_id, news)
+        except Exception as e:
+            await context.bot.send_message(chat_id, f"⚠️ Error: {e}")
+
+    elif query.data == 'btn_deep':
+        user_modes[chat_id] = "profundo"
+        await query.edit_message_text("🧘‍♀️ Modo Profundo activado.")
+
+    elif query.data == 'btn_normal':
+        user_modes[chat_id] = "normal"
+        await query.edit_message_text("⚡ Modo Normal activado.")
+
+    elif query.data == 'btn_clear':
+        conversation_history[chat_id] = []
+        await query.edit_message_text("🧹 Chat reiniciado. (Memoria persistente intacta)")
+
+    elif query.data == 'btn_mem':
+        all_facts = get_all_facts() or {}
+        lines = [f"• {k}: {v}" for k, v in all_facts.items() if not k.startswith("System_Location")]
+        if lines:
+            memory_text = "🧠 Lo que recuerdo de ti:\n\n" + "\n".join(lines)
+            if len(memory_text) > 4000:
+                memory_text = memory_text[:4000] + "\n\n[... Truncado]"
+        else:
+            memory_text = "🧠 Memoria vacía. Dime cosas y las recordaré."
+        await query.edit_message_text(memory_text)
+
+    elif query.data == 'btn_location':
+        loc = user_locations.get(chat_id, DEFAULT_LOCATION)
+        await query.edit_message_text(f"📍 {loc['name']} ({loc['lat']}, {loc['lng']})")
+
+    elif query.data == 'btn_img':
+        await query.edit_message_text("🎨 Escríbeme qué imagen quieres que genere.")
+
+
+# =====================================================
+# RESUMEN MATUTINO
+# =====================================================
+
+def generate_morning_summary(chat_id):
+    """Genera resumen completo del día: clima + agenda + tareas + titulares."""
+    tz = pytz.timezone('America/Costa_Rica')
+    now = datetime.now(tz)
+    today_start = now.strftime("%Y-%m-%dT00:00:00-06:00")
+    today_end = now.strftime("%Y-%m-%dT23:59:59-06:00")
+
+    parts = [
+        f"☀️ Buenos días Pablo!",
+        f"📅 {now.strftime('%A %d de %B, %Y')} — {now.strftime('%H:%M')}",
+        ""
+    ]
+
+    # Clima
+    try:
+        loc = user_locations.get(chat_id, DEFAULT_LOCATION)
+        weather = get_weather(loc['lat'], loc['lng'])
+        parts.append(weather)
+        parts.append("")
+    except Exception as e:
+        logger.error(f"Morning weather error: {e}")
+
+    # Calendario
+    try:
+        events = google_calendar.get_calendar_events(today_start, today_end)
+        parts.append("📋 AGENDA DE HOY:")
+        if events and "No hay eventos" not in str(events):
+            parts.append(str(events))
+        else:
+            parts.append("Sin eventos programados. Día libre. 🎉")
+        parts.append("")
+    except Exception as e:
+        logger.error(f"Morning calendar error: {e}")
+        parts.append("📋 No pude consultar el calendario.")
+        parts.append("")
+
+    # Tareas
+    try:
+        tasks = google_tasks.list_tasks(False)
+        parts.append("✅ TAREAS PENDIENTES:")
+        if tasks and "No hay tareas" not in str(tasks):
+            parts.append(str(tasks))
+        else:
+            parts.append("¡Sin tareas pendientes!")
+        parts.append("")
+    except Exception as e:
+        logger.error(f"Morning tasks error: {e}")
+        parts.append("✅ No pude consultar las tareas.")
+        parts.append("")
+
+    parts.append("¿En qué te puedo ayudar hoy? 💪")
+    return "\n".join(parts)
+
+
+# =====================================================
+# RECORDATORIOS PROACTIVOS
+# =====================================================
+
+async def check_reminders(context: ContextTypes.DEFAULT_TYPE):
+    """Se ejecuta periódicamente. Revisa tareas y eventos próximos."""
+    if not OWNER_CHAT_ID:
+        return
+
+    chat_id = int(OWNER_CHAT_ID)
+    tz = pytz.timezone('America/Costa_Rica')
+    now = datetime.now(tz)
+
+    # Solo entre 7am y 10pm
+    if now.hour < 7 or now.hour > 22:
+        return
+
+    parts = []
+
+    # Eventos en las próximas 2 horas
+    try:
+        start = now.strftime("%Y-%m-%dT%H:%M:%S-06:00")
+        end = (now + timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%S-06:00")
+        events = google_calendar.get_calendar_events(start, end)
+        if events and "No hay eventos" not in str(events):
+            parts.append(f"⏰ Próximos eventos (2h):\n{events}")
+    except Exception as e:
+        logger.error(f"Reminder calendar error: {e}")
+
+    # Tareas pendientes
+    try:
+        tasks = google_tasks.list_tasks(False)
+        if tasks and "No hay tareas" not in str(tasks):
+            parts.append(f"📝 Tareas pendientes:\n{tasks}")
+    except Exception as e:
+        logger.error(f"Reminder tasks error: {e}")
+
+    if parts:
+        reminder_msg = f"🔔 Recordatorio ({now.strftime('%H:%M')}):\n\n" + "\n\n".join(parts)
+        try:
+            await context.bot.send_message(chat_id=chat_id, text=reminder_msg)
+            logger.info(f"🔔 Recordatorio enviado a {chat_id}")
+        except Exception as e:
+            logger.error(f"Error enviando recordatorio: {e}")
+
+
+# =====================================================
+# HANDLERS PRINCIPALES
+# =====================================================
+
+@restricted
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handler de mensajes de texto."""
+    chat_id = update.effective_chat.id
+    text = update.message.text
+
+    # Feedback visual
     await context.bot.send_chat_action(chat_id=chat_id, action="typing")
 
-    # 2. Check YouTube
+    # Detectar YouTube
     yt_transcript = get_youtube_transcript(text)
     if yt_transcript:
         text += f"\n\n[SISTEMA]: El usuario envió un video. {yt_transcript}"
 
-    # 3. Procesar
+    # Procesar con brain
     response = await process_chat(update, context, text)
-    
-    # 4. Enviar respuesta (si no es un comando de botón que ya editó)
-    if not text_override:
-        await update.message.reply_text(response)
+
+    # Enviar respuesta (split si es muy larga para Telegram)
+    await send_long_message(update, response)
+
+
+@restricted
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handler de notas de voz → Whisper → Claude → ElevenLabs."""
+    if not openai_client:
+        return await update.message.reply_text("Whisper no configurado.")
+    try:
+        file = await context.bot.get_file(update.message.voice.file_id)
+        with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as f:
+            await file.download_to_drive(f.name)
+            path = f.name
+
+        with open(path, "rb") as audio_file:
+            transcript = openai_client.audio.transcriptions.create(
+                model="whisper-1", file=audio_file
+            ).text
+        os.unlink(path)
+
+        await update.message.reply_text(f"🎤 {transcript}")
+        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+
+        response = await process_chat(update, context, transcript)
+        await send_long_message(update, response)
+
+        # Respuesta por voz
+        if elevenlabs_client:
+            try:
+                text_clean = re.sub(r'[^\w\s,.?¡!]', '', response)
+                audio = elevenlabs_client.text_to_speech.convert(
+                    text=text_clean,
+                    voice_id=ELEVENLABS_VOICE_ID,
+                    model_id="eleven_multilingual_v2"
+                )
+                await update.effective_message.reply_voice(voice=b"".join(audio))
+            except Exception as e:
+                logger.error(f"❌ ElevenLabs Error: {e}")
+
+    except Exception as e:
+        await update.message.reply_text(f"Error voz: {e}")
+
+
+@restricted
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handler de fotos → visión Claude."""
+    photo_file = await update.message.photo[-1].get_file()
+    with io.BytesIO() as f:
+        await photo_file.download_to_memory(out=f)
+        image_data = base64.b64encode(f.getvalue()).decode("utf-8")
+
+    caption = update.message.caption or "Analiza esta imagen."
+
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+    response = await process_chat(update, context, caption, image_data=image_data)
+    await send_long_message(update, response)
+
+
+@restricted
+async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handler de documentos (PDF, etc)."""
+    doc = update.message.document
+    if not doc:
+        return
+
+    caption = update.message.caption or f"El usuario envió un archivo: {doc.file_name}"
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+    response = await process_chat(update, context, caption)
+    await send_long_message(update, response)
+
+
+async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handler de ubicación compartida."""
+    msg = update.effective_message
+    if not msg or not msg.location:
+        return
+
+    lat, lng = msg.location.latitude, msg.location.longitude
+    chat_id = update.effective_chat.id
+
+    user_locations[chat_id] = {"lat": lat, "lng": lng, "name": "Ubicación Telegram"}
+
+    try:
+        save_fact(f"System_Location_Lat_{chat_id}", str(lat))
+        save_fact(f"System_Location_Lng_{chat_id}", str(lng))
+        logger.info(f"💾 Ubicación guardada: {lat}, {lng}")
+    except Exception as e:
+        logger.error(f"Error guardando ubicación: {e}")
+
+    if not update.edited_message:
+        await msg.reply_text("📍 Ubicación actualizada.")
+
+
+# =====================================================
+# COMANDOS DIRECTOS
+# =====================================================
+
+@restricted
+async def cmd_buenos_dias(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    await update.message.reply_text("☕ Preparando tu resumen matutino...")
+    try:
+        summary = generate_morning_summary(chat_id)
+        await update.message.reply_text(summary)
+    except Exception as e:
+        await update.message.reply_text(f"⚠️ Error: {e}")
+
+
+@restricted
+async def cmd_noticias(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("📰 Buscando noticias...")
+    try:
+        news = search_news()
+        if len(news) > 4000:
+            news = news[:4000] + "\n\n[... Truncado.]"
+        await update.message.reply_text(news)
+    except Exception as e:
+        await update.message.reply_text(f"⚠️ Error: {e}")
+
+
+@restricted
+async def cmd_profundo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_modes[update.effective_chat.id] = "profundo"
+    await update.message.reply_text("🧘‍♀️ Modo Profundo activado.")
+
+
+@restricted
+async def cmd_normal(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_modes[update.effective_chat.id] = "normal"
+    await update.message.reply_text("⚡ Modo Normal activado.")
+
+
+@restricted
+async def cmd_clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    conversation_history[update.effective_chat.id] = []
+    await update.message.reply_text("🧹 Memoria de conversación borrada. (Memoria persistente intacta)")
+
+
+@restricted
+async def cmd_memoria(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    all_facts = get_all_facts() or {}
+    lines = [f"• {k}: {v}" for k, v in all_facts.items() if not k.startswith("System_Location")]
+    if lines:
+        memory_text = "🧠 Lo que recuerdo de ti:\n\n" + "\n".join(lines)
+        if len(memory_text) > 4000:
+            memory_text = memory_text[:4000] + "\n\n[... Truncado]"
     else:
-        # Si vino de un botón, enviamos mensaje nuevo
-        await context.bot.send_message(chat_id, response)
+        memory_text = "🧠 Memoria vacía. Dime cosas y las recordaré."
+    await update.message.reply_text(memory_text)
+
+
+# =====================================================
+# UTILIDADES
+# =====================================================
+
+async def send_long_message(update, text, max_length=4000):
+    """Envía mensajes largos dividiéndolos si superan el límite de Telegram."""
+    if len(text) <= max_length:
+        await update.effective_message.reply_text(text)
+        return
+
+    # Dividir en chunks respetando saltos de línea
+    chunks = []
+    while text:
+        if len(text) <= max_length:
+            chunks.append(text)
+            break
+        # Buscar un buen punto de corte
+        cut = text.rfind('\n', 0, max_length)
+        if cut == -1:
+            cut = max_length
+        chunks.append(text[:cut])
+        text = text[cut:].lstrip('\n')
+
+    for chunk in chunks:
+        if chunk.strip():
+            await update.effective_message.reply_text(chunk)
+
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.error(msg="Exception:", exc_info=context.error)
+
+
+# =====================================================
+# MAIN
+# =====================================================
 
 def main():
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    
-    app.add_handler(CommandHandler("start", show_menu)) # /start muestra el menú
+
+    # Comandos
+    app.add_handler(CommandHandler("start", show_menu))
     app.add_handler(CommandHandler("menu", show_menu))
+    app.add_handler(CommandHandler("clear", cmd_clear))
+    app.add_handler(CommandHandler("profundo", cmd_profundo))
+    app.add_handler(CommandHandler("normal", cmd_normal))
+    app.add_handler(CommandHandler("buenosdias", cmd_buenos_dias))
+    app.add_handler(CommandHandler("noticias", cmd_noticias))
+    app.add_handler(CommandHandler("memoria", cmd_memoria))
+
+    # Botones inline
     app.add_handler(CallbackQueryHandler(button_handler))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    print("🚀 Claudette 2.0 (Segura y Modular) ONLINE")
+
+    # Mensajes
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    app.add_handler(MessageHandler(filters.VOICE, handle_voice))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
+    app.add_handler(MessageHandler(filters.LOCATION, handle_location))
+
+    # Recordatorios proactivos
+    try:
+        if OWNER_CHAT_ID and app.job_queue:
+            app.job_queue.run_repeating(
+                check_reminders,
+                interval=14400,  # cada 4 horas
+                first=60,
+                name="reminders"
+            )
+            logger.info(f"🔔 Recordatorios activados para chat_id: {OWNER_CHAT_ID}")
+        else:
+            logger.warning("⚠️ Recordatorios desactivados (falta OWNER_CHAT_ID o job-queue).")
+    except Exception as e:
+        logger.warning(f"⚠️ Recordatorios no disponibles: {e}")
+
+    app.add_error_handler(error_handler)
+    print("🚀 Claudette 2.0 (Modular + YouTube + Google Services) ONLINE")
     app.run_polling()
+
 
 if __name__ == '__main__':
     main()
