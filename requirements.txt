@@ -1,6 +1,7 @@
-python-telegram-bot
+python-telegram-bot[job-queue]
 anthropic
 openai
+elevenlabs
 youtube-transcript-api
 google-api-python-client
 google-auth-httplib2
@@ -10,5 +11,6 @@ pypdf
 ebooklib
 beautifulsoup4
 duckduckgo-search
-psycopg[binary]
+googlesearch-python
 pytz
+requests
