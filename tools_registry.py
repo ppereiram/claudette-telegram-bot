@@ -203,6 +203,38 @@ def read_book_from_drive(query):
         return f"Error leyendo libro: {e}"
 
 
+def read_local_file(filename):
+    """Lee archivos locales del sistema de modelos mentales y prompts."""
+    ALLOWED_FILES = [
+        'MODELS_DEEP.md', 'FRAMEWORK.md', 'ANTIPATTERNS.md', 'TEMPLATES.md',
+        'CLAUDETTE_CORE.md', 'user_profile.md'
+    ]
+
+    if filename not in ALLOWED_FILES:
+        return f"Archivo '{filename}' no permitido. Archivos válidos: {', '.join(ALLOWED_FILES)}"
+
+    # Buscar en varias rutas posibles
+    possible_paths = [
+        f'prompts/{filename}',
+        filename,
+        f'/opt/render/project/src/{filename}',
+        f'/opt/render/project/src/prompts/{filename}',
+    ]
+
+    for path in possible_paths:
+        if os.path.exists(path):
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                if len(content) > 15000:
+                    return f"📖 {filename} (truncado a 15000 chars):\n{content[:15000]}\n\n[... Truncado. Pide una sección específica.]"
+                return f"📖 {filename}:\n{content}"
+            except Exception as e:
+                return f"Error leyendo {filename}: {e}"
+
+    return f"Archivo '{filename}' no encontrado."
+
+
 # =====================================================
 # SCHEMAS DE HERRAMIENTAS (para Anthropic API)
 # =====================================================
@@ -369,6 +401,21 @@ TOOLS_SCHEMA = [
             "properties": {"prompt": {"type": "string", "description": "Descripción visual detallada"}},
             "required": ["prompt"]
         }
+    },
+    {
+        "name": "read_local_file",
+        "description": "Leer archivos del sistema de modelos mentales. Archivos disponibles: MODELS_DEEP.md (176 modelos adicionales por dominio), FRAMEWORK.md (metodología paso-a-paso), ANTIPATTERNS.md (cuándo NO usar modelos), TEMPLATES.md (plantillas ejecutables para decisiones, negocios, riesgo, ética, innovación). USAR cuando análisis profundo requiere más de los 40 modelos core.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "filename": {
+                    "type": "string",
+                    "description": "Nombre del archivo: MODELS_DEEP.md, FRAMEWORK.md, ANTIPATTERNS.md, o TEMPLATES.md",
+                    "enum": ["MODELS_DEEP.md", "FRAMEWORK.md", "ANTIPATTERNS.md", "TEMPLATES.md"]
+                }
+            },
+            "required": ["filename"]
+        }
     }
 ]
 
@@ -489,6 +536,9 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
             )
             await context.bot.delete_message(chat_id, msg.message_id)
             return "✅ Imagen generada y enviada."
+
+        elif tool_name == "read_local_file":
+            return read_local_file(tool_input['filename'])
 
         return f"Herramienta '{tool_name}' no encontrada."
 
