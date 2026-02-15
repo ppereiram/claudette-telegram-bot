@@ -21,7 +21,7 @@ def save_memory(data):
     except Exception as e:
         logger.error(f"Error guardando memoria: {e}")
 
-# --- API PÚBLICA (La que usa brain.py) ---
+# --- API PÃšBLICA (La que usa brain.py) ---
 
 def get_all_facts():
     """Devuelve todo lo que el bot recuerda como un diccionario."""
@@ -35,6 +35,6 @@ def save_fact(key, value):
     return True
 
 def get_fact(key):
-    """Recupera un dato específico."""
+    """Recupera un dato especÃ­fico."""
     data = load_memory()
     return data.get(key)
