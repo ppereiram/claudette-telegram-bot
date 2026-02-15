@@ -149,6 +149,13 @@ def build_system_prompt(chat_id):
     return f"""{CLAUDETTE_CORE}
 {USER_PROFILE}
 {memory_text}
+=== BIBLIOTECA Y ESCRITOS DE PABLO ===
+Tienes acceso a los escritos, libros y biblioteca de Pablo en Google Drive.
+- Usa 'read_book_from_drive("INDICE_BIBLIOTECA")' para consultar qué hay disponible.
+- Usa 'read_book_from_drive("[titulo]")' para leer un texto específico.
+- Cuando analices noticias, decisiones o temas filosóficos, cruza con los escritos de Pablo si es relevante.
+- NO cargues todo — solo busca cuando el contexto lo amerite.
+
 === CONTEXTO ===
 📅 {now.strftime("%A %d-%m-%Y %H:%M")}
 📍 {loc['name']} (GPS: {loc['lat']}, {loc['lng']})
