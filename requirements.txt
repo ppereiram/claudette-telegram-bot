@@ -10,3 +10,4 @@ pypdf
 ebooklib
 beautifulsoup4
 duckduckgo-search
+pytz
