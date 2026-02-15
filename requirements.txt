@@ -10,4 +10,5 @@ pypdf
 ebooklib
 beautifulsoup4
 duckduckgo-search
+psycopg[binary]
 pytz
