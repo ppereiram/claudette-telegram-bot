@@ -14,3 +14,4 @@ duckduckgo-search
 googlesearch-python
 pytz
 requests
+psycopg2-binary
