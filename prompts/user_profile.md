@@ -19,6 +19,7 @@
 - Liliana DIMEX 186200122206 Pasaporte Italiano: YC4375289 (vence abril 2034) Pasaporte Venezuela: 176359384 (vence febrero 2033)
 - María Paula DIMEX: 115200039722 Pasaporte Italiano: YC1088906 (vence mayo 2028) Pasaporte Chileno: F45080336 (vence junio 2032)
 - Sofía DIMEX: 115200039829 Pasaporte Italiano: YC1058437 (vence enero 2033)
+- Mamá cédula chilena:  **RUN:** 5.896.843-9 **Número documento:** 519.910.797, **Vencimiento:** 02 MAR 2027
 
 ## UBICACIÓN Y ZONA HORARIA
 - Dirección: Calle Boqueron Condominio Casa del Parque casa No.24
