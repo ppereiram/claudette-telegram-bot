@@ -21,7 +21,7 @@ from config import (
     TELEGRAM_BOT_TOKEN, OPENAI_API_KEY, ELEVENLABS_API_KEY,
     ELEVENLABS_VOICE_ID, OWNER_CHAT_ID, DEFAULT_LOCATION, logger
 )
-from brain import process_chat, conversation_history, user_modes, build_system_prompt
+from brain import process_chat, conversation_history, user_modes, build_system_prompt, generate_morning_summary
 from tools_registry import (
     user_locations, get_weather, search_news, search_web_google
 )
@@ -40,9 +40,7 @@ if ELEVENLABS_API_KEY:
     from elevenlabs.client import ElevenLabs
     elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
-# --- Google services (para funciones directas como morning summary) ---
-import google_calendar
-import google_tasks
+# Google services ya no necesarios aquí — brain.py los importa para el resumen matutino
 
 
 # =====================================================
@@ -80,8 +78,8 @@ async def button_handler(update, context):
     if query.data == 'btn_morning':
         await query.edit_message_text("☕ Preparando tu resumen matutino...")
         try:
-            summary = generate_morning_summary(chat_id)
-            await context.bot.send_message(chat_id, summary)
+            summary = await generate_morning_summary(chat_id)
+            await send_long_message_raw(context, chat_id, summary)
         except Exception as e:
             await context.bot.send_message(chat_id, f"⚠️ Error: {e}")
 
@@ -127,105 +125,21 @@ async def button_handler(update, context):
 
 
 # =====================================================
-# RESUMEN MATUTINO
-# =====================================================
-
-def generate_morning_summary(chat_id):
-    """Genera resumen completo del día: clima + agenda + tareas + titulares."""
-    tz = pytz.timezone('America/Costa_Rica')
-    now = datetime.now(tz)
-    today_start = now.strftime("%Y-%m-%dT00:00:00-06:00")
-    today_end = now.strftime("%Y-%m-%dT23:59:59-06:00")
-
-    parts = [
-        f"☀️ Buenos días Pablo!",
-        f"📅 {now.strftime('%A %d de %B, %Y')} — {now.strftime('%H:%M')}",
-        ""
-    ]
-
-    # Clima
-    try:
-        loc = user_locations.get(chat_id, DEFAULT_LOCATION)
-        weather = get_weather(loc['lat'], loc['lng'])
-        parts.append(weather)
-        parts.append("")
-    except Exception as e:
-        logger.error(f"Morning weather error: {e}")
-
-    # Calendario
-    try:
-        events = google_calendar.get_calendar_events(today_start, today_end)
-        parts.append("📋 AGENDA DE HOY:")
-        if events and "No hay eventos" not in str(events):
-            parts.append(str(events))
-        else:
-            parts.append("Sin eventos programados. Día libre. 🎉")
-        parts.append("")
-    except Exception as e:
-        logger.error(f"Morning calendar error: {e}")
-        parts.append("📋 No pude consultar el calendario.")
-        parts.append("")
-
-    # Tareas
-    try:
-        tasks = google_tasks.list_tasks(False)
-        parts.append("✅ TAREAS PENDIENTES:")
-        if tasks and "No hay tareas" not in str(tasks):
-            parts.append(str(tasks))
-        else:
-            parts.append("¡Sin tareas pendientes!")
-        parts.append("")
-    except Exception as e:
-        logger.error(f"Morning tasks error: {e}")
-        parts.append("✅ No pude consultar las tareas.")
-        parts.append("")
-
-    parts.append("¿En qué te puedo ayudar hoy? 💪")
-    return "\n".join(parts)
-
-
 # =====================================================
 # RECORDATORIOS PROACTIVOS
 # =====================================================
 
 async def check_reminders(context: ContextTypes.DEFAULT_TYPE):
-    """Resumen matutino automático — UNA VEZ al día a las 9am CR."""
+    """Resumen matutino inteligente — UNA VEZ al día a las 9am CR. Pasa por Claude."""
     if not OWNER_CHAT_ID:
         return
 
     chat_id = int(OWNER_CHAT_ID)
 
     try:
-        parts = []
-        tz = pytz.timezone('America/Costa_Rica')
-        now = datetime.now(tz)
-        parts.append(f"☀️ Buenos días, Pablo. {now.strftime('%A %d de %B, %Y')}")
-
-        # Agenda del día
-        try:
-            start = now.replace(hour=0, minute=0).strftime("%Y-%m-%dT%H:%M:%S-06:00")
-            end = now.replace(hour=23, minute=59).strftime("%Y-%m-%dT%H:%M:%S-06:00")
-            events = google_calendar.get_calendar_events(start, end)
-            if events and "No hay eventos" not in str(events):
-                parts.append(f"\n📅 Agenda:\n{events}")
-            else:
-                parts.append("\n📅 Sin eventos hoy.")
-        except Exception as e:
-            logger.error(f"Morning calendar error: {e}")
-
-        # Tareas pendientes
-        try:
-            tasks = google_tasks.list_tasks(False)
-            if tasks and "No hay tareas" not in str(tasks):
-                parts.append(f"\n📝 Tareas pendientes:\n{tasks}")
-        except Exception as e:
-            logger.error(f"Morning tasks error: {e}")
-
-        parts.append("\n— Claudette")
-        summary = "\n".join(parts)
-        await context.bot.send_message(chat_id=chat_id, text=summary)
-        logger.info(f"☀️ Resumen matutino enviado a {chat_id}")
-
+        summary = await generate_morning_summary(chat_id)
+        await send_long_message_raw(context, chat_id, summary)
+        logger.info(f"☀️ Resumen matutino inteligente enviado a {chat_id}")
     except Exception as e:
         logger.error(f"Error resumen matutino: {e}")
 
@@ -354,8 +268,8 @@ async def cmd_buenos_dias(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     await update.message.reply_text("☕ Preparando tu resumen matutino...")
     try:
-        summary = generate_morning_summary(chat_id)
-        await update.message.reply_text(summary)
+        summary = await generate_morning_summary(chat_id)
+        await send_long_message(update, summary)
     except Exception as e:
         await update.message.reply_text(f"⚠️ Error: {e}")
 
@@ -429,6 +343,28 @@ async def send_long_message(update, text, max_length=4000):
     for chunk in chunks:
         if chunk.strip():
             await update.effective_message.reply_text(chunk)
+
+
+async def send_long_message_raw(context, chat_id, text, max_length=4000):
+    """Envía mensajes largos usando context.bot directamente (sin Update)."""
+    if len(text) <= max_length:
+        await context.bot.send_message(chat_id=chat_id, text=text)
+        return
+
+    chunks = []
+    while text:
+        if len(text) <= max_length:
+            chunks.append(text)
+            break
+        cut = text.rfind('\n', 0, max_length)
+        if cut == -1:
+            cut = max_length
+        chunks.append(text[:cut])
+        text = text[cut:].lstrip('\n')
+
+    for chunk in chunks:
+        if chunk.strip():
+            await context.bot.send_message(chat_id=chat_id, text=chunk)
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
