@@ -34,7 +34,7 @@ except Exception as e:
 # =====================================================
 
 def _pg_connect():
-    """Crea conexión a PostgreSQL."""
+    """Crea conexion a PostgreSQL."""
     import psycopg2
     return psycopg2.connect(_pg_conn_string)
 
@@ -55,8 +55,38 @@ def _pg_setup():
         cur.close()
         conn.close()
         logger.info("🗄️ Tabla user_memory verificada/creada")
+        return True
     except Exception as e:
-        logger.error(f"Error creando tabla: {e}")
+        logger.error(f"Error creando tabla user_memory: {e}")
+        return False
+
+
+# --- AUTO-CREAR TABLA al detectar PostgreSQL ---
+_table_ready = False
+if _use_postgres:
+    _table_ready = _pg_setup()
+    # Migrar datos de JSON si existen
+    if _table_ready and os.path.exists('user_memory.json'):
+        try:
+            with open('user_memory.json', 'r') as f:
+                json_data = json.load(f)
+            if json_data:
+                logger.info(f"🔄 Migrando {len(json_data)} facts de JSON a PostgreSQL...")
+                conn = _pg_connect()
+                cur = conn.cursor()
+                for k, v in json_data.items():
+                    cur.execute("""
+                        INSERT INTO user_memory (key, value, updated_at)
+                        VALUES (%s, %s, CURRENT_TIMESTAMP)
+                        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+                    """, (k, str(v)))
+                conn.commit()
+                cur.close()
+                conn.close()
+                os.rename('user_memory.json', 'user_memory.json.migrated')
+                logger.info("✅ Migración completa. JSON respaldado.")
+        except Exception as e:
+            logger.error(f"Error migrando JSON: {e}")
 
 
 def _pg_get_all():
@@ -95,7 +125,7 @@ def _pg_save(key, value):
 
 
 def _pg_get(key):
-    """Lee un fact específico desde PostgreSQL."""
+    """Lee un fact especifico desde PostgreSQL."""
     try:
         conn = _pg_connect()
         cur = conn.cursor()
@@ -154,19 +184,8 @@ def _json_save_all(data):
 # =====================================================
 
 def setup_database():
-    """Inicializa la base de datos. Llamar al arrancar."""
-    if _use_postgres:
-        _pg_setup()
-        # Migrar datos de JSON si existen
-        if os.path.exists(MEMORY_FILE):
-            json_data = _json_load()
-            if json_data:
-                logger.info(f"🔄 Migrando {len(json_data)} facts de JSON a PostgreSQL...")
-                for k, v in json_data.items():
-                    _pg_save(k, v)
-                # Renombrar JSON como backup
-                os.rename(MEMORY_FILE, f"{MEMORY_FILE}.migrated")
-                logger.info("✅ Migración completa. JSON renombrado a .migrated")
+    """Compatibilidad — la tabla ya se crea automaticamente al importar."""
+    pass
 
 
 def get_all_facts():
@@ -187,7 +206,7 @@ def save_fact(key, value):
 
 
 def get_fact(key):
-    """Recupera un dato específico."""
+    """Recupera un dato especifico."""
     if _use_postgres:
         return _pg_get(key)
     data = _json_load()
