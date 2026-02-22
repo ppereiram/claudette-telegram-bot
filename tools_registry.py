@@ -8,6 +8,7 @@ import os
 import tempfile
 import logging
 import requests
+from datetime import datetime
 from config import OPENAI_API_KEY, OPENWEATHER_API_KEY, DEFAULT_LOCATION, logger
 from memory_manager import save_fact, get_fact
 
@@ -28,6 +29,21 @@ try:
     import pypdf
 except ImportError:
     pypdf = None
+
+# --- Import para generación de documentos ---
+try:
+    from docx import Document as DocxDocument
+    from docx.shared import Pt, Inches, Cm, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+except ImportError:
+    DocxDocument = None
+
+try:
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+except ImportError:
+    openpyxl = None
 
 try:
     import ebooklib
@@ -248,6 +264,274 @@ def read_local_file(filename):
 
 
 # =====================================================
+# GENERACIÓN DE DOCUMENTOS
+# =====================================================
+
+def generate_document(title, content, doc_format="docx"):
+    """
+    Genera un documento descargable (.docx o .md) a partir del contenido.
+    Parsea formato Markdown básico para crear documentos Word con estilo.
+    Retorna la ruta del archivo temporal generado.
+    """
+    import re as re_mod
+
+    # Sanitizar título para nombre de archivo
+    safe_title = re_mod.sub(r'[^\w\s-]', '', title).strip().replace(' ', '_')[:50]
+    timestamp = datetime.now().strftime("%Y%m%d")
+
+    if doc_format == "md":
+        # Markdown: guardar directamente
+        filename = f"{safe_title}_{timestamp}.md"
+        filepath = os.path.join(tempfile.gettempdir(), filename)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(f"# {title}\n\n")
+            f.write(content)
+        return filepath, filename
+
+    # --- DOCX ---
+    if not DocxDocument:
+        # Fallback a markdown si python-docx no está
+        logger.warning("python-docx no instalado, generando .md")
+        return generate_document(title, content, "md")
+
+    filename = f"{safe_title}_{timestamp}.docx"
+    filepath = os.path.join(tempfile.gettempdir(), filename)
+
+    doc = DocxDocument()
+
+    # --- Estilos del documento ---
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Georgia'
+    font.size = Pt(11)
+    font.color.rgb = RGBColor(30, 30, 30)
+
+    # Márgenes
+    for section in doc.sections:
+        section.top_margin = Cm(2.5)
+        section.bottom_margin = Cm(2.5)
+        section.left_margin = Cm(3)
+        section.right_margin = Cm(3)
+
+    # Título principal
+    title_para = doc.add_heading(title, level=0)
+    title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    # Subtítulo con fecha y autor
+    date_str = datetime.now().strftime("%d de %B, %Y")
+    subtitle = doc.add_paragraph()
+    subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = subtitle.add_run(f"Pablo Pereiram — {date_str}")
+    run.font.size = Pt(10)
+    run.font.color.rgb = RGBColor(120, 120, 120)
+    run.font.italic = True
+
+    doc.add_paragraph("")  # Espacio
+
+    # --- Parsear contenido Markdown → DOCX ---
+    lines = content.split('\n')
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+
+        # Línea vacía
+        if not stripped:
+            i += 1
+            continue
+
+        # Encabezados
+        if stripped.startswith('#### '):
+            doc.add_heading(stripped[5:], level=4)
+        elif stripped.startswith('### '):
+            doc.add_heading(stripped[4:], level=3)
+        elif stripped.startswith('## '):
+            doc.add_heading(stripped[3:], level=2)
+        elif stripped.startswith('# '):
+            doc.add_heading(stripped[2:], level=1)
+
+        # Separador horizontal
+        elif stripped in ('---', '***', '___'):
+            p = doc.add_paragraph()
+            p.add_run('─' * 50).font.color.rgb = RGBColor(180, 180, 180)
+
+        # Listas con viñetas
+        elif stripped.startswith(('- ', '• ', '* ')):
+            text = stripped[2:]
+            p = doc.add_paragraph(style='List Bullet')
+            _add_formatted_text(p, text)
+
+        # Listas numeradas
+        elif re_mod.match(r'^\d+[\.\)]\s', stripped):
+            text = re_mod.sub(r'^\d+[\.\)]\s', '', stripped)
+            p = doc.add_paragraph(style='List Number')
+            _add_formatted_text(p, text)
+
+        # Citas (blockquote)
+        elif stripped.startswith('> '):
+            text = stripped[2:]
+            p = doc.add_paragraph()
+            p.paragraph_format.left_indent = Cm(1.5)
+            run = p.add_run(text)
+            run.font.italic = True
+            run.font.color.rgb = RGBColor(100, 100, 100)
+
+        # Párrafos normales
+        else:
+            # Acumular líneas consecutivas como un solo párrafo
+            para_lines = [stripped]
+            while i + 1 < len(lines):
+                next_line = lines[i + 1].strip()
+                if (next_line and
+                    not next_line.startswith(('#', '-', '•', '*', '>', '---', '***', '___')) and
+                    not re_mod.match(r'^\d+[\.\)]\s', next_line)):
+                    para_lines.append(next_line)
+                    i += 1
+                else:
+                    break
+            full_text = ' '.join(para_lines)
+            p = doc.add_paragraph()
+            _add_formatted_text(p, full_text)
+
+        i += 1
+
+    doc.save(filepath)
+    return filepath, filename
+
+
+def _add_formatted_text(paragraph, text):
+    """Agrega texto con formato inline (bold, italic) a un párrafo docx."""
+    import re as re_mod
+
+    # Patrón unificado: ***bold+italic***, **bold**, *italic*
+    pattern = re_mod.compile(r'\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*(.+?)\*')
+
+    last_end = 0
+    for match in pattern.finditer(text):
+        # Texto plano antes del match
+        if match.start() > last_end:
+            paragraph.add_run(text[last_end:match.start()])
+
+        # Determinar tipo de formato
+        if match.group(1):  # ***bold+italic***
+            run = paragraph.add_run(match.group(1))
+            run.bold = True
+            run.italic = True
+        elif match.group(2):  # **bold**
+            run = paragraph.add_run(match.group(2))
+            run.bold = True
+        elif match.group(3):  # *italic*
+            run = paragraph.add_run(match.group(3))
+            run.italic = True
+
+        last_end = match.end()
+
+    # Texto restante después del último match
+    if last_end < len(text):
+        paragraph.add_run(text[last_end:])
+
+
+# =====================================================
+# GENERACIÓN DE SPREADSHEETS (EXCEL)
+# =====================================================
+
+def generate_spreadsheet(title, sheets_data):
+    """
+    Genera un archivo Excel (.xlsx) con múltiples hojas.
+    
+    sheets_data: lista de dicts con:
+      - sheet_name: nombre de la hoja
+      - headers: lista de strings con los encabezados
+      - rows: lista de listas con los datos
+    
+    Retorna (filepath, filename).
+    """
+    import re as re_mod
+
+    if not openpyxl:
+        raise Exception("openpyxl no está instalado")
+
+    safe_title = re_mod.sub(r'[^\w\s-]', '', title).strip().replace(' ', '_')[:50]
+    timestamp = datetime.now().strftime("%Y%m%d")
+    filename = f"{safe_title}_{timestamp}.xlsx"
+    filepath = os.path.join(tempfile.gettempdir(), filename)
+
+    wb = openpyxl.Workbook()
+    # Eliminar la hoja default
+    wb.remove(wb.active)
+
+    # Estilos
+    header_font = Font(name='Calibri', bold=True, size=11, color='FFFFFF')
+    header_fill = PatternFill(start_color='2F5496', end_color='2F5496', fill_type='solid')
+    header_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    cell_font = Font(name='Calibri', size=11)
+    cell_alignment = Alignment(vertical='top', wrap_text=True)
+    thin_border = Border(
+        left=Side(style='thin', color='D9D9D9'),
+        right=Side(style='thin', color='D9D9D9'),
+        top=Side(style='thin', color='D9D9D9'),
+        bottom=Side(style='thin', color='D9D9D9')
+    )
+    alt_fill = PatternFill(start_color='F2F2F2', end_color='F2F2F2', fill_type='solid')
+
+    for sheet_info in sheets_data:
+        sheet_name = sheet_info.get('sheet_name', 'Hoja1')[:31]  # Excel limit: 31 chars
+        headers = sheet_info.get('headers', [])
+        rows = sheet_info.get('rows', [])
+
+        ws = wb.create_sheet(title=sheet_name)
+
+        # Escribir encabezados
+        for col_idx, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_idx, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+            cell.border = thin_border
+
+        # Escribir datos
+        for row_idx, row_data in enumerate(rows, 2):
+            is_alt = (row_idx % 2 == 0)
+            for col_idx, value in enumerate(row_data, 1):
+                # Intentar convertir números
+                try:
+                    if isinstance(value, str):
+                        if '.' in value or ',' in value:
+                            value = float(value.replace(',', ''))
+                        elif value.isdigit():
+                            value = int(value)
+                except (ValueError, AttributeError):
+                    pass
+
+                cell = ws.cell(row=row_idx, column=col_idx, value=value)
+                cell.font = cell_font
+                cell.alignment = cell_alignment
+                cell.border = thin_border
+                if is_alt:
+                    cell.fill = alt_fill
+
+        # Auto-ajustar anchos de columna
+        for col_idx in range(1, len(headers) + 1):
+            max_length = len(str(headers[col_idx - 1])) if col_idx <= len(headers) else 10
+            for row in ws.iter_rows(min_row=2, min_col=col_idx, max_col=col_idx):
+                for cell in row:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+            adjusted_width = min(max_length + 4, 50)
+            ws.column_dimensions[get_column_letter(col_idx)].width = adjusted_width
+
+        # Freeze header row
+        ws.freeze_panes = 'A2'
+
+        # Auto-filter
+        if headers:
+            ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}{len(rows) + 1}"
+
+    wb.save(filepath)
+    return filepath, filename
+
+
+# =====================================================
 # SCHEMAS DE HERRAMIENTAS (para Anthropic API)
 # =====================================================
 
@@ -428,6 +712,97 @@ TOOLS_SCHEMA = [
             },
             "required": ["filename"]
         }
+    },
+    {
+        "name": "generate_document",
+        "description": """Genera un documento largo y descargable (.docx o .md) que se envía como archivo adjunto en Telegram. 
+USA ESTA HERRAMIENTA cuando Pablo pida:
+- Generar un reporte, informe, ensayo, bitácora, resumen extenso, documento de trabajo
+- Compilar conversaciones o impresiones en un documento
+- Cualquier texto que supere las limitaciones de un mensaje de Telegram (~4000 chars)
+- 'Hazme un documento', 'generame un reporte', 'arma la bitácora', 'compila esto en un doc'
+
+IMPORTANTE: El campo 'content' es el documento COMPLETO que quieres generar. Usa formato Markdown:
+- # Título, ## Sección, ### Subsección
+- **negrita**, *cursiva*
+- Listas con - o 1. 2. 3.
+- > para citas
+- --- para separadores
+
+El contenido se convierte automáticamente en un Word (.docx) con formato profesional.""",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "Título del documento"
+                },
+                "content": {
+                    "type": "string",
+                    "description": "Contenido completo del documento en formato Markdown. Puede ser tan largo como sea necesario."
+                },
+                "format": {
+                    "type": "string",
+                    "description": "Formato del archivo: 'docx' (Word, default) o 'md' (Markdown)",
+                    "enum": ["docx", "md"],
+                    "default": "docx"
+                }
+            },
+            "required": ["title", "content"]
+        }
+    },
+    {
+        "name": "generate_spreadsheet",
+        "description": """Genera un archivo Excel (.xlsx) con formato profesional que se envía como archivo adjunto en Telegram.
+USA ESTA HERRAMIENTA cuando Pablo pida:
+- Tablas, comparativas, matrices de datos
+- Hojas de cálculo, presupuestos, tracking, inventarios
+- Análisis comparativo en formato tabular
+- 'Hazme una tabla en Excel', 'ponlo en una hoja de cálculo', 'generame un spreadsheet'
+
+Soporta múltiples hojas en un solo archivo. El Excel se genera con:
+- Encabezados azules con texto blanco
+- Filas alternadas en gris claro
+- Auto-filtros en cada columna
+- Fila de encabezado congelada
+- Anchos de columna auto-ajustados""",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "Título del archivo Excel"
+                },
+                "sheets": {
+                    "type": "array",
+                    "description": "Lista de hojas del Excel. Cada hoja tiene nombre, encabezados y filas de datos.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "sheet_name": {
+                                "type": "string",
+                                "description": "Nombre de la hoja (max 31 caracteres)"
+                            },
+                            "headers": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Lista de encabezados de columna"
+                            },
+                            "rows": {
+                                "type": "array",
+                                "items": {
+                                    "type": "array",
+                                    "items": {"type": "string"}
+                                },
+                                "description": "Lista de filas, cada fila es una lista de valores (strings)"
+                            }
+                        },
+                        "required": ["sheet_name", "headers", "rows"]
+                    }
+                }
+            },
+            "required": ["title", "sheets"]
+        }
     }
 ]
 
@@ -551,6 +926,65 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
 
         elif tool_name == "read_local_file":
             return read_local_file(tool_input['filename'])
+
+        elif tool_name == "generate_document":
+            doc_format = tool_input.get('format', 'docx')
+            title = tool_input['title']
+            content = tool_input['content']
+
+            msg = await context.bot.send_message(chat_id, "📝 Generando documento...")
+
+            try:
+                filepath, filename = generate_document(title, content, doc_format)
+
+                # Enviar como archivo adjunto en Telegram
+                with open(filepath, 'rb') as f:
+                    await context.bot.send_document(
+                        chat_id=chat_id,
+                        document=f,
+                        filename=filename,
+                        caption=f"📄 {title}"
+                    )
+
+                # Limpiar archivo temporal
+                os.unlink(filepath)
+                await context.bot.delete_message(chat_id, msg.message_id)
+
+                return f"✅ Documento '{title}' generado y enviado como {filename}"
+
+            except Exception as e:
+                logger.error(f"Document generation error: {e}")
+                await context.bot.delete_message(chat_id, msg.message_id)
+                return f"⚠️ Error generando documento: {e}"
+
+        elif tool_name == "generate_spreadsheet":
+            title = tool_input['title']
+            sheets_data = tool_input['sheets']
+
+            msg = await context.bot.send_message(chat_id, "📊 Generando Excel...")
+
+            try:
+                filepath, filename = generate_spreadsheet(title, sheets_data)
+
+                with open(filepath, 'rb') as f:
+                    await context.bot.send_document(
+                        chat_id=chat_id,
+                        document=f,
+                        filename=filename,
+                        caption=f"📊 {title}"
+                    )
+
+                os.unlink(filepath)
+                await context.bot.delete_message(chat_id, msg.message_id)
+
+                total_rows = sum(len(s.get('rows', [])) for s in sheets_data)
+                total_sheets = len(sheets_data)
+                return f"✅ Excel '{title}' generado: {total_sheets} hoja(s), {total_rows} filas"
+
+            except Exception as e:
+                logger.error(f"Spreadsheet generation error: {e}")
+                await context.bot.delete_message(chat_id, msg.message_id)
+                return f"⚠️ Error generando Excel: {e}"
 
         return f"Herramienta '{tool_name}' no encontrada."
 
