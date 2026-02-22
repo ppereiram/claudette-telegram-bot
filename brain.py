@@ -9,7 +9,7 @@ import json
 import anthropic
 import pytz
 from datetime import datetime
-from config import ANTHROPIC_API_KEY, DEFAULT_MODEL, MAX_HISTORY, MAX_TOOL_ROUNDS, logger
+from config import ANTHROPIC_API_KEY, DEFAULT_MODEL, MAX_HISTORY, MAX_TOOL_ROUNDS, MAX_TOKENS_NORMAL, MAX_TOKENS_DOCUMENT, logger
 from tools_registry import TOOLS_SCHEMA, execute_tool, user_locations
 from memory_manager import get_all_facts, get_fact, save_fact
 
@@ -156,6 +156,18 @@ Tienes acceso a los escritos, libros y biblioteca de Pablo en Google Drive.
 - Cuando analices noticias, decisiones o temas filosóficos, cruza con los escritos de Pablo si es relevante.
 - NO cargues todo — solo busca cuando el contexto lo amerite.
 
+=== GENERACIÓN DE DOCUMENTOS ===
+Puedes generar documentos largos (.docx Word o .md Markdown) que se envían como archivo descargable.
+- Usa 'generate_document' cuando Pablo pida reportes, bitácoras, ensayos, compilaciones o cualquier texto extenso.
+- El contenido del documento NO tiene el límite de 4000 chars de Telegram — puede ser tan largo como necesites.
+- Usa formato Markdown en el contenido (# títulos, ## secciones, **negrita**, *cursiva*, listas, citas con >).
+- Se convierte automáticamente en un Word profesional con tipografía Georgia y márgenes elegantes.
+
+Puedes generar hojas de cálculo Excel (.xlsx) con formato profesional.
+- Usa 'generate_spreadsheet' cuando Pablo pida tablas, comparativas, presupuestos, tracking o datos tabulares.
+- Soporta múltiples hojas, encabezados formateados, filtros automáticos.
+- Los datos se pasan como headers + rows estructurados.
+
 === CONTEXTO ===
 📅 {now.strftime("%A %d-%m-%Y %H:%M")}
 📍 {loc['name']} (GPS: {loc['lat']}, {loc['lng']})
@@ -214,10 +226,19 @@ async def process_chat(update, context, text, image_data=None):
     try:
         system_prompt = build_system_prompt(chat_id)
 
+        # Detectar si el mensaje pide generación de documentos → más tokens
+        doc_keywords = ['documento', 'reporte', 'informe', 'bitácora', 'bitacora',
+                        'compila', 'genera un doc', 'genera un archivo', 'word',
+                        'ensayo largo', 'resumen extenso', 'docx', 'exporta',
+                        'excel', 'xlsx', 'spreadsheet', 'hoja de cálculo', 'tabla comparativa']
+        text_lower = text.lower() if isinstance(text, str) else ""
+        needs_document = any(kw in text_lower for kw in doc_keywords)
+        max_tokens = MAX_TOKENS_DOCUMENT if needs_document else MAX_TOKENS_NORMAL
+
         # Primera llamada a Claude
         response = client.messages.create(
             model=DEFAULT_MODEL,
-            max_tokens=4096,
+            max_tokens=max_tokens,
             system=system_prompt,
             tools=TOOLS_SCHEMA,
             messages=messages
@@ -256,10 +277,15 @@ async def process_chat(update, context, text, image_data=None):
 
             messages.append({"role": "user", "content": tool_results})
 
+            # Si se usó generate_document o generate_spreadsheet, asegurar tokens altos
+            for block in response.content:
+                if hasattr(block, 'name') and block.name in ('generate_document', 'generate_spreadsheet'):
+                    max_tokens = MAX_TOKENS_DOCUMENT
+
             # Siguiente ronda
             response = client.messages.create(
                 model=DEFAULT_MODEL,
-                max_tokens=4096,
+                max_tokens=max_tokens,
                 system=system_prompt,
                 tools=TOOLS_SCHEMA,
                 messages=messages
