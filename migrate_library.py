@@ -62,6 +62,9 @@ def setup_table():
     conn = get_conn()
     cur = conn.cursor()
 
+    # Recrear tabla limpia (la migración siempre recarga todo)
+    cur.execute("DROP TABLE IF EXISTS library")
+
     cur.execute("""
         CREATE TABLE IF NOT EXISTS library (
             id SERIAL PRIMARY KEY,
@@ -75,22 +78,15 @@ def setup_table():
             filename TEXT,
             drive_path TEXT,
             word_count INTEGER DEFAULT 0,
+            fts_vector TSVECTOR,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
-    # Índice full-text en español
+    # Índice GIN sobre la columna precalculada
     cur.execute("""
         CREATE INDEX IF NOT EXISTS idx_library_fts 
-        ON library 
-        USING GIN (
-            to_tsvector('spanish', 
-                COALESCE(title, '') || ' ' || 
-                COALESCE(author, '') || ' ' || 
-                COALESCE(content, '') || ' ' ||
-                COALESCE(array_to_string(tags, ' '), '')
-            )
-        )
+        ON library USING GIN (fts_vector)
     """)
 
     cur.execute("CREATE INDEX IF NOT EXISTS idx_library_author ON library (LOWER(author))")
@@ -259,10 +255,8 @@ def insert_books(books, batch_size=50):
     conn = get_conn()
     cur = conn.cursor()
 
-    # Limpiar tabla existente (migración completa)
-    cur.execute("DELETE FROM library")
-    conn.commit()
-    logger.info(f"🗑️ Tabla limpiada. Insertando {len(books)} libros...")
+    # Limpiar tabla (ya recreada por setup_table)
+    logger.info(f"📥 Insertando {len(books)} libros...")
 
     inserted = 0
     errors = 0
@@ -273,8 +267,14 @@ def insert_books(books, batch_size=50):
             try:
                 cur.execute("""
                     INSERT INTO library (title, author, category, tags, summary, content, 
-                                         filename, word_count)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                                         filename, word_count, fts_vector)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s,
+                            to_tsvector('spanish', 
+                                COALESCE(%s, '') || ' ' || 
+                                COALESCE(%s, '') || ' ' || 
+                                COALESCE(%s, '') || ' ' ||
+                                COALESCE(%s, '')
+                            ))
                 """, (
                     book['title'],
                     book['author'],
@@ -283,7 +283,12 @@ def insert_books(books, batch_size=50):
                     book['summary'],
                     book['content'],
                     book['filename'],
-                    book['word_count']
+                    book['word_count'],
+                    # Para el fts_vector:
+                    book['title'],
+                    book['author'],
+                    book['content'],
+                    ' '.join(book['tags']) if book['tags'] else ''
                 ))
                 inserted += 1
             except Exception as e:
@@ -368,12 +373,7 @@ def print_stats():
     for q in test_queries:
         cur.execute("""
             SELECT COUNT(*) FROM library
-            WHERE to_tsvector('spanish', 
-                      COALESCE(title, '') || ' ' || 
-                      COALESCE(author, '') || ' ' || 
-                      COALESCE(content, '') || ' ' ||
-                      COALESCE(array_to_string(tags, ' '), '')
-                  ) @@ plainto_tsquery('spanish', %s)
+            WHERE fts_vector @@ plainto_tsquery('spanish', %s)
         """, (q,))
         cnt = cur.fetchone()[0]
         print(f"  '{q}': {cnt} resultados")
