@@ -168,6 +168,16 @@ Puedes generar hojas de cálculo Excel (.xlsx) con formato profesional.
 - Soporta múltiples hojas, encabezados formateados, filtros automáticos.
 - Los datos se pasan como headers + rows estructurados.
 
+=== BIBLIOTECA PERSONAL (2100+ LIBROS) ===
+Pablo tiene una biblioteca indexada de ~2100 libros con extractos sustanciales.
+- Usa 'search_library' para buscar por tema, concepto o palabra clave (ej: "nihilismo", "atención", "democracia digital").
+- Usa 'search_library_by_author' para ver todos los libros de un autor (ej: "Byung-Chul Han", "Jung", "Wittgenstein").
+- Usa 'search_library_by_tag' para buscar por etiqueta (ej: "zen", "posestructuralismo", "capitalismo-vigilancia").
+- Usa 'get_book_detail' para leer el extracto completo de un libro específico.
+- Usa 'library_stats' para dar estadísticas generales.
+- IMPORTANTE: Cuando Pablo haga preguntas filosóficas, existenciales, o sobre cualquier tema intelectual, BUSCA PRIMERO en la biblioteca antes de responder genéricamente. Sus extractos son profundos y relevantes.
+- Cruza información entre libros cuando sea pertinente (ej: conectar a Han con Heidegger, o a Jung con Weil).
+
 === CONTEXTO ===
 📅 {now.strftime("%A %d-%m-%Y %H:%M")}
 📍 {loc['name']} (GPS: {loc['lat']}, {loc['lng']})
