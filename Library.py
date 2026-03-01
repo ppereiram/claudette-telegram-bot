@@ -53,22 +53,15 @@ def setup_library_table():
                 filename TEXT,
                 drive_path TEXT,
                 word_count INTEGER DEFAULT 0,
+                fts_vector TSVECTOR,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
 
-        # Índice full-text sobre título + contenido + autor + tags
+        # Índice GIN sobre la columna precalculada
         cur.execute("""
             CREATE INDEX IF NOT EXISTS idx_library_fts 
-            ON library 
-            USING GIN (
-                to_tsvector('spanish', 
-                    COALESCE(title, '') || ' ' || 
-                    COALESCE(author, '') || ' ' || 
-                    COALESCE(content, '') || ' ' ||
-                    COALESCE(array_to_string(tags, ' '), '')
-                )
-            )
+            ON library USING GIN (fts_vector)
         """)
 
         # Índices adicionales
@@ -205,11 +198,16 @@ def add_book(title, author, category, subcategory, tags, content, summary="",
         word_count = len(content.split()) if content else 0
         cur.execute("""
             INSERT INTO library (title, author, category, subcategory, tags, content, 
-                                 summary, filename, drive_path, word_count)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                 summary, filename, drive_path, word_count, fts_vector)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    to_tsvector('spanish',
+                        COALESCE(%s, '') || ' ' || COALESCE(%s, '') || ' ' ||
+                        COALESCE(%s, '') || ' ' || COALESCE(%s, '')
+                    ))
             RETURNING id
         """, (title, author, category, subcategory, tags, content,
-              summary, filename, drive_path, word_count))
+              summary, filename, drive_path, word_count,
+              title, author, content, ' '.join(tags) if tags else ''))
         book_id = cur.fetchone()[0]
         conn.commit()
         cur.close()
@@ -263,22 +261,9 @@ def search_library(query, limit=5):
         # Full-text search con ranking
         cur.execute("""
             SELECT title, author, category, tags, summary, content,
-                   ts_rank(
-                       to_tsvector('spanish', 
-                           COALESCE(title, '') || ' ' || 
-                           COALESCE(author, '') || ' ' || 
-                           COALESCE(content, '') || ' ' ||
-                           COALESCE(array_to_string(tags, ' '), '')
-                       ),
-                       plainto_tsquery('spanish', %s)
-                   ) AS rank
+                   ts_rank(fts_vector, plainto_tsquery('spanish', %s)) AS rank
             FROM library
-            WHERE to_tsvector('spanish', 
-                      COALESCE(title, '') || ' ' || 
-                      COALESCE(author, '') || ' ' || 
-                      COALESCE(content, '') || ' ' ||
-                      COALESCE(array_to_string(tags, ' '), '')
-                  ) @@ plainto_tsquery('spanish', %s)
+            WHERE fts_vector @@ plainto_tsquery('spanish', %s)
             ORDER BY rank DESC
             LIMIT %s
         """, (query, query, limit))
