@@ -11,6 +11,7 @@ import requests
 from datetime import datetime
 from config import OPENAI_API_KEY, OPENWEATHER_API_KEY, DEFAULT_LOCATION, logger
 from memory_manager import save_fact, get_fact
+from library import search_library, search_by_author, search_by_tag, get_book_content, get_library_stats
 
 # --- Imports de servicios Google ---
 import google_calendar
@@ -803,6 +804,59 @@ Soporta múltiples hojas en un solo archivo. El Excel se genera con:
             },
             "required": ["title", "sheets"]
         }
+    },
+    {
+        "name": "search_library",
+        "description": "Buscar en la biblioteca personal de Pablo (2100+ libros). Busca por tema, concepto, autor o tag. Usa para responder preguntas sobre filosofía, ciencias sociales, esoterismo, psicología, y cualquier tema de sus libros. Retorna extractos relevantes con contexto.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Tema, concepto, autor o palabra clave a buscar"},
+                "limit": {"type": "integer", "description": "Cantidad de resultados (default 5)", "default": 5}
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "name": "search_library_by_author",
+        "description": "Listar todos los libros de un autor específico en la biblioteca de Pablo.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "author": {"type": "string", "description": "Nombre del autor"}
+            },
+            "required": ["author"]
+        }
+    },
+    {
+        "name": "search_library_by_tag",
+        "description": "Buscar libros por tag/etiqueta en la biblioteca. Tags incluyen: filosofia, psicologia, nihilismo, democracia, capitalismo, atencion, zen, contemplacion, etc.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "tag": {"type": "string", "description": "Tag a buscar (minúsculas, sin espacios)"}
+            },
+            "required": ["tag"]
+        }
+    },
+    {
+        "name": "get_book_detail",
+        "description": "Obtener el extracto completo de un libro específico de la biblioteca. Usa cuando Pablo pide profundizar en un libro encontrado.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "description": "Título o parte del título del libro"}
+            },
+            "required": ["title"]
+        }
+    },
+    {
+        "name": "library_stats",
+        "description": "Mostrar estadísticas de la biblioteca de Pablo (total libros, autores, categorías).",
+        "input_schema": {
+            "type": "object",
+            "properties": {}
+        }
     }
 ]
 
@@ -985,6 +1039,21 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
                 logger.error(f"Spreadsheet generation error: {e}")
                 await context.bot.delete_message(chat_id, msg.message_id)
                 return f"⚠️ Error generando Excel: {e}"
+
+        elif tool_name == "search_library":
+            return search_library(tool_input['query'], tool_input.get('limit', 5))
+
+        elif tool_name == "search_library_by_author":
+            return search_by_author(tool_input['author'])
+
+        elif tool_name == "search_library_by_tag":
+            return search_by_tag(tool_input['tag'])
+
+        elif tool_name == "get_book_detail":
+            return get_book_content(tool_input['title'])
+
+        elif tool_name == "library_stats":
+            return get_library_stats()
 
         return f"Herramienta '{tool_name}' no encontrada."
 
