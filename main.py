@@ -509,18 +509,18 @@ def main():
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     app.add_handler(MessageHandler(filters.LOCATION, handle_location))
 
-    # Recordatorio matutino — UNA SOLA VEZ al día a las 9:00 AM Costa Rica
+    # Recordatorio matutino — UNA SOLA VEZ al día a las 6:00 AM Costa Rica
     try:
         if OWNER_CHAT_ID and app.job_queue:
             from datetime import time as dt_time
-            # 9:00 AM Costa Rica = 15:00 UTC (GMT-6)
-            morning_time = dt_time(hour=15, minute=0, second=0)
+            # 6:00 AM Costa Rica = 12:00 UTC (GMT-6)
+            morning_time = dt_time(hour=12, minute=0, second=0)
             app.job_queue.run_daily(
                 check_reminders,
                 time=morning_time,
                 name="morning_reminder"
             )
-            logger.info(f"🔔 Recordatorio matutino (9:00 AM CR) activado para chat_id: {OWNER_CHAT_ID}")
+            logger.info(f"🔔 Recordatorio matutino (6:00 AM CR) activado para chat_id: {OWNER_CHAT_ID}")
         else:
             logger.warning("⚠️ Recordatorios desactivados (falta OWNER_CHAT_ID o job-queue).")
     except Exception as e:
