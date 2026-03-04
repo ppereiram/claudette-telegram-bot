@@ -65,10 +65,16 @@ except ImportError:
 # =====================================================
 
 def clean_date_iso(date_str, is_end=False):
-    """Asegura formato ISO con timezone."""
+    """Asegura formato ISO con timezone Costa Rica (UTC-6)."""
     if 'T' not in date_str:
         time_part = "T23:59:59" if is_end else "T00:00:00"
         return f"{date_str}{time_part}-06:00"
+    # Si tiene T pero no tiene timezone, agregar -06:00
+    if '+' not in date_str and '-06:00' not in date_str and not date_str.endswith('Z'):
+        return f"{date_str}-06:00"
+    # Si viene con Z (UTC), reemplazar por -06:00 — Claude a veces manda UTC
+    if date_str.endswith('Z'):
+        return date_str[:-1] + "-06:00"
     return date_str
 
 
@@ -262,6 +268,99 @@ def read_local_file(filename):
                 return f"Error leyendo {filename}: {e}"
 
     return f"Archivo '{filename}' no encontrado."
+
+
+def fetch_url(url):
+    """Lee el contenido de una página web, tweet, artículo, etc."""
+    import re as re_mod
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'es,en;q=0.9',
+        }
+
+        clean_url = url.strip()
+
+        # Manejar URLs de X/Twitter
+        if 'x.com/' in clean_url or 'twitter.com/' in clean_url:
+            fx_url = clean_url.replace('x.com/', 'api.fxtwitter.com/').replace('twitter.com/', 'api.fxtwitter.com/')
+            try:
+                resp = requests.get(fx_url, headers=headers, timeout=15)
+                if resp.status_code == 200:
+                    import json
+                    data = resp.json()
+                    tweet = data.get('tweet', {})
+                    author = tweet.get('author', {}).get('name', 'Unknown')
+                    handle = tweet.get('author', {}).get('screen_name', '')
+                    text = tweet.get('text', '')
+                    media = tweet.get('media', {})
+                    photos = media.get('photos', []) if media else []
+                    result = f"🐦 Tweet de {author} (@{handle}):\n{text}"
+                    if photos:
+                        result += f"\n📷 {len(photos)} imagen(es) adjunta(s)"
+                    return result
+            except Exception:
+                pass
+
+        resp = requests.get(clean_url, headers=headers, timeout=15, allow_redirects=True)
+        resp.raise_for_status()
+
+        content_type = resp.headers.get('content-type', '')
+
+        if 'json' in content_type:
+            import json
+            return json.dumps(resp.json(), indent=2, ensure_ascii=False)[:6000]
+
+        html = resp.text
+
+        # Extraer título
+        title_match = re_mod.search(r'<title[^>]*>(.*?)</title>', html, re_mod.IGNORECASE | re_mod.DOTALL)
+        title = title_match.group(1).strip() if title_match else ''
+
+        # Extraer meta description / og:description
+        description = ''
+        og_match = re_mod.search(r'<meta[^>]*property=["\']og:description["\'][^>]*content=["\'](.*?)["\']', html, re_mod.IGNORECASE)
+        if og_match:
+            description = og_match.group(1).strip()
+        else:
+            desc_match = re_mod.search(r'<meta[^>]*name=["\']description["\'][^>]*content=["\'](.*?)["\']', html, re_mod.IGNORECASE)
+            if desc_match:
+                description = desc_match.group(1).strip()
+
+        # Limpiar HTML → texto
+        text = html
+        text = re_mod.sub(r'<script[^>]*>.*?</script>', '', text, flags=re_mod.DOTALL | re_mod.IGNORECASE)
+        text = re_mod.sub(r'<style[^>]*>.*?</style>', '', text, flags=re_mod.DOTALL | re_mod.IGNORECASE)
+        text = re_mod.sub(r'<nav[^>]*>.*?</nav>', '', text, flags=re_mod.DOTALL | re_mod.IGNORECASE)
+        text = re_mod.sub(r'<footer[^>]*>.*?</footer>', '', text, flags=re_mod.DOTALL | re_mod.IGNORECASE)
+        text = re_mod.sub(r'<br\s*/?>', '\n', text)
+        text = re_mod.sub(r'</p>', '\n\n', text)
+        text = re_mod.sub(r'</div>', '\n', text)
+        text = re_mod.sub(r'</h[1-6]>', '\n\n', text)
+        text = re_mod.sub(r'<[^>]+>', '', text)
+        text = re_mod.sub(r'\n\s*\n', '\n\n', text)
+        text = re_mod.sub(r' +', ' ', text)
+        text = text.strip()
+
+        if len(text) > 5000:
+            text = text[:5000] + "\n\n[... Contenido truncado]"
+
+        result = ""
+        if title:
+            result += f"📰 **{title}**\n"
+        if description:
+            result += f"_{description}_\n\n"
+        result += text
+
+        return result if result.strip() else "No pude extraer contenido legible de esa URL."
+
+    except requests.exceptions.Timeout:
+        return "⚠️ La página tardó demasiado en responder."
+    except requests.exceptions.HTTPError as e:
+        return f"⚠️ Error HTTP {e.response.status_code} al acceder a la URL."
+    except Exception as e:
+        return f"⚠️ Error leyendo URL: {e}"
 
 
 # =====================================================
@@ -715,6 +814,20 @@ TOOLS_SCHEMA = [
         }
     },
     {
+        "name": "fetch_url",
+        "description": "Lee el contenido de una URL/link que Pablo comparta. Funciona con artículos web, tweets/posts de X (Twitter), blogs, noticias, y cualquier página pública. Usa cuando Pablo mande un link y quiera que lo leas o analices.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "URL completa a leer (con https://)"
+                }
+            },
+            "required": ["url"]
+        }
+    },
+    {
         "name": "generate_document",
         "description": """Genera un documento largo y descargable (.docx o .md) que se envía como archivo adjunto en Telegram. 
 USA ESTA HERRAMIENTA cuando Pablo pida:
@@ -980,6 +1093,9 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
 
         elif tool_name == "read_local_file":
             return read_local_file(tool_input['filename'])
+
+        elif tool_name == "fetch_url":
+            return fetch_url(tool_input['url'])
 
         elif tool_name == "generate_document":
             doc_format = tool_input.get('format', 'docx')
