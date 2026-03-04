@@ -146,6 +146,17 @@ def build_system_prompt(chat_id):
     if current_mode == "profundo":
         mode_instruction = "MODO: PROFUNDO 🧘‍♀️. Analiza detalladamente."
 
+    # Mini-calendario de referencia (próximos 7 días)
+    from datetime import timedelta
+    dias_semana = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+    week_ref = []
+    for i in range(7):
+        d = now + timedelta(days=i)
+        dia_nombre = dias_semana[d.weekday()]
+        prefix = "HOY" if i == 0 else ("MAÑANA" if i == 1 else dia_nombre.upper())
+        week_ref.append(f"  {prefix}: {dia_nombre} {d.strftime('%d/%m/%Y')}")
+    week_calendar = "\n".join(week_ref)
+
     return f"""{CLAUDETTE_CORE}
 {USER_PROFILE}
 {memory_text}
@@ -155,6 +166,12 @@ Tienes acceso a los escritos, libros y biblioteca de Pablo en Google Drive.
 - Usa 'read_book_from_drive("[titulo]")' para leer un texto específico.
 - Cuando analices noticias, decisiones o temas filosóficos, cruza con los escritos de Pablo si es relevante.
 - NO cargues todo — solo busca cuando el contexto lo amerite.
+
+=== LECTURA DE URLs ===
+Puedes leer páginas web, tweets, artículos y links que Pablo comparta.
+- Usa 'fetch_url' cuando Pablo mande una URL o link.
+- Funciona con X/Twitter, noticias, blogs, y páginas públicas.
+- Si Pablo manda un link sin contexto, léelo y resumilo.
 
 === GENERACIÓN DE DOCUMENTOS ===
 Puedes generar documentos largos (.docx Word o .md Markdown) que se envían como archivo descargable.
@@ -179,8 +196,13 @@ Pablo tiene una biblioteca indexada de ~2100 libros con extractos sustanciales.
 - Cruza información entre libros cuando sea pertinente (ej: conectar a Han con Heidegger, o a Jung con Weil).
 
 === CONTEXTO ===
-📅 {now.strftime("%A %d-%m-%Y %H:%M")}
+📅 {now.strftime("%A %d-%m-%Y %H:%M")} (hora Costa Rica, UTC-6)
 📍 {loc['name']} (GPS: {loc['lat']}, {loc['lng']})
+
+📆 CALENDARIO DE REFERENCIA (NO te confundas de fecha):
+{week_calendar}
+⚠️ IMPORTANTE: Cuando Pablo diga un día de la semana, usa EXACTAMENTE la fecha de arriba. NO calcules fechas mentalmente.
+
 {mode_instruction}
 """
 
