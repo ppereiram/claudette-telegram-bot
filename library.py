@@ -43,15 +43,21 @@ def setup_library_table():
         cur.execute("""
             CREATE TABLE IF NOT EXISTS library (
                 id SERIAL PRIMARY KEY,
+                biblioteca_id INTEGER,
                 title TEXT NOT NULL,
                 author TEXT,
+                year INTEGER,
+                genre TEXT,
                 category TEXT,
                 subcategory TEXT,
+                nivel CHAR(1),
+                has_ficha BOOLEAN DEFAULT FALSE,
+                pablo_rating INTEGER,
                 tags TEXT[],
                 summary TEXT,
                 content TEXT,
                 filename TEXT,
-                drive_path TEXT,
+                file_path TEXT,
                 word_count INTEGER DEFAULT 0,
                 fts_vector TSVECTOR,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -68,6 +74,8 @@ def setup_library_table():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_library_author ON library (LOWER(author))")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_library_category ON library (LOWER(category))")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_library_tags ON library USING GIN (tags)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_library_nivel ON library (nivel)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_library_has_ficha ON library (has_ficha)")
 
         conn.commit()
         cur.close()
@@ -227,16 +235,16 @@ def get_library_stats():
         cur = conn.cursor()
         cur.execute("SELECT COUNT(*) FROM library")
         total = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(DISTINCT author) FROM library WHERE author IS NOT NULL AND author != ''")
+        cur.execute("SELECT COUNT(*) FROM library WHERE has_ficha = TRUE")
+        with_ficha = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(DISTINCT LOWER(author)) FROM library WHERE author IS NOT NULL AND author != ''")
         authors = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(DISTINCT category) FROM library WHERE category IS NOT NULL AND category != ''")
-        categories = cur.fetchone()[0]
         cur.execute("SELECT SUM(word_count) FROM library")
         total_words = cur.fetchone()[0] or 0
         cur.close()
         conn.close()
-        return (f"📚 Biblioteca: {total} libros, {authors} autores, "
-                f"{categories} categorías, ~{total_words:,} palabras totales")
+        return (f"📚 Biblioteca: {total} libros ({with_ficha} con ficha detallada), "
+                f"{authors} autores, ~{total_words:,} palabras analizadas")
     except Exception as e:
         logger.error(f"Stats error: {e}")
         return f"Error: {e}"
@@ -261,6 +269,7 @@ def search_library(query, limit=5):
         # Full-text search con ranking
         cur.execute("""
             SELECT title, author, category, tags, summary, content,
+                   nivel, pablo_rating, has_ficha,
                    ts_rank(fts_vector, plainto_tsquery('spanish', %s)) AS rank
             FROM library
             WHERE fts_vector @@ plainto_tsquery('spanish', %s)
@@ -278,20 +287,25 @@ def search_library(query, limit=5):
 
         output = []
         for row in results:
-            title, author, category, tags, summary, content, rank = row
-            tags_str = ', '.join(tags) if tags else ''
+            title, author, category, tags, summary, content, nivel, pablo_rating, has_ficha, rank = row
+            tags_str = ', '.join(tags[:6]) if tags else ''
 
             # Extracto relevante: buscar párrafo que contenga la query
-            excerpt = _find_relevant_excerpt(content, query)
+            excerpt = _find_relevant_excerpt(content, query) if has_ficha else summary or ''
 
             entry = f"📖 **{title}**"
             if author:
                 entry += f" — {author}"
-            if category:
-                entry += f" [{category}]"
+            if nivel:
+                entry += f" [Nivel {nivel}]"
+            if pablo_rating:
+                entry += f" ⭐{pablo_rating}/10"
+            if not has_ficha:
+                entry += " _(sin ficha)_"
             if tags_str:
                 entry += f"\n🏷️ {tags_str}"
-            entry += f"\n{excerpt}"
+            if excerpt:
+                entry += f"\n{excerpt}"
 
             output.append(entry)
 
@@ -310,10 +324,10 @@ def search_by_author(author_name, limit=10):
         conn = _get_conn()
         cur = conn.cursor()
         cur.execute("""
-            SELECT title, author, category, tags, summary
+            SELECT title, author, category, tags, summary, nivel, pablo_rating, has_ficha
             FROM library
             WHERE LOWER(author) LIKE LOWER(%s)
-            ORDER BY title
+            ORDER BY nivel NULLS LAST, title
             LIMIT %s
         """, (f'%{author_name}%', limit))
 
@@ -325,9 +339,18 @@ def search_by_author(author_name, limit=10):
             return f"No encontré libros de '{author_name}' en la biblioteca."
 
         output = [f"📚 Libros de {results[0][1]}:\n"]
-        for title, author, category, tags, summary in results:
-            tags_str = ', '.join(tags[:5]) if tags else ''
-            output.append(f"• **{title}** [{category}] — {tags_str}")
+        for title, author, category, tags, summary, nivel, pablo_rating, has_ficha in results:
+            tags_str = ', '.join(tags[:4]) if tags else ''
+            line = f"• **{title}**"
+            if nivel:
+                line += f" [N{nivel}]"
+            if pablo_rating:
+                line += f" ⭐{pablo_rating}"
+            if not has_ficha:
+                line += " _(pendiente)_"
+            if tags_str:
+                line += f" — {tags_str}"
+            output.append(line)
 
         return "\n".join(output)
 
@@ -455,13 +478,13 @@ def _search_fallback(query, limit):
         conn = _get_conn()
         cur = conn.cursor()
         cur.execute("""
-            SELECT title, author, category, tags, summary, content
+            SELECT title, author, category, tags, summary, content, nivel, pablo_rating, has_ficha
             FROM library
             WHERE LOWER(title) LIKE LOWER(%s)
                OR LOWER(author) LIKE LOWER(%s)
                OR LOWER(content) LIKE LOWER(%s)
                OR LOWER(array_to_string(tags, ' ')) LIKE LOWER(%s)
-            ORDER BY title
+            ORDER BY nivel NULLS LAST, title
             LIMIT %s
         """, (f'%{query}%', f'%{query}%', f'%{query}%', f'%{query}%', limit))
 
@@ -473,15 +496,22 @@ def _search_fallback(query, limit):
             return f"No encontré nada sobre '{query}' en la biblioteca de 2100 libros."
 
         output = []
-        for title, author, category, tags, summary, content in results:
-            tags_str = ', '.join(tags) if tags else ''
-            excerpt = _find_relevant_excerpt(content, query)
+        for title, author, category, tags, summary, content, nivel, pablo_rating, has_ficha in results:
+            tags_str = ', '.join(tags[:6]) if tags else ''
+            excerpt = _find_relevant_excerpt(content, query) if has_ficha else summary or ''
             entry = f"📖 **{title}**"
             if author:
                 entry += f" — {author}"
+            if nivel:
+                entry += f" [N{nivel}]"
+            if pablo_rating:
+                entry += f" ⭐{pablo_rating}"
+            if not has_ficha:
+                entry += " _(sin ficha)_"
             if tags_str:
                 entry += f"\n🏷️ {tags_str}"
-            entry += f"\n{excerpt}"
+            if excerpt:
+                entry += f"\n{excerpt}"
             output.append(entry)
 
         return "\n\n---\n\n".join(output)
