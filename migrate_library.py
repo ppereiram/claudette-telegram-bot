@@ -430,7 +430,6 @@ def insert_books(books, batch_size=50):
                     book.get('file_path', ''),
                     book.get('word_count', 0),
                     fts_text[:100000],  # limitar para no exceder columna tsvector
->>>>>>> 4953c00 (Migración ampliada: vault multi-nivel + catálogo completo biblioteca.db)
                 ))
                 inserted += 1
             except Exception as e:
