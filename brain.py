@@ -346,8 +346,8 @@ async def process_chat(update, context, text, image_data=None):
 async def generate_morning_summary(chat_id):
     """
     Genera el resumen matutino completo pasando por Claude.
-    Pre-busca datos (clima, agenda, tareas, noticias) y le pide a Claude
-    que sintetice con reflexión filosófica, cita estoica y conexiones.
+    Pre-busca datos (clima, agenda, tareas, noticias) + un libro aleatorio
+    de la biblioteca para provocación intelectual.
     """
     import google_calendar
     import google_tasks
@@ -397,6 +397,43 @@ async def generate_morning_summary(chat_id):
     except Exception as e:
         logger.warning(f"Morning news error: {e}")
 
+    # --- BIBLIOTECA: Libro aleatorio del día ---
+    book_data = ""
+    try:
+        from library import _get_conn
+        conn = _get_conn()
+        cur = conn.cursor()
+        # Seleccionar un libro al azar que tenga contenido sustancial
+        cur.execute("""
+            SELECT title, author, category, tags, content
+            FROM library
+            WHERE word_count > 200
+            ORDER BY RANDOM()
+            LIMIT 1
+        """)
+        row = cur.fetchone()
+        if row:
+            b_title, b_author, b_category, b_tags, b_content = row
+            b_tags_str = ', '.join(b_tags) if b_tags else ''
+            # Limitar contenido para no explotar tokens
+            if len(b_content) > 3000:
+                b_content = b_content[:3000] + "\n[...]"
+            book_data = f"""
+LIBRO DEL DÍA (seleccionado al azar de la biblioteca de Pablo):
+📖 Título: {b_title}
+👤 Autor: {b_author}
+📂 Categoría: {b_category}
+🏷️ Tags: {b_tags_str}
+
+EXTRACTO:
+{b_content}
+"""
+        cur.close()
+        conn.close()
+    except Exception as e:
+        logger.warning(f"Morning library error: {e}")
+        book_data = "\n(Biblioteca no disponible hoy)\n"
+
     context_block = "\n".join(raw_data)
 
     # --- 2. Prompt matutino para Claude ---
@@ -405,22 +442,40 @@ async def generate_morning_summary(chat_id):
 DATOS DISPONIBLES:
 {context_block}
 
+{book_data}
+
 INSTRUCCIONES:
 Genera un resumen matutino siguiendo EXACTAMENTE esta estructura:
 
 1. **Saludo breve** — fecha y clima en una línea
+
 2. **Agenda del día** — eventos si los hay, breve
+
 3. **Tareas pendientes** — una sola mención, sin repetir después
+
 4. **3-4 noticias curadas** — SOLO geopolítica, economía/finanzas, filosofía, ciencia, tecnología con impacto social, IA. EXCLUIR deportes, farándula, crímenes, accidentes
-5. **Confrontación con modelo mental** — si alguna noticia contradice o confirma un modelo de los 216, señálalo brevemente
-6. **Tema de reflexión del día** — una pregunta o provocación intelectual derivada de lo anterior
-7. **Pensamiento estoico/filosófico** — una cita de Marco Aurelio, Epicteto, Séneca, Kierkegaard, Nietzsche, Heidegger, Byung-Chul Han, o de la Escuela de Frankfurt, conectada al tema del día si es posible. Breve pero provocadora.
+
+5. **📖 Rincón de la Biblioteca** — Esta es la sección nueva y más importante. Con el LIBRO DEL DÍA:
+   a) Presentá el libro: título, autor, una línea sobre su tesis central
+   b) Extraé UNA frase memorable o una idea poderosa del extracto — citala textual si la encontrás
+   c) Conectá esa idea con algo actual: una noticia del día, una tendencia, un dilema contemporáneo. Que no sea forzado — si la conexión es obvia, mejor. Si no, hacé una conexión inesperada pero inteligente.
+   d) Lanzá UNA pregunta provocadora que obligue a Pablo a pensar. No preguntas retóricas fáciles. Preguntas que incomoden, que cuestionen, que abran una puerta. Ejemplos del nivel que busco:
+      - "Si Byung-Chul Han dice que la transparencia es violencia, ¿tu obsesión por documentar todo en Obsidian es un acto de control o de resistencia?"
+      - "Taleb diría que tu portafolio de inversiones tiene fragilidad oculta. ¿Dónde está tu antifragilidad personal?"
+      - "Jung habla del encuentro con la sombra. ¿Cuál es la parte de vos que deliberadamente no querés ver hoy?"
+   e) Sugerí una conexión con OTRO libro o autor de la biblioteca que cruce con el tema. "Esto conecta con lo que dice X en Y" — así Pablo puede buscar después.
+
+6. **Pensamiento del cierre** — UNA cita filosófica (puede ser del libro del día o de otro autor: Marco Aurelio, Epicteto, Séneca, Kierkegaard, Nietzsche, Heidegger, Han, Weil, Campbell, Jung). Breve, cortante, sin explicación.
 
 REGLAS:
-- Todo el resumen debe caber en UN mensaje de Telegram (máximo 3000 caracteres)
+- Todo el resumen debe caber en UN mensaje de Telegram (máximo 4000 caracteres)
 - Tono: directo, filosófico, sin condescendencia
 - No uses "¡Excelente!" ni frases de chatbot
-- La reflexión debe ser una semilla para que Pablo piense durante el día, NO un sermón
+- La sección de Biblioteca es la más valiosa — dedícale espacio y profundidad
+- La pregunta provocadora debe ser PERSONAL, dirigida a Pablo, no genérica
+- Si encontrás frases memorables textuales en el extracto, usalas
+- Buscá lo incómodo, lo que Pablo preferiría no pensar a las 6am
+- Mejor una provocación que incomode que un cumplido intelectual
 """
 
     # --- 3. Llamar a Claude ---
@@ -442,5 +497,4 @@ REGLAS:
 
     except Exception as e:
         logger.error(f"Morning Claude error: {e}")
-        # Fallback: al menos mandar los datos brutos
         return f"☀️ Buenos días, Pablo.\n{context_block}\n\n— Claudette"
