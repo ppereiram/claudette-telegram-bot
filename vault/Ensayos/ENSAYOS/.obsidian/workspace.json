@@ -1,0 +1,225 @@
+{
+  "main": {
+    "id": "e1e2faa41ba7bac5",
+    "type": "split",
+    "children": [
+      {
+        "id": "5e63df6852dc2347",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "8e18a8192d2bfefb",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Teoría Crítica/La Gran Fuga de la atención - Sobre el Robo del Presente y la Rebelión Silenciosa de los Que Se Detienen.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "La Gran Fuga de la atención - Sobre el Robo del Presente y la Rebelión Silenciosa de los Que Se Detienen"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "9dacfb2d852d1aa2",
+    "type": "split",
+    "children": [
+      {
+        "id": "617e1b055e3f833d",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "2de7a20345a81bc8",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "8672c34635c56075",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "87bdfd786c061df3",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "b4d85bb94ef4bf26",
+    "type": "split",
+    "children": [
+      {
+        "id": "488b30174c2c9172",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "0b9984c82753b74b",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Teoría Crítica/Cyberpunk - Tecnofeudalismo - Capitalismo de vigilancia.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for Cyberpunk - Tecnofeudalismo - Capitalismo de vigilancia"
+            }
+          },
+          {
+            "id": "34a71ca700556875",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Teoría Crítica/Cyberpunk - Tecnofeudalismo - Capitalismo de vigilancia.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from Cyberpunk - Tecnofeudalismo - Capitalismo de vigilancia"
+            }
+          },
+          {
+            "id": "90fd20ab897443f7",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "5873f314c18a8e6b",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "08cc90f390646370",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Teoría Crítica/Cyberpunk - Tecnofeudalismo - Capitalismo de vigilancia.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of Cyberpunk - Tecnofeudalismo - Capitalismo de vigilancia"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "8e18a8192d2bfefb",
+  "lastOpenFiles": [
+    "Teoría Crítica/Cyberpunk - Tecnofeudalismo - Capitalismo de vigilancia.md",
+    "Ficción Filosófica/El Amor - La Quinta Fuerza del Universo.md",
+    "Teoría Crítica/La Gran Fuga de la atención - Sobre el Robo del Presente y la Rebelión Silenciosa de los Que Se Detienen.md",
+    "Cultura/Literatura/Biografias - El Virus de la Ultraviolencia.md",
+    "Teoría Crítica/5 de 6 LA DOBLE TRILOGÍA DE LA ESTUPIDEZ HUMANA.md",
+    "ÍNDICE DE LA BIBLIOTECA.md",
+    "Actualidad, economía y geopolítica/La Democracia Esta Colapsando - Serie Completa.md",
+    "ÍNDICE DE LA BIBLIOTECA.md.tmp.5.1771978421751",
+    "Filósofia/Ciencia cristiana vs Ciencia secular.md",
+    "Ficción Filosófica/1 de 2 IA - La Ultima Metamorfosis.md",
+    "Ficción Filosófica/2 de 2 IA - La Partitura Imposible.md",
+    "Ficción Filosófica/La Hermosa Ilusion del Control.md",
+    "Ficción Filosófica/El Prometeo de las Matematicas - John von Neumann.md",
+    "Teoría Crítica/4 de 6 LA DOBLE TRILOGÍA DE LA ESTUPIDEZ HUMANA.md",
+    "Actualidad, economía y geopolítica/La Doble Trilogia de la Estupidez Humana.md",
+    "Teoría Crítica/6 de 6 LA DOBLE TRILOGÍA DE LA ESTUPIDEZ HUMANA.md",
+    "Teoría Crítica/3 de 6 LA DOBLE TRILOGÍA DE LA ESTUPIDEZ HUMANA.md",
+    "Teoría Crítica/2 de 6 LA DOBLE TRILOGÍA DE LA ESTUPIDEZ HUMANA.md",
+    "Teoría Crítica/1 de 6 LA DOBLE TRILOGÍA DE LA ESTUPIDEZ HUMANA.md",
+    "Ficción Filosófica/La Trilogia del Escudo Rojo - Parte III.md",
+    "Ficción Filosófica/La Trilogia del Escudo Rojo - Parte II.md",
+    "Ficción Filosófica/La Trilogia del Escudo Rojo - Parte I.md",
+    "Cultura/Musica/La Frecuencia de los Dioses - Hendrix.md",
+    "Cultura/Literatura/El Virus Wallace - Cómo la Contracultura Más Letal del Siglo XXI Sigue Infectando la Cultura Pop.md",
+    "Ficción Filosófica/Los Guardianes del Fuego Prohibido.md",
+    "Ficción Filosófica/Los Nuevos Argonautas.md",
+    "Ficción Filosófica/Los Secretos Infinitos de Pi.md",
+    "Filósofia",
+    "Cultura/Literatura",
+    "Cultura/Arte",
+    "Cultura/Musica",
+    "Cultura/Cine",
+    "Biografias",
+    "Cultura",
+    "ÍNDICE DE LA BIBLIOTECA.md.tmp.5.1771975883899",
+    "Actualidad, economía y geopolítica"
+  ]
+}

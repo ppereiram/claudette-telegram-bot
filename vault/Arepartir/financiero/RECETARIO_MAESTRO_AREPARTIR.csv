@@ -1,0 +1,730 @@
+RECETARIO MAESTRO - AREPARTIR
+Inversiones Las Chamas de Costa Rica S.A. | Cedula Juridica: 3-101-766288
+Fecha de Actualizacion: 14/02/2026
+DOCUMENTO CONFIDENCIAL - USO INTERNO
+
+================================================================================
+INDICE DE CONTENIDO
+================================================================================
+SECCION,CODIGOS,CANTIDAD,DESCRIPCION
+Sub-Recetas Base,SR-001 a SR-018,18,Preparaciones base reutilizables
+Arepas,A-001 a A-016,16,Menu completo de arepas
+Empanadas,E-001 a E-009,9,Todas las empanadas (incluye 2 nuevas feb-2026)
+Tequenos,T-001 a T-002,2,Tequenos activos (queso y chocolate)
+Dips,DIP-001 a DIP-003,3,Salsas acompanantes
+Extras,EXT-001 a EXT-008,8,Ingredientes adicionales
+
+================================================================================
+SECCION 1: SUB-RECETAS BASE (SR-001 a SR-018)
+================================================================================
+
+---SR-001: SOFRITO BASE---
+Rendimiento: 8 litros | Costo Total: 13634.60 | Costo/Litro: 1704.33 | Costo/g: 1.70
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Ajo (cabezas completas),15,g,Mercado local,2.20/g,33.00
+Cebolla blanca,3000,g,Mercadito de Guelo,1.30/g,3900.00
+Tomate,3000,g,Mercadito de Guelo,1.50/g,4500.00
+Chile dulce,10,unidades,Mercadito de Guelo,400.00/und,4000.00
+Cebollin,2,ramilletes,Verduleria local,500.00/und,1000.00
+Sal,45,g,Mas x Menos,0.88/g,39.60
+Pimienta negra,6,g,Mas x Menos,27.00/g,162.00
+TOTAL,,,,,13634.60
+USO: Base para carnes mechadas frijoles y otras preparaciones
+
+---SR-002: CARNE MOLIDA GUISADA---
+Rendimiento: 1.2 kg (crece 20%) | Costo Total: 12534.33 | Costo/kg: 10445.28 | Costo/g: 10.45
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Carne molida 95% magra,1000,g,Por definir (Odoo),10.83/g,10830.00
+Sofrito (SR-001),1000,ml,Sub-receta,1.70/ml,1704.33
+TOTAL,,,,,12534.33
+NOTA: Sin merma - crece ligeramente por absorcion del sofrito
+
+---SR-003: POLLO MECHADO---
+Rendimiento: 2.25 kg (crece 125%) | Costo Total: 6054.33 | Costo/kg: 2690.81 | Costo/g: 2.69
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Pechuga de pollo,1000,g,PriceSmart,4.35/g,4350.00
+Sofrito (SR-001),1000,ml,Sub-receta,1.70/ml,1704.33
+TOTAL,,,,,6054.33
+NOTA: Crece significativamente por absorcion de sofrito - MUY RENTABLE
+
+---SR-004: CARNE MECHADA (QUITITEÑA)---
+Rendimiento: 3 kg (merma 62.5%) | Costo Total: 19177.32 | Costo/kg: 6392.44 | Costo/g: 6.39
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Carne Quititeña mechada,4000,g,Mayca,3.09/g,12360.00
+Sofrito (SR-001),4000,ml,Sub-receta,1.70/ml,6817.32
+TOTAL,,,,,19177.32
+NOTA: Alta merma por coccion y deshebrado - Ingrediente mas costoso
+
+---SR-005: POLLO REINA (SIN SOFRITO)---
+Rendimiento: 1 kg | Costo Total: 4403.40 | Costo/kg: 4403.40 | Costo/g: 4.40
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Pollo desmechado,1000,g,PriceSmart,4.35/g,4350.00
+Sal,30,g,Mas x Menos,0.88/g,26.40
+Pimienta negra,1,g,Mas x Menos,27.00/g,27.00
+TOTAL,,,,,4403.40
+USO: Especifico para Reina Pepiada (se mezcla con aguacate y mayonesa)
+
+---SR-006: RELLENO REINA PEPIADA---
+Rendimiento: 150g (1 porcion) | Costo Total: 556.50 | Costo/porcion: 556.50 | Costo/g: 3.71
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Pollo Reina (SR-005),60,g,Sub-receta,4.40/g,264.00
+Aguacate Hass,60,g,Mercado local,3.00/g,180.00
+Mayonesa Real Sysco,30,g,Mayca,3.75/g,112.50
+TOTAL,,,,,556.50
+USO: Arepas Reina Pepiada y Sifrina
+
+---SR-007: PERICO (HUEVOS REVUELTOS)---
+Rendimiento: 1 porcion | Costo Total: 283.94 | Costo/porcion: 283.94
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Huevos,2,unidades,Pongale Huevos,126.67/und,253.34
+Sofrito (SR-001),18,g,Sub-receta,1.70/g,30.60
+TOTAL,,,,,283.94
+USO: Arepa Perico
+
+---SR-008: FRIJOLES NEGROS---
+Rendimiento: 3.3 kg (crece 10%) | Costo Total: 5075.00 | Costo/kg: 1537.88 | Costo/g: 1.54
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Frijoles negros secos Indiana,3000,g,Mas x Menos,1.55/g,4650.00
+Caldo de carne,3000,ml,Subproducto,0.00,0.00
+Sofrito (SR-001),250,g,Sub-receta,1.70/g,425.00
+TOTAL,,,,,5075.00
+USO: Pabellon Domino Vegetariana Vegana
+
+---SR-009: FRIJOLES ROJOS---
+Rendimiento: 1.1 kg (crece 10%) | Costo Total: 1917.50 | Costo/kg: 1743.18 | Costo/g: 1.74
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Frijoles rojos secos Indiana,1000,g,Mas x Menos,1.66/g,1662.50
+Caldo de carne,1000,ml,Subproducto,0.00,0.00
+Sofrito (SR-001),150,g,Sub-receta,1.70/g,255.00
+TOTAL,,,,,1917.50
+USO: Chifriarepa
+
+---SR-010: BOLILLO (CAZON) GUISADO---
+Rendimiento: 2.5 kg (aprox) | Costo Total: 18545.40 | Costo/kg: 7418.16 | Costo/g: 7.42
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Bolillo (pescado),2000,g,Pescaderia Del Mar,8.50/g,17000.00
+Cebolla grande,200,g,Mercadito de Guelo,1.30/g,260.00
+Sal,30,g,Mas x Menos,0.88/g,26.40
+Sofrito (SR-001),10,g,Sub-receta,1.70/g,17.00
+Alcaparras,200,g,PriceSmart,5.71/g,1142.00
+Chile dulce,100,g,Mercadito de Guelo,400.00/und,100.00
+TOTAL,,,,,18545.40
+USO: Empanada de Cazon y Arepa Oriental - PRODUCTO PREMIUM
+
+---SR-011: SALSA AJO-CULANTRO---
+Rendimiento: 7 litros | Costo Total: 7370.00 | Costo/L: 1052.86 | Costo/g: 1.05
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Aderezo mayonesa MFS,2400,ml (1 galon),Mayca,4490.00/gal,4490.00
+Culantro,12,ramitos,Verduleria local,240.00/ramito,2880.00
+TOTAL,,,,,7370.00
+COSTO POR PORCION (30ml): 31.59 colones
+USO: Dip para tequenos y empanadas
+
+---SR-012: SALSA TAPA DULCE---
+Rendimiento: 850 ml | Costo Total: 720.00 | Costo/L: 847.06 | Costo/g: 0.85
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Tapa dulce Hortifrut,600,g,Hortifrut,1.20/g,720.00
+Agua,250,ml,Grifo,0.00,0.00
+TOTAL,,,,,720.00
+COSTO POR PORCION (30ml): 25.41 colones
+USO: Dip para tequenos
+
+---SR-013: SALSA GUAYABA---
+Rendimiento: 1.25 L | Costo Total: 2211.00 | Costo/L: 1768.80 | Costo/g: 1.77
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Guayaba Tricopilia (manga),1000,g,Mayca,2111.00/kg,2111.00
+Agua,250,ml,Grifo,0.00,0.00
+Limon mesino,1,unidad,Mas x Menos,100.00/und,100.00
+TOTAL,,,,,2211.00
+COSTO POR PORCION (30ml): 53.06 colones
+USO: Dip para tequenos
+
+---SR-014: PICO DE GALLO---
+Rendimiento: 300g (7 porciones) | Costo Total: 1350.00 | Costo/porcion: 192.86
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Pico de Gallo MxM (preparado),300,g,Mas x Menos,4.50/g,1350.00
+TOTAL,,,,,1350.00
+USO: Chifriarepa (unico producto que lo lleva)
+
+---SR-015: AREPA VIUDA (MASA BASE)---
+Rendimiento: 20 unidades | Costo Total: 1712.00 | Costo/arepa: 85.60 | Con desperdicio 5%: 89.88
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Harina PAN (maiz precocida),1000,g,Mas x Menos,1.69/g,1690.00
+Agua,1800,ml,Grifo,0.00,0.00
+Sal,25,g,Mas x Menos,0.88/g,22.00
+TOTAL,,,,,1712.00
+NOTA: Este es el costo base de la masa. Los rellenos se agregan segun cada receta.
+
+---SR-016: MASA PARA EMPANADA---
+Rendimiento: 35 unidades | Costo Total: 2769.24 | Costo/empanada: 79.12
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Harina PAN maiz amarillo,500,g,Mas x Menos,1.69/g,845.00
+Harina PAN original (blanca),1000,g,Mas x Menos,1.65/g,1650.00
+Harina de trigo (Nacarina),80,g,Mayca,0.81/g,64.64
+Azucar (Mayca),250,g,Mayca,0.77/g,192.00
+Agua,2100,ml,Grifo,0.00,0.00
+Sal,20,g,Mas x Menos,0.88/g,17.60
+TOTAL,,,,,2769.24
+NOTA: A este costo se agrega el relleno segun sabor
+
+---SR-017: MASA AREPA DULCE---
+Rendimiento: 18 unidades | Costo Masa: 2930.60 | Costo/arepa: 162.81
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Harina PAN (blanca),1000,g,Mas x Menos,1.65/g,1650.00
+Agua,1080,ml,Grifo,0.00,0.00
+Melado de papelon,580,g,Hortifrut,1.20/g,696.00
+Sal,20,g,Mas x Menos,0.88/g,17.60
+Anis molido,18,g,Especias,31.50/g,567.00
+TOTAL MASA,,,,,2930.60
+RELLENO POR UNIDAD:
+Queso blanco rallado,100,g,Lacteos Hermanos Condega,3.60/g,360.00
+COSTO TOTAL AREPA DULCE: 522.81 colones (masa + relleno)
+
+---SR-018: MASA PARA TEQUENOS---
+Rendimiento: 160 unidades | Costo Total: 2931.12 | Costo/tequeno: 18.32
+INGREDIENTE,CANTIDAD,UNIDAD,PROVEEDOR,COSTO/UNIDAD,COSTO TOTAL
+Harina de trigo (Nacarina),1800,g,Mayca,0.81/g,1458.00
+Margarina Corona (bloque),232,g,Mayca,1.69/g,392.08
+Huevos,7.5,unidades,Pongale Huevos,126.67/und,950.03
+Azucar,54,g,Mayca,0.77/g,41.58
+Sal,36,g,Mas x Menos,0.88/g,31.68
+Polvo de hornear Fleischman,33,g,Mayca,1.75/g,57.75
+Agua,395,ml,Grifo,0.00,0.00
+TOTAL,,,,,2931.12
+
+================================================================================
+SECCION 2: COSTOS DE COCCION
+================================================================================
+
+CONCEPTO,COSTO/UNIDAD,DESCRIPCION
+Aceite para freir (por tequeno),11.20,Aceite Doral HD: 10ml x 1.12/ml
+Gas (por tequeno),1.00,Consumo estimado por unidad
+TOTAL COCCION TEQUENO,12.20,Por unidad frita
+,,,
+Gas para asar (por arepa),6.00,Plancha/grill estimado
+NOTA: Arepas NO se frien - se asan en plancha,,,
+,,,
+APLICA A:,,,
+- Tequenos cocinados (6 20 30 40 50 und vendidos para consumo inmediato),,,
+- Empanadas fritas,,,
+- NO aplica a productos CONGELADOS (sin coccion),,,
+
+================================================================================
+SECCION 3: RECETAS DE AREPAS (A-001 a A-016)
+================================================================================
+
+Todas incluyen: Masa base (SR-015) 89.88 + Bandeja bagazo 75.80 + Coccion (gas) 6.00 = 171.68 base
+
+A-001: AREPA REINA PEPIADA
+PRECIO VENTA: 4700 | FOOD COST: 9.17%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa base (SR-015),1 und,89.88,89.88
+Relleno Reina (SR-006),70 g,3.71/g,259.70
+Coccion (gas),1 und,6.00,6.00
+Bandeja bagazo 9x6x3,1 und,75.80,75.80
+TOTAL COSTO,,,431.38
+MARGEN BRUTO: 4268.62 | FOOD COST: 9.17% | EVALUACION: SUPER ESTRELLA
+
+A-002: AREPA PELUA
+PRECIO VENTA: 3500 | FOOD COST: 28.04%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa base (SR-015),1 und,89.88,89.88
+Carne mechada (SR-004),70 g,6.39/g,447.30
+Queso amarillo rallado,80 g,4.53/g,362.40
+Coccion (gas),1 und,6.00,6.00
+Bandeja bagazo 9x6x3,1 und,75.80,75.80
+TOTAL COSTO,,,981.38
+MARGEN BRUTO: 2518.62 | FOOD COST: 28.04% | EVALUACION: BUENO
+
+A-003: AREPA CATIRA
+PRECIO VENTA: 4400 | FOOD COST: 16.42%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa base (SR-015),1 und,89.88,89.88
+Pollo mechado (SR-003),70 g,2.69/g,188.30
+Queso amarillo rallado,80 g,4.53/g,362.40
+Coccion (gas),1 und,6.00,6.00
+Bandeja bagazo 9x6x3,1 und,75.80,75.80
+TOTAL COSTO,,,722.38
+MARGEN BRUTO: 3677.62 | FOOD COST: 16.42% | EVALUACION: ESTRELLA
+
+A-004: AREPA PABELLON
+PRECIO VENTA: 4900 | FOOD COST: 18.38%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa base (SR-015),1 und,89.88,89.88
+Carne mechada (SR-004),45 g,6.39/g,287.55
+Queso blanco rallado,80 g,3.60/g,288.00
+Platano maduro (4 rodajas),40 g,0.75/g,30.00
+Frijoles negros (SR-008),80 g,1.54/g,123.20
+Coccion (gas),1 und,6.00,6.00
+Bandeja bagazo 9x6x3,1 und,75.80,75.80
+TOTAL COSTO,,,900.43
+MARGEN BRUTO: 3999.57 | FOOD COST: 18.38% | EVALUACION: ESTRELLA
+
+A-005: AREPA CHIFRIAREPA
+PRECIO VENTA: 4900 | FOOD COST: 13.07%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa base (SR-015),1 und,89.88,89.88
+Pico de gallo (SR-014),20 g,4.50/g,90.00
+Chicharron,70 g,0.85/g,59.50
+Frijoles rojos (SR-009),80 g,1.74/g,139.20
+Aguacate,60 g,3.00/g,180.00
+Coccion (gas),1 und,6.00,6.00
+Bandeja bagazo 9x6x3,1 und,75.80,75.80
+TOTAL COSTO,,,640.38
+MARGEN BRUTO: 4259.62 | FOOD COST: 13.07% | EVALUACION: ESTRELLA
+
+A-006: AREPA ORIENTAL
+PRECIO VENTA: 4500 | FOOD COST: 22.42%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa base (SR-015),1 und,89.88,89.88
+Bolillo guisado (SR-010),70 g,7.42/g,519.40
+Queso blanco rallado,80 g,3.60/g,288.00
+Platano maduro (4 rodajas),40 g,0.75/g,30.00
+Coccion (gas),1 und,6.00,6.00
+Bandeja bagazo 9x6x3,1 und,75.80,75.80
+TOTAL COSTO,,,1009.08
+MARGEN BRUTO: 3490.92 | FOOD COST: 22.42% | EVALUACION: EXCELENTE
+
+A-007: AREPA DOMINO
+PRECIO VENTA: 4150 | FOOD COST: 17.27%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa base (SR-015),1 und,89.88,89.88
+Frijoles negros (SR-008),120 g,1.54/g,184.80
+Queso blanco rallado,100 g,3.60/g,360.00
+Coccion (gas),1 und,6.00,6.00
+Bandeja bagazo 9x6x3,1 und,75.80,75.80
+TOTAL COSTO,,,716.48
+MARGEN BRUTO: 3433.52 | FOOD COST: 17.27% | EVALUACION: ESTRELLA
+
+A-008: AREPA VEGETARIANA
+PRECIO VENTA: 4350 | FOOD COST: 18.22%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa base (SR-015),1 und,89.88,89.88
+Frijoles negros (SR-008),80 g,1.54/g,123.20
+Queso blanco rallado,80 g,3.60/g,288.00
+Aguacate,60 g,3.00/g,180.00
+Platano maduro (4 rodajas),40 g,0.75/g,30.00
+Coccion (gas),1 und,6.00,6.00
+Bandeja bagazo 9x6x3,1 und,75.80,75.80
+TOTAL COSTO,,,792.88
+MARGEN BRUTO: 3557.12 | FOOD COST: 18.22% | EVALUACION: ESTRELLA
+
+A-009: AREPA VEGANA
+PRECIO VENTA: 4000 | FOOD COST: 12.62%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa base (SR-015),1 und,89.88,89.88
+Frijoles negros (SR-008),80 g,1.54/g,123.20
+Aguacate,60 g,3.00/g,180.00
+Platano maduro (4 rodajas),40 g,0.75/g,30.00
+Coccion (gas),1 und,6.00,6.00
+Bandeja bagazo 9x6x3,1 und,75.80,75.80
+TOTAL COSTO,,,504.88
+MARGEN BRUTO: 3495.12 | FOOD COST: 12.62% | EVALUACION: ESTRELLA
+
+A-010: AREPA PERICO
+PRECIO VENTA: 4700 | FOOD COST: 9.69%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa base (SR-015),1 und,89.88,89.88
+Perico (SR-007),1 porcion,283.94,283.94
+Coccion (gas),1 und,6.00,6.00
+Bandeja bagazo 9x6x3,1 und,75.80,75.80
+TOTAL COSTO,,,455.62
+MARGEN BRUTO: 4244.38 | FOOD COST: 9.69% | EVALUACION: SUPER ESTRELLA
+
+A-011: AREPA JAMON Y QUESO
+PRECIO VENTA: 4150 | FOOD COST: 19.95%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa base (SR-015),1 und,89.88,89.88
+Queso blanco rallado,100 g,3.60/g,360.00
+Jamon FUD (3 rebanadas),3 und,98.86/und,296.57
+Coccion (gas),1 und,6.00,6.00
+Bandeja bagazo 9x6x3,1 und,75.80,75.80
+TOTAL COSTO,,,828.25
+MARGEN BRUTO: 3321.75 | FOOD COST: 19.95% | EVALUACION: ESTRELLA
+
+A-012: AREPA QUESO AMARILLO
+PRECIO VENTA: 3850 | FOOD COST: 18.62%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa base (SR-015),1 und,89.88,89.88
+Queso amarillo rallado,120 g,4.53/g,543.60
+Margarina,5 g,0.33/g,1.66
+Coccion (gas),1 und,6.00,6.00
+Bandeja bagazo 9x6x3,1 und,75.80,75.80
+TOTAL COSTO,,,716.94
+MARGEN BRUTO: 3133.06 | FOOD COST: 18.62% | EVALUACION: ESTRELLA
+
+A-013: AREPA QUESO BLANCO
+PRECIO VENTA: 3850 | FOOD COST: 15.72%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa base (SR-015),1 und,89.88,89.88
+Queso blanco rallado,120 g,3.60/g,432.00
+Margarina,5 g,0.33/g,1.66
+Coccion (gas),1 und,6.00,6.00
+Bandeja bagazo 9x6x3,1 und,75.80,75.80
+TOTAL COSTO,,,605.34
+MARGEN BRUTO: 3244.66 | FOOD COST: 15.72% | EVALUACION: ESTRELLA
+
+A-014: AREPA DULCE
+PRECIO VENTA: 3850 | FOOD COST: 13.73%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa arepa dulce (SR-017),1 und,162.81,162.81
+Queso blanco rallado,100 g,3.60/g,360.00
+Coccion (gas),1 und,6.00,6.00
+Bandeja bagazo 9x6x3,1 und,75.80,75.80
+TOTAL COSTO,,,528.81
+MARGEN BRUTO: 3321.19 | FOOD COST: 13.73% | EVALUACION: ESTRELLA
+
+A-015: AREPA VIUDA
+PRECIO VENTA: 1150 | FOOD COST: 14.93%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa base (SR-015),1 und,89.88,89.88
+Coccion (gas),1 und,6.00,6.00
+Bandeja bagazo 9x6x3,1 und,75.80,75.80
+TOTAL COSTO,,,171.68
+MARGEN BRUTO: 978.32 | FOOD COST: 14.93% | EVALUACION: ESTRELLA
+
+A-016: AREPA SIFRINA
+PRECIO VENTA: 5000 | FOOD COST: 15.88%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa base (SR-015),1 und,89.88,89.88
+Relleno Reina (SR-006),70 g,3.71/g,259.70
+Queso amarillo rallado,80 g,4.53/g,362.40
+Coccion (gas),1 und,6.00,6.00
+Bandeja bagazo 9x6x3,1 und,75.80,75.80
+TOTAL COSTO,,,793.78
+MARGEN BRUTO: 4206.22 | FOOD COST: 15.88% | EVALUACION: ESTRELLA
+
+================================================================================
+RESUMEN AREPAS - RANKING POR FOOD COST
+================================================================================
+#,AREPA,PRECIO,COSTO,FOOD COST %,MARGEN,EVALUACION
+1,Reina Pepiada,4700,431.38,9.17%,4268.62,SUPER ESTRELLA
+2,Perico,4700,455.62,9.69%,4244.38,SUPER ESTRELLA
+3,Vegana,4000,504.88,12.62%,3495.12,ESTRELLA
+4,Chifriarepa,4900,640.38,13.07%,4259.62,ESTRELLA
+5,Dulce,3850,528.81,13.73%,3321.19,ESTRELLA
+6,Viuda,1150,171.68,14.93%,978.32,ESTRELLA
+7,Queso Blanco,3850,605.34,15.72%,3244.66,ESTRELLA
+8,Sifrina,5000,793.78,15.88%,4206.22,ESTRELLA
+9,Catira,4400,722.38,16.42%,3677.62,ESTRELLA
+10,Domino,4150,716.48,17.27%,3433.52,ESTRELLA
+11,Vegetariana,4350,792.88,18.22%,3557.12,ESTRELLA
+12,Pabellon,4900,900.43,18.38%,3999.57,ESTRELLA
+13,Queso Amarillo,3850,716.94,18.62%,3133.06,ESTRELLA
+14,Jamon y Queso,4150,828.25,19.95%,3321.75,ESTRELLA
+15,Oriental,4500,1009.08,22.42%,3490.92,EXCELENTE
+16,Pelua,3500,981.38,28.04%,2518.62,BUENO
+PROMEDIO,,,16.49%,,
+
+================================================================================
+SECCION 4: RECETAS DE EMPANADAS (E-001 a E-007)
+================================================================================
+
+Todas incluyen: Masa (SR-016) 79.12 + Costo fritura (aceite estimado) ~15.00 = 94.12 base
+
+E-001: EMPANADA DE QUESO
+PRECIO VENTA: 2000 | FOOD COST: 13.71%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa (SR-016),1 und,79.12,79.12
+Queso blanco,50 g,3.60/g,180.00
+Costo fritura,1 und,15.00,15.00
+TOTAL COSTO,,,274.12
+MARGEN BRUTO: 1725.88 | FOOD COST: 13.71% | EVALUACION: ESTRELLA
+
+E-002: EMPANADA DE CARNE MOLIDA
+PRECIO VENTA: 2000 | FOOD COST: 25.61%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa (SR-016),1 und,79.12,79.12
+Carne molida guisada (SR-002),40 g,10.45/g,418.00
+Costo fritura,1 und,15.00,15.00
+TOTAL COSTO,,,512.12
+MARGEN BRUTO: 1487.88 | FOOD COST: 25.61% | EVALUACION: EXCELENTE
+
+E-003: EMPANADA DE CARNE MECHADA
+PRECIO VENTA: 2000 | FOOD COST: 17.49%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa (SR-016),1 und,79.12,79.12
+Carne mechada (SR-004),40 g,6.39/g,255.60
+Costo fritura,1 und,15.00,15.00
+TOTAL COSTO,,,349.72
+MARGEN BRUTO: 1650.28 | FOOD COST: 17.49% | EVALUACION: ESTRELLA
+
+E-004: EMPANADA DE POLLO
+PRECIO VENTA: 2000 | FOOD COST: 9.82%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa (SR-016),1 und,79.12,79.12
+Pollo mechado (SR-003),38 g,2.69/g,102.22
+Costo fritura,1 und,15.00,15.00
+TOTAL COSTO,,,196.34
+MARGEN BRUTO: 1803.66 | FOOD COST: 9.82% | EVALUACION: SUPER ESTRELLA
+
+E-005: EMPANADA DE PLATANO Y QUESO
+PRECIO VENTA: 2300 | FOOD COST: 14.88%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa (SR-016),1 und,79.12,79.12
+Queso blanco,50 g,3.60/g,180.00
+Platano maduro (3 rebanadas),35 g,0.75/g,68.19
+Costo fritura,1 und,15.00,15.00
+TOTAL COSTO,,,342.31
+MARGEN BRUTO: 1957.69 | FOOD COST: 14.88% | EVALUACION: ESTRELLA
+
+E-006: EMPANADA DE CAZON
+PRECIO VENTA: 2000 | FOOD COST: 19.55%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa (SR-016),1 und,79.12,79.12
+Bolillo guisado (SR-010),40 g,7.42/g,296.80
+Costo fritura,1 und,15.00,15.00
+TOTAL COSTO,,,390.92
+MARGEN BRUTO: 1609.08 | FOOD COST: 19.55% | EVALUACION: ESTRELLA
+
+E-007: EMPANADA PABELLON
+PRECIO VENTA: 3100 | FOOD COST: 16.31%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa (SR-016),1 und,79.12,79.12
+Carne mechada (SR-004),38 g,6.39/g,242.82
+Platano maduro (2 rebanadas),23 g,0.75/g,45.46
+Frijoles negros (SR-008),80 g,1.54/g,123.20
+Costo fritura,1 und,15.00,15.00
+TOTAL COSTO,,,505.60
+MARGEN BRUTO: 2594.40 | FOOD COST: 16.31% | EVALUACION: ESTRELLA
+
+E-008: EMPANADA DE JAMON AHUMADO Y QUESO
+PRECIO VENTA: 2300 | FOOD COST: 16.47%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa (SR-016),1 und,79.12,79.12
+Jamon ahumado (1.5 laminas),~19.3 g,108.57/lamina,162.86
+Queso blanco rallado,15 g,3.60/g,54.00
+Queso amarillo rallado,15 g,4.53/g,67.95
+Costo fritura,1 und,15.00,15.00
+TOTAL COSTO,,,378.93
+MARGEN BRUTO: 1921.07 | FOOD COST: 16.47% | EVALUACION: ESTRELLA
+NOTA: Jamon ahumado paquete 35 laminas x 450g x 3800 colones (108.57/lamina = 12.86g/lamina). Empanada de dos sabores.
+
+E-009: EMPANADA DOMINO (FRIJOLES NEGROS Y QUESO)
+PRECIO VENTA: 2300 | FOOD COST: 14.37%
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa (SR-016),1 und,79.12,79.12
+Frijoles negros (SR-008),60 g,1.54/g,92.40
+Queso blanco fresco rallado,40 g,3.60/g,144.00
+Costo fritura,1 und,15.00,15.00
+TOTAL COSTO,,,330.52
+MARGEN BRUTO: 1969.48 | FOOD COST: 14.37% | EVALUACION: ESTRELLA
+NOTA: Clasico venezolano. Todos los ingredientes ya en inventario. Empanada de dos sabores.
+
+================================================================================
+RESUMEN EMPANADAS - RANKING POR FOOD COST
+================================================================================
+#,EMPANADA,PRECIO,COSTO,FOOD COST %,MARGEN,EVALUACION
+1,Pollo,2000,196.34,9.82%,1803.66,SUPER ESTRELLA
+2,Queso,2000,274.12,13.71%,1725.88,ESTRELLA
+3,Domino (NUEVA),2300,330.52,14.37%,1969.48,ESTRELLA
+4,Platano y Queso,2300,342.31,14.88%,1957.69,ESTRELLA
+5,Pabellon,3100,505.60,16.31%,2594.40,ESTRELLA
+6,Jamon y Queso (NUEVA),2300,378.93,16.47%,1921.07,ESTRELLA
+7,Mechada,2000,349.72,17.49%,1650.28,ESTRELLA
+8,Cazon,2000,390.92,19.55%,1609.08,ESTRELLA
+9,Molida,2000,512.12,25.61%,1487.88,EXCELENTE
+PROMEDIO,,,16.47%,,
+
+================================================================================
+SECCION 5: RECETAS DE TEQUENOS (T-001 a T-002)
+================================================================================
+
+---TEQUENO CRUDO (SIN COCCION - PARA CONGELADOS)---
+T-001-CRUDO: TEQUENO DE QUESO BLANCO (CRUDO)
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa (SR-018),1 und,18.32,18.32
+Queso blanco,11 g,3.60/g,39.60
+TOTAL COSTO CRUDO,,,57.92
+
+T-002-CRUDO: TEQUENO DE CHOCOLATE (CRUDO)
+COMPONENTE,CANTIDAD,COSTO/UNIDAD,COSTO TOTAL
+Masa (SR-018),1 und,18.32,18.32
+Cobertura chocolate #117,10 g,7.45/g,74.50
+TOTAL COSTO CRUDO,,,92.82
+
+---TEQUENO COCINADO (CON COCCION - PARA VENTA INMEDIATA)---
+COSTO COCCION POR TEQUENO: 12.20 colones (aceite 11.20 + gas 1.00)
+
+T-001: TEQUENO DE QUESO BLANCO (COCINADO)
+COSTO CRUDO: 57.92 + COCCION: 12.20 = TOTAL: 70.12 por unidad
+
+PRESENTACIONES COCINADAS:
+CANTIDAD,PRECIO VENTA,COSTO TOTAL,FOOD COST %,MARGEN,EVALUACION
+6 unidades,4100,420.72,10.26%,3679.28,SUPER ESTRELLA
+20 unidades,10300,1402.40,13.62%,8897.60,ESTRELLA
+30 unidades,15000,2103.60,14.02%,12896.40,ESTRELLA
+40 unidades,19500,2804.80,14.38%,16695.20,ESTRELLA
+50 unidades,22000,3506.00,15.94%,18494.00,ESTRELLA
+
+T-002: TEQUENO DE CHOCOLATE (COCINADO)
+COSTO CRUDO: 92.82 + COCCION: 12.20 = TOTAL: 105.02 por unidad
+
+PRESENTACIONES COCINADAS:
+CANTIDAD,PRECIO VENTA,COSTO TOTAL,FOOD COST %,MARGEN,EVALUACION
+6 unidades,4350,630.12,14.49%,3719.88,ESTRELLA
+20 unidades,10900,2100.40,19.27%,8799.60,ESTRELLA
+
+================================================================================
+SECCION 6: PRODUCTOS CONGELADOS
+================================================================================
+
+NOTA: Los productos congelados NO llevan costo de coccion (el cliente prepara en casa)
+
+PRODUCTO,CANTIDAD,COSTO UNITARIO,COSTO TOTAL,PRECIO VENTA,FOOD COST %,MARGEN,EVALUACION
+Arepas precocidas,20 und,89.88,1797.60,4800,37.45%,3002.40,ACEPTABLE
+Tequenos queso,20 und,57.92,1158.40,10300,11.25%,9141.60,SUPER ESTRELLA
+Tequenos queso,50 und,57.92,2896.00,22000,13.16%,19104.00,ESTRELLA
+Tequenos chocolate,20 und,92.82,1856.40,10900,17.03%,9043.60,ESTRELLA
+
+NOTA IMPORTANTE: Las arepas precocidas tienen food cost alto (37.45%) porque el precio de venta no compensa el costo de 20 masas. Considerar ajuste de precio.
+
+================================================================================
+SECCION 7: DIPS Y SALSAS
+================================================================================
+
+PRESENTACION 2 ONZAS (60ml):
+DIP,SUB-RECETA,COSTO,PRECIO VENTA,FOOD COST %,MARGEN,EVALUACION
+Ajo-Culantro,SR-011,63.18,700,9.03%,636.82,SUPER ESTRELLA
+Tapa Dulce,SR-012,50.82,700,7.26%,649.18,SUPER ESTRELLA
+Guayaba,SR-013,106.12,700,15.16%,593.88,ESTRELLA
+
+PRESENTACION 8 ONZAS (240ml):
+DIP,SUB-RECETA,COSTO,PRECIO VENTA,FOOD COST %,MARGEN,EVALUACION
+Ajo-Culantro,SR-011,252.72,2400,10.53%,2147.28,SUPER ESTRELLA
+Tapa Dulce,SR-012,203.28,2400,8.47%,2196.72,SUPER ESTRELLA
+Guayaba,SR-013,424.48,2400,17.69%,1975.52,ESTRELLA
+
+NOTA: Dips incluidos con tequenos representan costo de ~35 colones promedio por unidad
+
+================================================================================
+SECCION 8: EXTRAS / INGREDIENTES ADICIONALES
+================================================================================
+
+TIPO 1 - PRECIO: 800 COLONES
+INGREDIENTE,PORCION,COSTO/g,COSTO TOTAL,FOOD COST %,MARGEN,EVALUACION
+Aguacate Hass,40 g,3.00,120.00,15.00%,680.00,ESTRELLA
+Queso blanco,80 g,3.60,288.00,36.00%,512.00,ACEPTABLE
+Queso amarillo,80 g,4.53,362.40,45.30%,437.60,REVISAR PRECIO
+Platano maduro,2 rebanadas,22.73,45.46,5.68%,754.54,SUPER ESTRELLA
+Frijoles negros,40 g,1.54,61.60,7.70%,738.40,SUPER ESTRELLA
+
+TIPO 2 - PRECIO: 1200 COLONES
+INGREDIENTE,PORCION,COSTO/g,COSTO TOTAL,FOOD COST %,MARGEN,EVALUACION
+Carne mechada (SR-004),40 g,6.39,255.60,21.30%,944.40,ESTRELLA
+Pollo mechado (SR-003),40 g,2.69,107.60,8.97%,1092.40,SUPER ESTRELLA
+Cazon/Bolillo (SR-010),40 g,7.42,296.80,24.73%,903.20,EXCELENTE
+
+================================================================================
+SECCION 9: COMBOS Y FIESTA PACK
+================================================================================
+
+COMBO 1: AREPA + 6 TEQUENOS
+COMPONENTE,COSTO
+Arepa promedio,706.00
+6 Tequenos cocinados,420.72
+Bandeja combo,75.80
+TOTAL COSTO,1202.52
+PRECIO VENTA,6750
+FOOD COST %,17.82%
+MARGEN,5547.48
+EVALUACION,ESTRELLA
+
+COMBO 2: AREPA + EMPANADA + 3 TEQUENOS
+COMPONENTE,COSTO
+Arepa promedio,706.00
+Empanada promedio,338.73
+3 Tequenos cocinados,210.36
+Bandeja combo,75.80
+TOTAL COSTO,1330.89
+PRECIO VENTA,7650
+FOOD COST %,17.40%
+MARGEN,6319.11
+EVALUACION,ESTRELLA
+
+COMBO 3: 2 EMPANADAS + 6 TEQUENOS
+COMPONENTE,COSTO
+2 Empanadas promedio,677.46
+6 Tequenos cocinados,420.72
+Bandeja combo,75.80
+TOTAL COSTO,1173.98
+PRECIO VENTA,6200
+FOOD COST %,18.94%
+MARGEN,5026.02
+EVALUACION,ESTRELLA
+
+FIESTA PACK: 3 AREPAS + 2 EMPANADAS + 20 TEQUENOS
+COMPONENTE,COSTO
+3 Arepas promedio,2118.00
+2 Empanadas promedio,677.46
+20 Tequenos cocinados,1402.40
+2 Salsas 8oz,456.00
+Empaque fiesta,200.00
+TOTAL COSTO,4853.86
+PRECIO VENTA,25000
+FOOD COST %,19.42%
+MARGEN,20146.14
+EVALUACION,ESTRELLA
+
+================================================================================
+SECCION 10: DIRECTORIO DE PROVEEDORES
+================================================================================
+
+PROVEEDOR,PRODUCTOS,CONTACTO,TELEFONO,EMAIL
+PriceSmart,Pollo aceite alcaparras,4035-1500,,facturaelectronica@pricesmart.com
+Mayca Auto Servicio,Carne harinas margarina chocolate mayonesa,(506) 2433-3311,,
+Mas x Menos / Maxi Pali,Harina PAN frijoles jamon sal pimienta,(506) 2582-8400,,
+Lacteos Hermanos Condega,Queso blanco (28kg/semana),(506) 8724-2595,,jydlacteoshermanoscodega@gmail.com
+Productos Ceci,Queso amarillo,(506) 8320-7206,,lacteosarrietarojas@gmail.com
+Pongale Huevos (Bryan),Huevos (120 und/semana),Por actualizar,,
+El Corte Fresco,Chicharron,(506) 2282-3481,,info@cortefrescocr.com
+Pescaderia Del Mar,Bolillo (pescado),(506) 8383-6922,,delmar.ventas2@gmail.com
+El Mercadito de Guelo,Platanos tomates chile dulce,(506) 8893-6028,,elmercaditodeguelo@gmail.com
+Hortifrut,Tapa dulce,,,,
+
+================================================================================
+SECCION 11: TABLA DE RENDIMIENTOS
+================================================================================
+
+PROTEINAS Y CARNES:
+SUB-RECETA,PESO CRUDO,PESO COCIDO,FACTOR,TIPO
+SR-002 Carne Molida,1 kg,1.2 kg,120%,Sin merma
+SR-003 Pollo Mechado,1 kg,2.25 kg,225%,Crece (muy rentable)
+SR-004 Carne Mechada,4 kg,3 kg,75%,Merma 25%
+SR-005 Pollo Reina,1 kg,1 kg,100%,Sin cambio
+SR-010 Bolillo,2 kg,2.5 kg,125%,Estimado
+
+GRANOS:
+SUB-RECETA,PESO SECO,PESO COCIDO,FACTOR,TIPO
+SR-008 Frijoles Negros,3 kg,3.3 kg,110%,Crece 10%
+SR-009 Frijoles Rojos,1 kg,1.1 kg,110%,Crece 10%
+
+MASAS:
+SUB-RECETA,CANTIDAD HARINA,RENDIMIENTO,UNIDADES
+SR-015 Arepa Viuda,1 kg,2.8 kg masa,20 arepas
+SR-016 Masa Empanada,1.65 kg,2.9 kg masa,35 empanadas
+SR-018 Masa Tequeno,1.8 kg,2.9 kg masa,160 tequenos
+
+================================================================================
+SECCION 12: ESCALA DE EVALUACION FOOD COST
+================================================================================
+
+CATEGORIA,RANGO FOOD COST,DESCRIPCION
+SUPER ESTRELLA,< 10%,Rentabilidad excepcional - Promover activamente
+ESTRELLA,10% - 20%,Muy rentable - Core del negocio
+EXCELENTE,20% - 25%,Buena rentabilidad - Mantener
+BUENO,25% - 30%,Aceptable - Meta de la industria
+ACEPTABLE,30% - 35%,Limite inferior - Monitorear
+REVISAR,> 35%,Requiere ajuste de precio o porcion
+
+Meta industria restaurantes: 28-35% Food Cost
+AREPARTIR promedio: 16-17% Food Cost (EXCEPCIONAL)
+
+================================================================================
+FIN DEL RECETARIO MAESTRO
+================================================================================
+Documento preparado por: Pablo Pereira
+Fecha: 14 de Febrero 2026
+Version: 1.1 - Agregadas E-008 Jamon y Queso + E-009 Domino
+Proxima revision: Marzo 2026
+CONFIDENCIAL - Uso interno AREPARTIR

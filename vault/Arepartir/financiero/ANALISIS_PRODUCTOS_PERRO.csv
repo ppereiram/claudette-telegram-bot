@@ -1,0 +1,160 @@
+ANALISIS DE PRODUCTOS PERRO - AREPARTIR,,,,,,
+Fecha: 25/01/2026 | Preparado por: Claude para Pablo Pereira,,,,,,
+,,,,,,
+================================================================================,,,,,,
+ESCALA DE EVALUACION FOOD COST,,,,,,
+================================================================================,,,,,,
+CATEGORIA,RANGO FOOD COST,DESCRIPCION,ESTADO,,,
+SUPER ESTRELLA,Menor a 10%,Rentabilidad excepcional,Optimo,,,
+ESTRELLA,10% a 20%,Muy rentable (core del negocio),Optimo,,,
+EXCELENTE,20% a 25%,Buena rentabilidad,Bueno,,,
+BUENO,25% a 30%,Aceptable (meta industria),Aceptable,,,
+ACEPTABLE,30% a 35%,Limite inferior,Vigilar,,,
+REVISAR,Mayor a 35%,Requiere ajuste,PERRO,,,
+,,,,,,
+================================================================================,,,,,,
+PRODUCTOS PERRO IDENTIFICADOS (Food Cost mayor a 35%),,,,,,
+================================================================================,,,,,,
+PRODUCTO,CATEGORIA,FOOD COST %,PRECIO VENTA,COSTO,MARGEN,EVALUACION
+Queso amarillo (extra),Extras Tipo 1,45.30%,800,362.40,437.60,REVISAR - PERRO
+Queso blanco (extra),Extras Tipo 1,36.00%,800,288.00,512.00,ACEPTABLE - LIMITE
+,,,,,,
+TOTAL PRODUCTOS PERRO:,2,de aproximadamente 30 productos,,,Representa 6.7% del menu,
+,,,,,,
+================================================================================,,,,,,
+PRODUCTOS EN ZONA DE VIGILANCIA (Food Cost 25% a 35%),,,,,,
+================================================================================,,,,,,
+PRODUCTO,CATEGORIA,FOOD COST %,PRECIO VENTA,COSTO,MARGEN,EVALUACION
+Arepa Pelua,Arepas,28.04%,3500,981.38,2518.62,BUENO
+Empanada Carne Molida,Empanadas,25.61%,2000,512.12,1487.88,EXCELENTE
+Cazon (extra),Extras Tipo 2,24.73%,1200,296.80,903.20,EXCELENTE
+Arepa Oriental (Cazon),Arepas,22.42%,4500,1009.08,3490.92,EXCELENTE
+Carne mechada (extra),Extras Tipo 2,21.30%,1200,255.60,944.40,ESTRELLA
+,,,,,,
+================================================================================,,,,,,
+ANALISIS POR CATEGORIA DE PRODUCTO,,,,,,
+================================================================================,,,,,,
+CATEGORIA,CANTIDAD PRODUCTOS,FOOD COST PROMEDIO,PRODUCTOS PERRO,PRODUCTOS VIGILANCIA,ESTADO GENERAL,
+Arepas,16,16.49%,0,2,EXCEPCIONAL,
+Empanadas,7,16.77%,0,1,EXCEPCIONAL,
+Tequenos,2,Aprox 15%,0,0,EXCEPCIONAL,
+Dips,3,10-18%,0,0,EXCEPCIONAL,
+Extras Tipo 1 (800 col),5,21.94%,2,0,REVISAR QUESOS,
+Extras Tipo 2 (1200 col),3,18.33%,0,1,BUENO,
+,,,,,,
+================================================================================,,,,,,
+DIAGNOSTICO DETALLADO - PRODUCTOS PERRO,,,,,,
+================================================================================,,,,,,
+,,,,,,
+PRODUCTO PERRO 1: QUESO AMARILLO EXTRA,,,,,,
+Detalle,Valor,Observacion,,,,
+Porcion actual,80,gramos,,,,
+Costo por gramo,4.53,colones,,,,
+Costo total,362.40,colones,,,,
+Precio venta,800,colones,,,,
+Food Cost actual,45.30%,MUY ALTO,,,,
+Margen actual,437.60,colones,,,,
+,,,,,,
+OPCIONES DE CORRECCION:,,,,,,
+Opcion,Ajuste,Nuevo Food Cost,Nuevo Margen,Viabilidad,,
+A) Subir precio a 1000,Precio +200,36.24%,637.60,RECOMENDADO,,
+B) Reducir porcion a 60g,Porcion -20g,33.98%,528.20,Posible,,
+C) Subir precio a 1200,Precio +400,30.20%,837.60,Ideal pero alto,,
+D) Combinado: 70g a 1000,Ambos ajustes,31.71%,682.90,MEJOR OPCION,,
+,,,,,,
+PRODUCTO PERRO 2: QUESO BLANCO EXTRA,,,,,,
+Detalle,Valor,Observacion,,,,
+Porcion actual,80,gramos,,,,
+Costo por gramo,3.60,colones,,,,
+Costo total,288.00,colones,,,,
+Precio venta,800,colones,,,,
+Food Cost actual,36.00%,LIMITE,,,,
+Margen actual,512.00,colones,,,,
+,,,,,,
+OPCIONES DE CORRECCION:,,,,,,
+Opcion,Ajuste,Nuevo Food Cost,Nuevo Margen,Viabilidad,,
+A) Subir precio a 900,Precio +100,32.00%,612.00,RECOMENDADO,,
+B) Reducir porcion a 70g,Porcion -10g,31.50%,548.00,Posible,,
+C) Mantener actual,Sin cambio,36.00%,512.00,Aceptable limite,,
+,,,,,,
+================================================================================,,,,,,
+COMPARATIVO CON INDUSTRIA,,,,,,
+================================================================================,,,,,,
+METRICA,AREPARTIR,META INDUSTRIA,DIFERENCIA,EVALUACION,,
+Food Cost Arepas,16.49%,28-35%,11.51% mejor,EXCEPCIONAL,,
+Food Cost Empanadas,16.77%,28-35%,11.23% mejor,EXCEPCIONAL,,
+Food Cost Promedio General,16.63%,28-35%,11.37% mejor,EXCEPCIONAL,,
+Productos Perro,2 de 30,Hasta 10%,6.7%,ACEPTABLE,,
+,,,,,,
+================================================================================,,,,,,
+RANKING COMPLETO POR FOOD COST (todos los productos),,,,,,
+================================================================================,,,,,,
+#,PRODUCTO,CATEGORIA,PRECIO,COSTO,FOOD COST %,EVALUACION
+1,Platano maduro (extra),Extras,800,45.46,5.68%,SUPER ESTRELLA
+2,Tapa Dulce 2oz,Dips,700,50.82,7.26%,SUPER ESTRELLA
+3,Frijoles negros (extra),Extras,800,61.60,7.70%,SUPER ESTRELLA
+4,Tapa Dulce 8oz,Dips,2400,203.28,8.47%,SUPER ESTRELLA
+5,Pollo mechado (extra),Extras,1200,107.60,8.97%,SUPER ESTRELLA
+6,Ajo-Culantro 2oz,Dips,700,63.18,9.03%,SUPER ESTRELLA
+7,Arepa Reina Pepiada,Arepas,4700,431.38,9.17%,SUPER ESTRELLA
+8,Arepa Perico,Arepas,4700,455.62,9.69%,SUPER ESTRELLA
+9,Empanada Pollo,Empanadas,2000,196.34,9.82%,SUPER ESTRELLA
+10,Ajo-Culantro 8oz,Dips,2400,252.72,10.53%,ESTRELLA
+11,Arepa Vegana,Arepas,4000,504.88,12.62%,ESTRELLA
+12,Arepa Chifriarepa,Arepas,4900,640.38,13.07%,ESTRELLA
+13,Empanada Queso Blanco,Empanadas,2000,274.12,13.71%,ESTRELLA
+14,Empanada Platano y Queso,Empanadas,2300,342.31,14.88%,ESTRELLA
+15,Arepa Viuda,Arepas,1150,171.68,14.93%,ESTRELLA
+16,Aguacate (extra),Extras,800,120.00,15.00%,ESTRELLA
+17,Guayaba 2oz,Dips,700,106.12,15.16%,ESTRELLA
+18,Arepa Dulce,Arepas,3850,604.61,15.70%,ESTRELLA
+19,Arepa Queso Blanco,Arepas,3850,605.34,15.72%,ESTRELLA
+20,Arepa Sifrina,Arepas,5000,793.78,15.88%,ESTRELLA
+21,Empanada Pabellon,Empanadas,3100,505.60,16.31%,ESTRELLA
+22,Arepa Catira,Arepas,4400,722.38,16.42%,ESTRELLA
+23,Arepa Domino,Arepas,4150,716.48,17.27%,ESTRELLA
+24,Empanada Carne Mechada,Empanadas,2000,349.72,17.49%,ESTRELLA
+25,Guayaba 8oz,Dips,2400,424.48,17.69%,ESTRELLA
+26,Arepa Vegetariana,Arepas,4350,792.88,18.22%,ESTRELLA
+27,Arepa Pabellon,Arepas,4900,900.43,18.38%,ESTRELLA
+28,Arepa Queso Amarillo,Arepas,3850,716.94,18.62%,ESTRELLA
+29,Empanada Cazon,Empanadas,2000,390.92,19.55%,ESTRELLA
+30,Arepa Jamon y Queso,Arepas,4150,828.25,19.95%,ESTRELLA
+31,Carne mechada (extra),Extras,1200,255.60,21.30%,ESTRELLA
+32,Arepa Oriental (Cazon),Arepas,4500,1009.08,22.42%,EXCELENTE
+33,Cazon (extra),Extras,1200,296.80,24.73%,EXCELENTE
+34,Empanada Carne Molida,Empanadas,2000,512.12,25.61%,EXCELENTE
+35,Arepa Pelua,Arepas,3500,981.38,28.04%,BUENO
+36,Queso blanco (extra),Extras,800,288.00,36.00%,ACEPTABLE
+37,Queso amarillo (extra),Extras,800,362.40,45.30%,REVISAR - PERRO
+,,,,,,
+================================================================================,,,,,,
+CONCLUSIONES Y RECOMENDACIONES,,,,,,
+================================================================================,,,,,,
+,,,,,,
+CONCLUSION PRINCIPAL:,,,,,,
+AREPARTIR tiene una estructura de costos EXCEPCIONAL con solo 2 productos perro (6.7% del menu),,,,,,
+Ambos productos perro son EXTRAS de queso y no productos principales del menu,,,,,,
+,,,,,,
+RECOMENDACIONES INMEDIATAS:,,,,,,
+1,Queso amarillo extra: Subir precio de 800 a 1000 colones,Impacto: Food cost baja de 45% a 36%,,,
+2,Queso blanco extra: Subir precio de 800 a 900 colones,Impacto: Food cost baja de 36% a 32%,,,
+3,Alternativa: Reducir porciones de queso extra de 80g a 70g,Mantiene precio accesible,,,
+,,,,,,
+RECOMENDACIONES ESTRATEGICAS:,,,,,,
+1,Promover mas las empanadas de POLLO (9.82% food cost),Mejor rentabilidad,,,,
+2,Promover mas la Arepa Reina Pepiada (9.17% food cost),Super estrella,,,,
+3,Vigilar la Arepa Pelua (28.04%) - producto mas costoso del menu principal,Revisar precio o porcion,,,,
+4,Los DIPS son altamente rentables (7-18%) - considerar venta individual,Oportunidad de upselling,,,,
+,,,,,,
+FORTALEZAS DE AREPARTIR:,,,,,,
+1,El 91% de los productos (32 de 35) tienen food cost menor a 25%,,,,,
+2,Promedio general 16.63% vs meta industria 28-35%,,,,,
+3,9 productos son SUPER ESTRELLA (menos de 10% food cost),,,,,
+4,Ningun producto principal (arepas/empanadas/tequenos) es perro,,,,,
+,,,,,,
+================================================================================,,,,,,
+FIN DEL INFORME,,,,,,
+================================================================================,,,,,,
+Documento generado: 25 de Enero 2026,,,,,,
+CONFIDENCIAL - Uso interno AREPARTIR,,,,,,
