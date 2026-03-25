@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where:*)",
+      "Bash(/c/Python314/python.exe:*)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\Pablo\\.claude\\projects\\c--Users-Pablo-Documents-Obsidian-Vault-Trader-Bot\\memory"
+    ]
+  }
+}

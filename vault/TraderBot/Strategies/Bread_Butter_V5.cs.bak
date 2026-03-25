@@ -1,0 +1,371 @@
+#region Using declarations
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Xml.Serialization;
+using NinjaTrader.Cbi;
+using NinjaTrader.Gui;
+using NinjaTrader.Gui.Chart;
+using NinjaTrader.Gui.SuperDom;
+using NinjaTrader.Gui.Tools;
+using NinjaTrader.Data;
+using NinjaTrader.NinjaScript;
+using NinjaTrader.Core.FloatingPoint;
+using NinjaTrader.NinjaScript.Indicators;
+using NinjaTrader.NinjaScript.DrawingTools;
+#endregion
+
+namespace NinjaTrader.NinjaScript.Strategies
+{
+    public class BreadButter_v5_Apex : Strategy
+    {
+        // ============================================================
+        // Bread & Butter v5.0 - "Apex Predator"
+        //
+        // DISENO ESPECIFICO PARA APEX / PROP FIRMS:
+        // 1. Trailing Stop Agresivo: Combate la regla del "Unrealized Drawdown".
+        //    Si el trade sube, el stop sube rapido. No devolvemos ganancias.
+        // 2. Horario Extendido: Operativa en sesión completa (Globex) con filtro de ADX.
+        // 3. Frecuencia: Optimizado para graficos de 2 Minutos.
+        // ============================================================
+
+        // === INDICADORES ===
+        private EMA emaFast;
+        private EMA emaSlow;
+        private EMA emaHTF;
+        private ATR atr;
+        private RSI rsi;
+        private SMA volumeSMA;
+        private ADX adx;
+
+        // === GESTION DE SESION ===
+        private double dailyPnL = 0;
+        private int tradesThisSession = 0;
+        private DateTime lastSessionDate;
+        private bool stopTradingToday = false;
+
+        // === TRAILING INTERNO (APEX LOGIC) ===
+        private double entryPrice = 0;
+        private double dynamicStopPrice = 0;
+        private double maxUnrealizedProfit = 0; // Para trackear el pico del trade
+
+        protected override void OnStateChange()
+        {
+            if (State == State.SetDefaults)
+            {
+                Description = @"Bread & Butter v5.0 - Optimizado para Apex Trailing Drawdown";
+                Name = "BreadButter_v5_Apex";
+                Calculate = Calculate.OnBarClose;
+                EntriesPerDirection = 1;
+                EntryHandling = EntryHandling.AllEntries;
+                IsExitOnSessionCloseStrategy = true;
+                ExitOnSessionCloseSeconds = 30;
+                IsFillLimitOnTouch = false;
+                MaximumBarsLookBack = MaximumBarsLookBack.TwoHundredFiftySix;
+                OrderFillResolution = OrderFillResolution.Standard;
+                Slippage = 1;
+                StartBehavior = StartBehavior.WaitUntilFlat;
+                TimeInForce = TimeInForce.Gtc;
+                TraceOrders = false;
+                RealtimeErrorHandling = RealtimeErrorHandling.StopCancelClose;
+                StopTargetHandling = StopTargetHandling.PerEntryExecution;
+                BarsRequiredToTrade = 20;
+                IsInstantiatedOnEachOptimizationIteration = true;
+
+                // === 1. GESTION DE RIESGO (APEX) ===
+                // Tu drawdown total es $7500.
+                // Limite diario conservador: $1500 (20% del buffer total).
+                MaxPerdidaDiaria = 1500;      
+                MaxTradesPerDay = 10;        // Mas libertad de accion
+
+                // === 2. PARAMETROS DE ENTRADA ===
+                // Usaremos MNQ. 10 Contratos MNQ = 1 NQ.
+                // Esto permite granularidad.
+                FixedContracts = 10;         
+                StopLossATR = 2.0;           // Stop tecnico amplio para no salir por ruido
+                TargetRatio = 3.0;           // Buscamos recorridos largos, PERO el trailing nos sacará antes
+
+                // === 3. INDICADORES ===
+                EMAFastPeriod = 9;           // Mas rapida para 2 min (antes 21)
+                EMASlowPeriod = 20;          // (antes 50)
+                EMAHTFPeriod = 200;          // Tendencia de fondo
+                ATRPeriod = 14;
+                RSIPeriod = 14;
+                RSIOversold = 30;
+                RSIOverbought = 70;
+                ADXThreshold = 18;           // Bajamos exigencia para entrar mas seguido
+                ADXPeriod = 14;
+
+                // === 4. SALIDA (LOGICA APEX) ===
+                // El objetivo es mover el stop rapido para proteger el drawdown no realizado.
+                MoveToBreakevenR = 0.8;      // Apenas ganamos 0.8R, aseguramos empate.
+                EnableTrailing = true;
+                TrailingStartR = 1.0;        // Empezamos a perseguir al 1.0R
+                TrailingStepATR = 0.5;       // Ajuste fino del trailing
+
+                // === 5. HORARIO (CME COMPLETO) ===
+                // Evitamos solo el cierre bancario de 17:00 a 18:00 EST
+                UseTimeFilter = true;
+                StartTime = 180000;          // 18:00 (Apertura Globex ayer)
+                EndTime = 164500;            // 16:45 (Cierre mercado hoy)
+                // NOTA: NinjaTrader maneja esto segun la sesion del instrumento, 
+                // pero este filtro asegura no operar en el 'break' de mantenimiento.
+
+                DebugMode = false;
+            }
+            else if (State == State.DataLoaded)
+            {
+                emaFast = EMA(EMAFastPeriod);
+                emaSlow = EMA(EMASlowPeriod);
+                emaHTF = EMA(EMAHTFPeriod);
+                atr = ATR(ATRPeriod);
+                rsi = RSI(RSIPeriod, 3);
+                volumeSMA = SMA(Volume, 20);
+                adx = ADX(ADXPeriod);
+
+                // Visuales
+                emaFast.Plots[0].Brush = Brushes.Cyan;
+                emaSlow.Plots[0].Brush = Brushes.Orange;
+                emaHTF.Plots[0].Brush = Brushes.Gray;
+                AddChartIndicator(emaFast);
+                AddChartIndicator(emaSlow);
+                AddChartIndicator(emaHTF);
+            }
+        }
+
+        protected override void OnBarUpdate()
+        {
+            if (CurrentBar < Math.Max(EMAHTFPeriod, 20)) return;
+
+            // Reset Diario de PnL
+            if (Bars.IsFirstBarOfSession)
+            {
+                dailyPnL = 0;
+                tradesThisSession = 0;
+                stopTradingToday = false;
+            }
+
+            // Circuit Breaker Diario
+            if (stopTradingToday)
+            {
+                if (Position.MarketPosition != MarketPosition.Flat)
+                {
+                    ExitLong();
+                    ExitShort();
+                }
+                return;
+            }
+
+            // Gestion de Posicion
+            if (Position.MarketPosition != MarketPosition.Flat)
+            {
+                ManageTradeApexLogic();
+                return;
+            }
+
+            // Filtro Horario: Evitar el cierre de 17:00 ET
+            // Simplificado: Operar si hora actual < 16:45 O hora actual > 18:00
+            if (UseTimeFilter)
+            {
+                int t = ToTime(Time[0]);
+                // Rango prohibido aprox: 16:45 a 18:00
+                if (t >= 164500 && t < 180000) return;
+            }
+
+            CheckForEntries();
+        }
+
+        private void CheckForEntries()
+        {
+            // 1. FILTRO ADX: En horario nocturno el mercado puede estar muerto.
+            // Si no hay ADX, no operamos para evitar pagar comisiones en rangos de 2 ticks.
+            if (adx[0] < ADXThreshold) return;
+
+            // 2. FILTRO VOLUMEN: Evitar horas muertas de la madrugada
+            if (Volume[0] < volumeSMA[0] * 0.8) return; 
+
+            // 3. LOGICA DE TENDENCIA (Optimizada para 2 Min)
+            // En 2 min, usamos cruce de EMAs 9/20 a favor de la 200.
+            bool bullTrend = Close[0] > emaHTF[0];
+            bool bearTrend = Close[0] < emaHTF[0];
+
+            bool bullCross = CrossAbove(emaFast, emaSlow, 1);
+            bool bearCross = CrossBelow(emaFast, emaSlow, 1);
+
+            // Reentrada (Pullback): Precio toca la EMA Lenta y rebota
+            bool bullPullback = Low[0] <= emaSlow[0] && Close[0] > emaSlow[0] && emaFast[0] > emaSlow[0];
+            bool bearPullback = High[0] >= emaSlow[0] && Close[0] < emaSlow[0] && emaFast[0] < emaSlow[0];
+
+            // LONG
+            if (bullTrend && (bullCross || bullPullback))
+            {
+                if (rsi[0] < RSIOverbought) // Espacio para subir
+                {
+                    EnterLong(FixedContracts, "Long");
+                    
+                    double risk = atr[0] * StopLossATR;
+                    SetStopLoss("Long", CalculationMode.Price, Close[0] - risk, false);
+                    SetProfitTarget("Long", CalculationMode.Price, Close[0] + (risk * TargetRatio));
+                    
+                    entryPrice = Close[0];
+                    dynamicStopPrice = Close[0] - risk;
+                    maxUnrealizedProfit = 0;
+                }
+            }
+            // SHORT
+            else if (bearTrend && (bearCross || bearPullback))
+            {
+                if (rsi[0] > RSIOversold) // Espacio para bajar
+                {
+                    EnterShort(FixedContracts, "Short");
+
+                    double risk = atr[0] * StopLossATR;
+                    SetStopLoss("Short", CalculationMode.Price, Close[0] + risk, false);
+                    SetProfitTarget("Short", CalculationMode.Price, Close[0] - (risk * TargetRatio));
+
+                    entryPrice = Close[0];
+                    dynamicStopPrice = Close[0] + risk;
+                    maxUnrealizedProfit = 0;
+                }
+            }
+        }
+
+        private void ManageTradeApexLogic()
+        {
+            // Logica personalizada para proteger el Drawdown de Apex
+            double currentPrice = Close[0];
+            double riskAmount = atr[0] * StopLossATR;
+            
+            if (Position.MarketPosition == MarketPosition.Long)
+            {
+                double currentProfit = currentPrice - entryPrice;
+                if (currentProfit > maxUnrealizedProfit) maxUnrealizedProfit = currentProfit;
+
+                // 1. BREAKEVEN RAPIDO
+                if (dynamicStopPrice < entryPrice && currentProfit >= (riskAmount * MoveToBreakevenR))
+                {
+                    dynamicStopPrice = entryPrice + TickSize; // +1 tick para cubrir comision
+                    SetStopLoss("Long", CalculationMode.Price, dynamicStopPrice, false);
+                }
+
+                // 2. TRAILING "STEP" (Escalera)
+                // Si el precio avanza, subimos el stop pero mantenemos distancia para no ahogarlo
+                if (EnableTrailing && currentProfit >= (riskAmount * TrailingStartR))
+                {
+                    // Queremos asegurar el 50% de lo ganado desde el punto de trailing
+                    double desiredStop = currentPrice - (atr[0] * TrailingStepATR);
+                    
+                    if (desiredStop > dynamicStopPrice)
+                    {
+                        dynamicStopPrice = desiredStop;
+                        SetStopLoss("Long", CalculationMode.Price, dynamicStopPrice, false);
+                    }
+                }
+            }
+            else if (Position.MarketPosition == MarketPosition.Short)
+            {
+                double currentProfit = entryPrice - currentPrice;
+                if (currentProfit > maxUnrealizedProfit) maxUnrealizedProfit = currentProfit;
+
+                // 1. BREAKEVEN RAPIDO
+                if (dynamicStopPrice > entryPrice && currentProfit >= (riskAmount * MoveToBreakevenR))
+                {
+                    dynamicStopPrice = entryPrice - TickSize;
+                    SetStopLoss("Short", CalculationMode.Price, dynamicStopPrice, false);
+                }
+
+                // 2. TRAILING
+                if (EnableTrailing && currentProfit >= (riskAmount * TrailingStartR))
+                {
+                    double desiredStop = currentPrice + (atr[0] * TrailingStepATR);
+
+                    if (desiredStop < dynamicStopPrice)
+                    {
+                        dynamicStopPrice = desiredStop;
+                        SetStopLoss("Short", CalculationMode.Price, dynamicStopPrice, false);
+                    }
+                }
+            }
+        }
+
+        protected override void OnExecutionUpdate(Execution execution, string executionId, double price, int quantity,
+            MarketPosition marketPosition, string orderId, DateTime time)
+        {
+            if (execution.Order != null && execution.Order.OrderState == OrderState.Filled && marketPosition == MarketPosition.Flat)
+            {
+                double pnl = execution.Order.Instrument.MasterInstrument.RoundToTickSize(SystemPerformance.AllTrades[SystemPerformance.AllTrades.Count - 1].ProfitCurrency);
+                dailyPnL += pnl;
+                tradesThisSession++;
+
+                // HARD STOP DIARIO
+                if (dailyPnL <= -MaxPerdidaDiaria)
+                {
+                    stopTradingToday = true;
+                    Print("ALERTA APEX: Limite de Perdida Diaria Alcanzado. Protegiendo cuenta.");
+                }
+            }
+        }
+
+        #region Properties
+        // PROPIEDADES VISIBLES EN NINJA
+        [NinjaScriptProperty]
+        [Range(1, 100)]
+        [Display(Name = "Contratos MNQ (10 = 1 NQ)", GroupName = "1. Sizing", Order = 1)]
+        public int FixedContracts { get; set; }
+
+        [NinjaScriptProperty]
+        [Range(500, 7500)]
+        [Display(Name = "Max Perdida Diaria ($)", GroupName = "1. Sizing", Order = 2)]
+        public double MaxPerdidaDiaria { get; set; }
+
+        [NinjaScriptProperty]
+        [Range(1, 20)]
+        [Display(Name = "Max Trades Dia", GroupName = "1. Sizing", Order = 3)]
+        public int MaxTradesPerDay { get; set; }
+
+        [NinjaScriptProperty]
+        [Range(10, 50)]
+        [Display(Name = "Minimo ADX", GroupName = "2. Filtros", Order = 1)]
+        public double ADXThreshold { get; set; }
+
+        [NinjaScriptProperty]
+        [Range(0.5, 4.0)]
+        [Display(Name = "Stop Loss ATR", GroupName = "3. Gestion Trade", Order = 1)]
+        public double StopLossATR { get; set; }
+
+        [NinjaScriptProperty]
+        [Range(0.5, 2.0)]
+        [Display(Name = "Breakeven Trigger (R)", GroupName = "3. Gestion Trade", Order = 2)]
+        public double MoveToBreakevenR { get; set; }
+
+        [NinjaScriptProperty]
+        [Range(0.5, 3.0)]
+        [Display(Name = "Trailing Distance (ATR)", GroupName = "3. Gestion Trade", Order = 3)]
+        public double TrailingStepATR { get; set; }
+        
+        // Indicadores (Ocultos para limpiar el panel, pero modificables si es necesario)
+        [Browsable(false)] public int EMAFastPeriod { get; set; }
+        [Browsable(false)] public int EMASlowPeriod { get; set; }
+        [Browsable(false)] public int EMAHTFPeriod { get; set; }
+        [Browsable(false)] public int ATRPeriod { get; set; }
+        [Browsable(false)] public int RSIPeriod { get; set; }
+        [Browsable(false)] public int RSIOverbought { get; set; }
+        [Browsable(false)] public int RSIOversold { get; set; }
+        [Browsable(false)] public int ADXPeriod { get; set; }
+        [Browsable(false)] public double TargetRatio { get; set; }
+        [Browsable(false)] public bool EnableTrailing { get; set; }
+        [Browsable(false)] public double TrailingStartR { get; set; }
+        [Browsable(false)] public bool UseTimeFilter { get; set; }
+        [Browsable(false)] public int StartTime { get; set; }
+        [Browsable(false)] public int EndTime { get; set; }
+        [Browsable(false)] public bool DebugMode { get; set; }
+        #endregion
+    }
+}

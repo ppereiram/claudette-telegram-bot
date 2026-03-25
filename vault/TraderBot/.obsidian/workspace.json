@@ -1,0 +1,221 @@
+{
+  "main": {
+    "id": "f8d794d1fc3f9f1a",
+    "type": "split",
+    "children": [
+      {
+        "id": "56c6850cf900d45a",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "aa9f5bb10431430b",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Midas_Brain/brain_midas_arquitectura.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "brain_midas_arquitectura"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "00c421ce143f8a19",
+    "type": "split",
+    "children": [
+      {
+        "id": "5ae4b94ccaf45c1d",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "ecb8e6b805b1143e",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "3c300edb1ddad90a",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "ca192d1af89585d2",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "b39559bcfe74b49a",
+    "type": "split",
+    "children": [
+      {
+        "id": "0b9a2a3d0e7cf6e5",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "464d81b9345c94fd",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "MNQ Momentum Scalper - Documentacion.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for MNQ Momentum Scalper - Documentacion"
+            }
+          },
+          {
+            "id": "479c0292e78f81cc",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "MNQ Momentum Scalper - Documentacion.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from MNQ Momentum Scalper - Documentacion"
+            }
+          },
+          {
+            "id": "a0c93070fa97dc83",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "b2ecb42127ce7a40",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "219c0621b48e75ef",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "MNQ Momentum Scalper - Documentacion.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of MNQ Momentum Scalper - Documentacion"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "aa9f5bb10431430b",
+  "lastOpenFiles": [
+    "Midas_Brain/diario_lecciones.md",
+    "Midas_Brain/libros_extraidos.md",
+    "Midas_Brain/strategies_portfolio.md",
+    "Midas_Brain/roadmap_abril2026.md",
+    "Midas_Brain/quant_strategies.md",
+    "Midas_Brain/MEMORY.md",
+    "CLAUDE.md",
+    "Midas_Brain/brain_midas_arquitectura.md",
+    "Midas_Brain",
+    "MNQ Momentum Scalper - Documentacion.md",
+    "Welcome.md",
+    "Reports/00_Portfolio_Overview.md",
+    "Reports/11_Roadmap_2026.md",
+    "Reports/12_PivotTrendBreak_v1.md",
+    "Reports/21_MomentumZ_v1.md",
+    "Strategies/MomentumZ_v1.cs",
+    "Strategies/MomentumZ_v1.cs.tmp.18680.1772593319712",
+    "desktop.ini",
+    "Strategies/KalmanZScore_v1.cs.tmp.18680.1772587209534",
+    "Strategies/KalmanZScore_v1.cs.tmp.18680.1772587188496",
+    "Strategies/KalmanZScore_v1.cs.tmp.18680.1772587171092",
+    "Strategies/KalmanZScore_v1.cs.tmp.18680.1772587165270",
+    "Strategies/KalmanZScore_v1.cs.tmp.18680.1772587159692",
+    "Strategies/KalmanZScore_v1.cs.tmp.18680.1772587149321",
+    "Reports/19_DarvasBox_v1.md",
+    "Reports/20_VolumeProfile_POC_v1.md",
+    "Reports/01_BreadButter_v5_Apex.md",
+    "Reports/03_BreadButter_ULTRA.md",
+    "Reports/16_LWDonchianBreak_v1.md",
+    "Reports/15_ABCDHarmonic_v1.md",
+    "Reports/13_PivotReverse_v1.md",
+    "Reports/14_VWAPFlux_v1.md"
+  ]
+}

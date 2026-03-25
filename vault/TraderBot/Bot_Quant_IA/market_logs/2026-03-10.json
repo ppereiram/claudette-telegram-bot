@@ -1,0 +1,29 @@
+{
+  "fecha": "2026-03-10",
+  "timestamp": "2026-03-10T17:01:57.930688",
+  "precio_cierre": 24991.0,
+  "trend_1D": 0,
+  "trend_4H": 1,
+  "trend_1H": 1,
+  "trend_30M": 0,
+  "choppiness_15M": 52.87,
+  "sea_state": "moderate",
+  "tide_score": 1.4,
+  "swim_ok": true,
+  "trend_1D_label": "neutral",
+  "trend_4H_label": "bull",
+  "trend_1H_label": "bull",
+  "trend_30M_label": "neutral",
+  "strategies_pnl": {
+    "SimDarvasBox_v1": 2666.50,
+    "SimPivotTrendBreak": 436.00,
+    "SimPivotReverse_V1": -11.00,
+    "SimLWDonchianBreak_v": -802.80,
+    "SimBreadButter_v5_Apex": -54.00,
+    "SimSuperTrendWave": -836.00,
+    "SimVWAPFlux_v1": -97.30
+  },
+  "all_won": false,
+  "all_lost": false,
+  "notes": "Giro a bullish (tide=+1.40 vs -1.80 ayer). DarvasBox ENORME dia: +$2,667 long 24935->25003. PivotTrendBreak tambien gano +$436. BBv5 trade largo (11:11) llego a MFE=$2,541 en 17ct pero cerro en -$47 (Step Lock activo pero stop muy ajustado). SuperTrendWave mal dia -$836. Total portafolio: +$1,301."
+}

@@ -1,0 +1,21 @@
+{
+  "fecha": "2026-03-13",
+  "timestamp": "2026-03-13T15:57:46.097144",
+  "precio_cierre": 24560.0,
+  "trend_1D": 0,
+  "trend_4H": -1,
+  "trend_1H": 0,
+  "trend_30M": 0,
+  "choppiness_15M": 56.94,
+  "sea_state": "moderate",
+  "tide_score": -0.8,
+  "swim_ok": true,
+  "trend_1D_label": "neutral",
+  "trend_4H_label": "bear",
+  "trend_1H_label": "neutral",
+  "trend_30M_label": "neutral",
+  "strategies_pnl": {},
+  "all_won": null,
+  "all_lost": null,
+  "notes": ""
+}

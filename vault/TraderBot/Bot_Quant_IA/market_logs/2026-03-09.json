@@ -1,0 +1,28 @@
+{
+  "fecha": "2026-03-09",
+  "timestamp": "2026-03-09T15:36:29.877800",
+  "precio_cierre": 24670.25,
+  "trend_1D": 0,
+  "trend_4H": -1,
+  "trend_1H": -1,
+  "trend_30M": -1,
+  "choppiness_15M": 48.67,
+  "sea_state": "moderate",
+  "tide_score": -1.8,
+  "swim_ok": true,
+  "trend_1D_label": "neutral",
+  "trend_4H_label": "bear",
+  "trend_1H_label": "bear",
+  "trend_30M_label": "bear",
+  "strategies_pnl": {
+    "SimBreadButter_SCALPER": 268.00,
+    "SimDarvasBox_v1": -952.00,
+    "SimOpeningRange_v1": -156.80,
+    "SimSuperTrendWave": -731.50,
+    "SimOrderFlowReversal": -729.00,
+    "SimBreadButter_v5_Apex": -2616.50
+  },
+  "all_won": false,
+  "all_lost": false,
+  "notes": "Dia bajista. tide_score=-1.80, bear en 4H/1H/30M. BBv5 trade largo (11:37) llego a MFE=$3,822 pero cerro en stop loss -$39 (popcorn clasico - Step Lock habria salvado ~$3,800). BBv5 shorts (13:49) perdieron contra rebote. Solo SCALPER gano."
+}

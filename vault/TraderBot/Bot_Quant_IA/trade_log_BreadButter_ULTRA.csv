@@ -1,0 +1,4 @@
+direction,rsi,adx,vol_ratio,dist_htf,ema_slope,hour,minute,day_of_week,signal_type,trade_id,pnl,result,timestamp,phase
+1,48.5,30.2,1.4,0.002,0.3,10,15,2,0,TEST_080130,87.5,1,2026-03-05T08:01:30.253674,heuristic
+1,48.5,30.2,1.4,0.002,0.3,10,15,2,0,TEST_081926,87.5,1,2026-03-05T08:19:26.739008,heuristic
+1,48.5,30.2,1.4,0.002,0.3,10,15,2,0,TEST_143703,87.5,1,2026-03-05T14:37:03.037422,heuristic
