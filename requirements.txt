@@ -13,3 +13,10 @@ duckduckgo-search
 psycopg[binary]
 pytz
 pyyaml
+
+elevenlabs
+psycopg2-binary
+requests
+googlesearch-python
+python-docx
+openpyxl
