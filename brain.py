@@ -1,7 +1,7 @@
-"""
+﻿"""
 Brain de Claudette Bot.
 System prompt rico + loop de herramientas multi-ronda + safe history trimming.
-Portado completo desde bot.py monolítico.
+Portado completo desde bot.py monolÃ­tico.
 """
 
 import os
@@ -27,17 +27,17 @@ user_modes = {}
 # =====================================================
 
 def load_file_content(filename, default_text=""):
-    """Carga archivos de prompts/ o raíz."""
+    """Carga archivos de prompts/ o raÃ­z."""
     try:
         path = f'prompts/{filename}'
         if not os.path.exists(path):
             path = filename
         if os.path.exists(path):
             with open(path, 'r', encoding='utf-8') as f:
-                logger.info(f"📚 Loaded {filename}")
+                logger.info(f"ðŸ“š Loaded {filename}")
                 return f.read()
     except Exception as e:
-        logger.error(f"⚠️ Error loading {filename}: {e}")
+        logger.error(f"âš ï¸ Error loading {filename}: {e}")
     return default_text
 
 
@@ -84,14 +84,14 @@ def trim_history_safe(messages, max_length=20):
     # No empezar con un tool_result suelto
     while trimmed and _is_tool_result_message(trimmed[0]):
         trimmed = trimmed[1:]
-    # No empezar con un tool_use sin su tool_result después
+    # No empezar con un tool_use sin su tool_result despuÃ©s
     while trimmed and _is_tool_use_message(trimmed[0]) and not _next_is_tool_result(trimmed, 0):
         trimmed = trimmed[1:]
     return trimmed if trimmed else messages[-2:]
 
 
 # =====================================================
-# SERIALIZACIÓN (convierte objetos Anthropic → JSON)
+# SERIALIZACIÃ“N (convierte objetos Anthropic â†’ JSON)
 # =====================================================
 
 def serialize_content(content_obj):
@@ -123,7 +123,7 @@ def serialize_content(content_obj):
 # =====================================================
 
 def build_system_prompt(chat_id):
-    """Construye el system prompt completo con contexto dinámico."""
+    """Construye el system prompt completo con contexto dinÃ¡mico."""
     tz = pytz.timezone('America/Costa_Rica')
     now = datetime.now(tz)
 
@@ -134,26 +134,26 @@ def build_system_prompt(chat_id):
         memory_lines = [f"- {k}: {v}" for k, v in all_facts.items()
                         if not k.startswith("System_Location")]
         if memory_lines:
-            memory_text = "\n=== MEMORIA PERSISTENTE (datos que el usuario me pidió recordar) ===\n" + "\n".join(memory_lines) + "\n"
+            memory_text = "\n=== MEMORIA PERSISTENTE (datos que el usuario me pidiÃ³ recordar) ===\n" + "\n".join(memory_lines) + "\n"
 
-    # Ubicación
+    # UbicaciÃ³n
     from config import DEFAULT_LOCATION
     loc = user_locations.get(chat_id, DEFAULT_LOCATION)
 
     # Modo
     current_mode = user_modes.get(chat_id, "normal")
-    mode_instruction = "MODO: NORMAL ⚡. Sé breve."
+    mode_instruction = "MODO: NORMAL âš¡. SÃ© breve."
     if current_mode == "profundo":
-        mode_instruction = "MODO: PROFUNDO 🧘‍♀️. Analiza detalladamente."
+        mode_instruction = "MODO: PROFUNDO ðŸ§˜â€â™€ï¸. Analiza detalladamente."
 
-    # Mini-calendario de referencia (próximos 7 días)
+    # Mini-calendario de referencia (prÃ³ximos 7 dÃ­as)
     from datetime import timedelta
-    dias_semana = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+    dias_semana = ['lunes', 'martes', 'miÃ©rcoles', 'jueves', 'viernes', 'sÃ¡bado', 'domingo']
     week_ref = []
     for i in range(7):
         d = now + timedelta(days=i)
         dia_nombre = dias_semana[d.weekday()]
-        prefix = "HOY" if i == 0 else ("MAÑANA" if i == 1 else dia_nombre.upper())
+        prefix = "HOY" if i == 0 else ("MAÃ‘ANA" if i == 1 else dia_nombre.upper())
         week_ref.append(f"  {prefix}: {dia_nombre} {d.strftime('%d/%m/%Y')}")
     week_calendar = "\n".join(week_ref)
 
@@ -162,46 +162,46 @@ def build_system_prompt(chat_id):
 {memory_text}
 === BIBLIOTECA Y ESCRITOS DE PABLO ===
 Tienes acceso a los escritos, libros y biblioteca de Pablo en Google Drive.
-- Usa 'read_book_from_drive("INDICE_BIBLIOTECA")' para consultar qué hay disponible.
-- Usa 'read_book_from_drive("[titulo]")' para leer un texto específico.
-- Cuando analices noticias, decisiones o temas filosóficos, cruza con los escritos de Pablo si es relevante.
-- NO cargues todo — solo busca cuando el contexto lo amerite.
+- Usa 'read_book_from_drive("INDICE_BIBLIOTECA")' para consultar quÃ© hay disponible.
+- Usa 'read_book_from_drive("[titulo]")' para leer un texto especÃ­fico.
+- Cuando analices noticias, decisiones o temas filosÃ³ficos, cruza con los escritos de Pablo si es relevante.
+- NO cargues todo â€” solo busca cuando el contexto lo amerite.
 
 === LECTURA DE URLs ===
-Puedes leer páginas web, tweets, artículos y links que Pablo comparta.
+Puedes leer pÃ¡ginas web, tweets, artÃ­culos y links que Pablo comparta.
 - Usa 'fetch_url' cuando Pablo mande una URL o link.
-- Funciona con X/Twitter, noticias, blogs, y páginas públicas.
-- Si Pablo manda un link sin contexto, léelo y resumilo.
+- Funciona con X/Twitter, noticias, blogs, y pÃ¡ginas pÃºblicas.
+- Si Pablo manda un link sin contexto, lÃ©elo y resumilo.
 
-=== GENERACIÓN DE DOCUMENTOS ===
-Puedes generar documentos largos (.docx Word o .md Markdown) que se envían como archivo descargable.
-- Usa 'generate_document' cuando Pablo pida reportes, bitácoras, ensayos, compilaciones o cualquier texto extenso.
-- El contenido del documento NO tiene el límite de 4000 chars de Telegram — puede ser tan largo como necesites.
-- Usa formato Markdown en el contenido (# títulos, ## secciones, **negrita**, *cursiva*, listas, citas con >).
-- Se convierte automáticamente en un Word profesional con tipografía Georgia y márgenes elegantes.
+=== GENERACIÃ“N DE DOCUMENTOS ===
+Puedes generar documentos largos (.docx Word o .md Markdown) que se envÃ­an como archivo descargable.
+- Usa 'generate_document' cuando Pablo pida reportes, bitÃ¡coras, ensayos, compilaciones o cualquier texto extenso.
+- El contenido del documento NO tiene el lÃ­mite de 4000 chars de Telegram â€” puede ser tan largo como necesites.
+- Usa formato Markdown en el contenido (# tÃ­tulos, ## secciones, **negrita**, *cursiva*, listas, citas con >).
+- Se convierte automÃ¡ticamente en un Word profesional con tipografÃ­a Georgia y mÃ¡rgenes elegantes.
 
-Puedes generar hojas de cálculo Excel (.xlsx) con formato profesional.
+Puedes generar hojas de cÃ¡lculo Excel (.xlsx) con formato profesional.
 - Usa 'generate_spreadsheet' cuando Pablo pida tablas, comparativas, presupuestos, tracking o datos tabulares.
-- Soporta múltiples hojas, encabezados formateados, filtros automáticos.
+- Soporta mÃºltiples hojas, encabezados formateados, filtros automÃ¡ticos.
 - Los datos se pasan como headers + rows estructurados.
 
 === BIBLIOTECA PERSONAL (2100+ LIBROS) ===
 Pablo tiene una biblioteca indexada de ~2100 libros con extractos sustanciales.
-- Usa 'search_library' para buscar por tema, concepto o palabra clave (ej: "nihilismo", "atención", "democracia digital").
+- Usa 'search_library' para buscar por tema, concepto o palabra clave (ej: "nihilismo", "atenciÃ³n", "democracia digital").
 - Usa 'search_library_by_author' para ver todos los libros de un autor (ej: "Byung-Chul Han", "Jung", "Wittgenstein").
 - Usa 'search_library_by_tag' para buscar por etiqueta (ej: "zen", "posestructuralismo", "capitalismo-vigilancia").
-- Usa 'get_book_detail' para leer el extracto completo de un libro específico.
-- Usa 'library_stats' para dar estadísticas generales.
-- IMPORTANTE: Cuando Pablo haga preguntas filosóficas, existenciales, o sobre cualquier tema intelectual, BUSCA PRIMERO en la biblioteca antes de responder genéricamente. Sus extractos son profundos y relevantes.
-- Cruza información entre libros cuando sea pertinente (ej: conectar a Han con Heidegger, o a Jung con Weil).
+- Usa 'get_book_detail' para leer el extracto completo de un libro especÃ­fico.
+- Usa 'library_stats' para dar estadÃ­sticas generales.
+- IMPORTANTE: Cuando Pablo haga preguntas filosÃ³ficas, existenciales, o sobre cualquier tema intelectual, BUSCA PRIMERO en la biblioteca antes de responder genÃ©ricamente. Sus extractos son profundos y relevantes.
+- Cruza informaciÃ³n entre libros cuando sea pertinente (ej: conectar a Han con Heidegger, o a Jung con Weil).
 
 === CONTEXTO ===
-📅 {now.strftime("%A %d-%m-%Y %H:%M")} (hora Costa Rica, UTC-6)
-📍 {loc['name']} (GPS: {loc['lat']}, {loc['lng']})
+ðŸ“… {now.strftime("%A %d-%m-%Y %H:%M")} (hora Costa Rica, UTC-6)
+ðŸ“ {loc['name']} (GPS: {loc['lat']}, {loc['lng']})
 
-📆 CALENDARIO DE REFERENCIA (NO te confundas de fecha):
+ðŸ“† CALENDARIO DE REFERENCIA (NO te confundas de fecha):
 {week_calendar}
-⚠️ IMPORTANTE: Cuando Pablo diga un día de la semana, usa EXACTAMENTE la fecha de arriba. NO calcules fechas mentalmente.
+âš ï¸ IMPORTANTE: Cuando Pablo diga un dÃ­a de la semana, usa EXACTAMENTE la fecha de arriba. NO calcules fechas mentalmente.
 
 {mode_instruction}
 """
@@ -224,7 +224,7 @@ async def process_chat(update, context, text, image_data=None):
     if chat_id not in conversation_history:
         conversation_history[chat_id] = []
 
-    # Recuperar ubicación guardada si no la tenemos
+    # Recuperar ubicaciÃ³n guardada si no la tenemos
     if chat_id not in user_locations:
         try:
             saved_lat = get_fact(f"System_Location_Lat_{chat_id}")
@@ -233,11 +233,11 @@ async def process_chat(update, context, text, image_data=None):
                 user_locations[chat_id] = {
                     "lat": float(saved_lat),
                     "lng": float(saved_lng),
-                    "name": "Ubicación Guardada"
+                    "name": "UbicaciÃ³n Guardada"
                 }
-                logger.info(f"📍 Recuperado de memoria: {saved_lat}, {saved_lng}")
+                logger.info(f"ðŸ“ Recuperado de memoria: {saved_lat}, {saved_lng}")
         except Exception as e:
-            logger.error(f"Error recuperando ubicación: {e}")
+            logger.error(f"Error recuperando ubicaciÃ³n: {e}")
 
     # Construir contenido del mensaje
     user_msg_content = text
@@ -258,11 +258,11 @@ async def process_chat(update, context, text, image_data=None):
     try:
         system_prompt = build_system_prompt(chat_id)
 
-        # Detectar si el mensaje pide generación de documentos → más tokens
-        doc_keywords = ['documento', 'reporte', 'informe', 'bitácora', 'bitacora',
+        # Detectar si el mensaje pide generaciÃ³n de documentos â†’ mÃ¡s tokens
+        doc_keywords = ['documento', 'reporte', 'informe', 'bitÃ¡cora', 'bitacora',
                         'compila', 'genera un doc', 'genera un archivo', 'word',
                         'ensayo largo', 'resumen extenso', 'docx', 'exporta',
-                        'excel', 'xlsx', 'spreadsheet', 'hoja de cálculo', 'tabla comparativa']
+                        'excel', 'xlsx', 'spreadsheet', 'hoja de cÃ¡lculo', 'tabla comparativa']
         text_lower = text.lower() if isinstance(text, str) else ""
         needs_document = any(kw in text_lower for kw in doc_keywords)
         max_tokens = MAX_TOKENS_DOCUMENT if needs_document else MAX_TOKENS_NORMAL
@@ -295,7 +295,7 @@ async def process_chat(update, context, text, image_data=None):
             tool_results = []
             for block in response.content:
                 if block.type == "tool_use":
-                    logger.info(f"🔧 Tool (ronda {round_num + 1}): {block.name}")
+                    logger.info(f"ðŸ”§ Tool (ronda {round_num + 1}): {block.name}")
                     await context.bot.send_chat_action(chat_id=chat_id, action="typing")
                     try:
                         tool_result = await execute_tool(block.name, block.input, chat_id, context)
@@ -309,7 +309,7 @@ async def process_chat(update, context, text, image_data=None):
 
             messages.append({"role": "user", "content": tool_results})
 
-            # Si se usó generate_document o generate_spreadsheet, asegurar tokens altos
+            # Si se usÃ³ generate_document o generate_spreadsheet, asegurar tokens altos
             for block in response.content:
                 if hasattr(block, 'name') and block.name in ('generate_document', 'generate_spreadsheet'):
                     max_tokens = MAX_TOKENS_DOCUMENT
@@ -323,20 +323,39 @@ async def process_chat(update, context, text, image_data=None):
                 messages=messages
             )
         else:
-            # Agotó las rondas → extraer lo que haya
+            # AgotÃ³ las rondas â†’ extraer lo que haya
             for block in response.content:
                 if block.type == "text":
                     final_text += block.text
 
         if not final_text:
-            final_text = "✅ He procesado la solicitud."
+            final_text = "âœ… He procesado la solicitud."
+
+
+        # AUTO SELF-LEARNING: guardar decisiones en KB automaticamente
+        try:
+            from knowledge_base import kb_save_insight
+            _tl = text.lower() if isinstance(text, str) else ""
+            _dtriggers = ["he decidido", "voy a ", "decidi ", "el plan es", "mi decision es"]
+            _projs = ["midas", "arepartir", "claudette", "novela", "arquimath"]
+            if any(t in _tl for t in _dtriggers):
+                _proj = next((p.capitalize() for p in _projs if p in _tl), "General")
+                kb_save_insight(
+                    category="decision",
+                    title=text[:80] if len(text) > 80 else text,
+                    content="Pablo dijo: " + text + "\n\nRespuesta: " + final_text[:500],
+                    project=_proj
+                )
+                logger.info("Self-learning: decision guardada - " + _proj)
+        except Exception as _sl_err:
+            logger.warning("Self-learning error: " + str(_sl_err))
 
         messages.append({"role": "assistant", "content": final_text})
         return final_text
 
     except Exception as e:
         logger.error(f"Brain Error: {e}", exc_info=True)
-        return f"🤯 Error interno: {e}"
+        return f"ðŸ¤¯ Error interno: {e}"
 
 
 # =====================================================
@@ -347,7 +366,7 @@ async def generate_morning_summary(chat_id):
     """
     Genera el resumen matutino completo pasando por Claude.
     Pre-busca datos (clima, agenda, tareas, noticias) + un libro aleatorio
-    de la biblioteca para provocación intelectual.
+    de la biblioteca para provocaciÃ³n intelectual.
     """
     import google_calendar
     import google_tasks
@@ -359,7 +378,7 @@ async def generate_morning_summary(chat_id):
 
     # --- 1. Recolectar datos brutos ---
     raw_data = []
-    raw_data.append(f"FECHA: {now.strftime('%A %d de %B, %Y')} — {now.strftime('%H:%M')} hora Costa Rica")
+    raw_data.append(f"FECHA: {now.strftime('%A %d de %B, %Y')} â€” {now.strftime('%H:%M')} hora Costa Rica")
 
     # Clima
     try:
@@ -375,7 +394,7 @@ async def generate_morning_summary(chat_id):
         end = now.replace(hour=23, minute=59, second=59).strftime("%Y-%m-%dT%H:%M:%S-06:00")
         events = google_calendar.get_calendar_events(start, end)
         if events and "No hay eventos" not in str(events):
-            raw_data.append(f"\nAGENDA DEL DÍA:\n{events}")
+            raw_data.append(f"\nAGENDA DEL DÃA:\n{events}")
         else:
             raw_data.append("\nAGENDA: Sin eventos programados hoy.")
     except Exception as e:
@@ -397,7 +416,7 @@ async def generate_morning_summary(chat_id):
     except Exception as e:
         logger.warning(f"Morning news error: {e}")
 
-    # --- BIBLIOTECA: Libro aleatorio del día ---
+    # --- BIBLIOTECA: Libro aleatorio del dÃ­a ---
     book_data = ""
     try:
         from library import _get_conn
@@ -419,11 +438,11 @@ async def generate_morning_summary(chat_id):
             if len(b_content) > 3000:
                 b_content = b_content[:3000] + "\n[...]"
             book_data = f"""
-LIBRO DEL DÍA (seleccionado al azar de la biblioteca de Pablo):
-📖 Título: {b_title}
-👤 Autor: {b_author}
-📂 Categoría: {b_category}
-🏷️ Tags: {b_tags_str}
+LIBRO DEL DÃA (seleccionado al azar de la biblioteca de Pablo):
+ðŸ“– TÃ­tulo: {b_title}
+ðŸ‘¤ Autor: {b_author}
+ðŸ“‚ CategorÃ­a: {b_category}
+ðŸ·ï¸ Tags: {b_tags_str}
 
 EXTRACTO:
 {b_content}
@@ -447,35 +466,35 @@ DATOS DISPONIBLES:
 INSTRUCCIONES:
 Genera un resumen matutino siguiendo EXACTAMENTE esta estructura:
 
-1. **Saludo breve** — fecha y clima en una línea
+1. **Saludo breve** â€” fecha y clima en una lÃ­nea
 
-2. **Agenda del día** — eventos si los hay, breve
+2. **Agenda del dÃ­a** â€” eventos si los hay, breve
 
-3. **Tareas pendientes** — una sola mención, sin repetir después
+3. **Tareas pendientes** â€” una sola menciÃ³n, sin repetir despuÃ©s
 
-4. **3-4 noticias curadas** — SOLO geopolítica, economía/finanzas, filosofía, ciencia, tecnología con impacto social, IA. EXCLUIR deportes, farándula, crímenes, accidentes
+4. **3-4 noticias curadas** â€” SOLO geopolÃ­tica, economÃ­a/finanzas, filosofÃ­a, ciencia, tecnologÃ­a con impacto social, IA. EXCLUIR deportes, farÃ¡ndula, crÃ­menes, accidentes
 
-5. **📖 Rincón de la Biblioteca** — Esta es la sección nueva y más importante. Con el LIBRO DEL DÍA:
-   a) Presentá el libro: título, autor, una línea sobre su tesis central
-   b) Extraé UNA frase memorable o una idea poderosa del extracto — citala textual si la encontrás
-   c) Conectá esa idea con algo actual: una noticia del día, una tendencia, un dilema contemporáneo. Que no sea forzado — si la conexión es obvia, mejor. Si no, hacé una conexión inesperada pero inteligente.
-   d) Lanzá UNA pregunta provocadora que obligue a Pablo a pensar. No preguntas retóricas fáciles. Preguntas que incomoden, que cuestionen, que abran una puerta. Ejemplos del nivel que busco:
-      - "Si Byung-Chul Han dice que la transparencia es violencia, ¿tu obsesión por documentar todo en Obsidian es un acto de control o de resistencia?"
-      - "Taleb diría que tu portafolio de inversiones tiene fragilidad oculta. ¿Dónde está tu antifragilidad personal?"
-      - "Jung habla del encuentro con la sombra. ¿Cuál es la parte de vos que deliberadamente no querés ver hoy?"
-   e) Sugerí una conexión con OTRO libro o autor de la biblioteca que cruce con el tema. "Esto conecta con lo que dice X en Y" — así Pablo puede buscar después.
+5. **ðŸ“– RincÃ³n de la Biblioteca** â€” Esta es la secciÃ³n nueva y mÃ¡s importante. Con el LIBRO DEL DÃA:
+   a) PresentÃ¡ el libro: tÃ­tulo, autor, una lÃ­nea sobre su tesis central
+   b) ExtraÃ© UNA frase memorable o una idea poderosa del extracto â€” citala textual si la encontrÃ¡s
+   c) ConectÃ¡ esa idea con algo actual: una noticia del dÃ­a, una tendencia, un dilema contemporÃ¡neo. Que no sea forzado â€” si la conexiÃ³n es obvia, mejor. Si no, hacÃ© una conexiÃ³n inesperada pero inteligente.
+   d) LanzÃ¡ UNA pregunta provocadora que obligue a Pablo a pensar. No preguntas retÃ³ricas fÃ¡ciles. Preguntas que incomoden, que cuestionen, que abran una puerta. Ejemplos del nivel que busco:
+      - "Si Byung-Chul Han dice que la transparencia es violencia, Â¿tu obsesiÃ³n por documentar todo en Obsidian es un acto de control o de resistencia?"
+      - "Taleb dirÃ­a que tu portafolio de inversiones tiene fragilidad oculta. Â¿DÃ³nde estÃ¡ tu antifragilidad personal?"
+      - "Jung habla del encuentro con la sombra. Â¿CuÃ¡l es la parte de vos que deliberadamente no querÃ©s ver hoy?"
+   e) SugerÃ­ una conexiÃ³n con OTRO libro o autor de la biblioteca que cruce con el tema. "Esto conecta con lo que dice X en Y" â€” asÃ­ Pablo puede buscar despuÃ©s.
 
-6. **Pensamiento del cierre** — UNA cita filosófica (puede ser del libro del día o de otro autor: Marco Aurelio, Epicteto, Séneca, Kierkegaard, Nietzsche, Heidegger, Han, Weil, Campbell, Jung). Breve, cortante, sin explicación.
+6. **Pensamiento del cierre** â€” UNA cita filosÃ³fica (puede ser del libro del dÃ­a o de otro autor: Marco Aurelio, Epicteto, SÃ©neca, Kierkegaard, Nietzsche, Heidegger, Han, Weil, Campbell, Jung). Breve, cortante, sin explicaciÃ³n.
 
 REGLAS:
-- Todo el resumen debe caber en UN mensaje de Telegram (máximo 4000 caracteres)
-- Tono: directo, filosófico, sin condescendencia
-- No uses "¡Excelente!" ni frases de chatbot
-- La sección de Biblioteca es la más valiosa — dedícale espacio y profundidad
-- La pregunta provocadora debe ser PERSONAL, dirigida a Pablo, no genérica
-- Si encontrás frases memorables textuales en el extracto, usalas
-- Buscá lo incómodo, lo que Pablo preferiría no pensar a las 6am
-- Mejor una provocación que incomode que un cumplido intelectual
+- Todo el resumen debe caber en UN mensaje de Telegram (mÃ¡ximo 4000 caracteres)
+- Tono: directo, filosÃ³fico, sin condescendencia
+- No uses "Â¡Excelente!" ni frases de chatbot
+- La secciÃ³n de Biblioteca es la mÃ¡s valiosa â€” dedÃ­cale espacio y profundidad
+- La pregunta provocadora debe ser PERSONAL, dirigida a Pablo, no genÃ©rica
+- Si encontrÃ¡s frases memorables textuales en el extracto, usalas
+- BuscÃ¡ lo incÃ³modo, lo que Pablo preferirÃ­a no pensar a las 6am
+- Mejor una provocaciÃ³n que incomode que un cumplido intelectual
 """
 
     # --- 3. Llamar a Claude ---
@@ -493,8 +512,9 @@ REGLAS:
             if block.type == "text":
                 result += block.text
 
-        return result if result else "☀️ Buenos días, Pablo. No pude generar el resumen completo hoy."
+        return result if result else "â˜€ï¸ Buenos dÃ­as, Pablo. No pude generar el resumen completo hoy."
 
     except Exception as e:
         logger.error(f"Morning Claude error: {e}")
-        return f"☀️ Buenos días, Pablo.\n{context_block}\n\n— Claudette"
+        return f"â˜€ï¸ Buenos dÃ­as, Pablo.\n{context_block}\n\nâ€” Claudette"
+
