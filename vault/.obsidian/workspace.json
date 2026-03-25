@@ -1,0 +1,237 @@
+{
+  "main": {
+    "id": "0c7532a59321e435",
+    "type": "split",
+    "children": [
+      {
+        "id": "6fb21bb2e9aa749a",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "9cd94c13e1340499",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Modelos Mentales Universales/WorkSpace/26-02-03_14-30-00_sofia_cv_analysis/analysis_report.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "analysis_report"
+            }
+          },
+          {
+            "id": "3baca2ed495abaf1",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.11.7"
+              },
+              "icon": "lucide-book-up",
+              "title": "Release Notes 1.11.7"
+            }
+          }
+        ],
+        "currentTab": 1
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "831b5b26b4f5a9f8",
+    "type": "split",
+    "children": [
+      {
+        "id": "e5f437db1f471403",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "4627485576eae0de",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "6b7e858952a5c355",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "93c7bc7c2ba3bad7",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "269e7bdb8e418bd8",
+    "type": "split",
+    "children": [
+      {
+        "id": "cdf03eae403ad16a",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "254771ac4db97e62",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Modelos Mentales Universales/WorkSpace/26-01-26_rescat_cr_eco_project/problem_diagnosis.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for problem_diagnosis"
+            }
+          },
+          {
+            "id": "c2a8bf05a1dbb326",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Modelos Mentales Universales/WorkSpace/26-01-26_rescat_cr_eco_project/problem_diagnosis.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from problem_diagnosis"
+            }
+          },
+          {
+            "id": "6a5ca7eba0c7991d",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "ac47362ec6f2f664",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "69e0daea45ba846a",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Modelos Mentales Universales/WorkSpace/26-01-26_rescat_cr_eco_project/problem_diagnosis.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of problem_diagnosis"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "3baca2ed495abaf1",
+  "lastOpenFiles": [
+    "Chats/chat-2026-01-27T01-06-41-456Z.md",
+    "Modelos Mentales Universales/WorkSpace/26-02-03_14-30-00_sofia_cv_analysis/analysis_report.md",
+    "Modelos Mentales Universales/WorkSpace/26-02-03_14-30-00_sofia_cv_analysis",
+    "Modelos Mentales Universales/WorkSpace/26-02-01_10-00-00_ai_cinematic_production_system/LIBRARY/MODULE_1_DIRECTOR_DNA.md",
+    "Modelos Mentales Universales/WorkSpace/26-02-01_10-00-00_ai_cinematic_production_system/PROJECTS/01_LAST_NIGHT_OF_SHAKESPEARE/05_PRODUCTION_GUIDE.md",
+    "Modelos Mentales Universales/WorkSpace/26-02-01_10-00-00_ai_cinematic_production_system/PROJECTS/01_LAST_NIGHT_OF_SHAKESPEARE/04_SOUND_DESIGN.md",
+    "Modelos Mentales Universales/WorkSpace/26-02-01_10-00-00_ai_cinematic_production_system/PROJECTS/01_LAST_NIGHT_OF_SHAKESPEARE/03_SHOT_LIST_AND_PROMPTS.md",
+    "Modelos Mentales Universales/WorkSpace/26-02-01_10-00-00_ai_cinematic_production_system/PROJECTS/01_LAST_NIGHT_OF_SHAKESPEARE/02_SCREENPLAY.md",
+    "Modelos Mentales Universales/WorkSpace/26-02-01_10-00-00_ai_cinematic_production_system/PROJECTS/01_LAST_NIGHT_OF_SHAKESPEARE/02_MASTER_VISUAL_SCRIPT.md",
+    "Modelos Mentales Universales/WorkSpace/26-02-01_10-00-00_ai_cinematic_production_system/PROJECTS/01_LAST_NIGHT_OF_SHAKESPEARE/01_CREATIVE_BRIEF.md",
+    "Modelos Mentales Universales/WorkSpace/26-02-01_10-00-00_ai_cinematic_production_system/LIBRARY/MODULE_4_WORKFLOW_ENGINE.md",
+    "Modelos Mentales Universales/WorkSpace/26-02-01_10-00-00_ai_cinematic_production_system/PROJECTS/01_LAST_NIGHT_OF_SHAKESPEARE",
+    "Modelos Mentales Universales/WorkSpace/26-02-01_10-00-00_ai_cinematic_production_system/PROJECTS",
+    "Modelos Mentales Universales/WorkSpace/26-02-01_10-00-00_ai_cinematic_production_system/LIBRARY/MODULE_3_VISUAL_TRANSLATOR.md",
+    "Modelos Mentales Universales/WorkSpace/26-02-01_10-00-00_ai_cinematic_production_system/LIBRARY/MODULE_2_GENRE_MATRIX.md",
+    "Modelos Mentales Universales/WorkSpace/26-01-26_rescat_cr_eco_project/analysis_report.md",
+    "Modelos Mentales Universales/WorkSpace/26-01-26_rescat_cr_eco_project/food_and_beverage_strategy.md",
+    "Modelos Mentales Universales/WorkSpace/26-01-26_rescat_cr_eco_project/reasoning_inversion.md",
+    "Modelos Mentales Universales/sistema_modelos_mentales_universal.md",
+    "Modelos Mentales Universales/PLANTILLAS_ANALISIS.md",
+    "Modelos Mentales Universales/WorkSpace/26-01-26_rescat_cr_eco_project/problem_diagnosis.md",
+    "Modelos Mentales Universales/WorkSpace/26-01-26_rescat_cr_eco_project/financial_analysis.md",
+    "Modelos Mentales Universales/WorkSpace/26-01-26_nq_vwap_opening_strategy/reasoning_probabilistic_thinking.md",
+    "Modelos Mentales Universales/WorkSpace/26-01-26_rescat_cr_eco_project/reasoning_biophilia_signaling.md",
+    "Modelos Mentales Universales/WorkSpace/26-01-26_rescat_cr_eco_project",
+    "Modelos Mentales Universales/WorkSpace/26-01-26_nq_vwap_opening_strategy/analysis_report.md",
+    "Modelos Mentales Universales/WorkSpace/26-01-26_nq_vwap_opening_strategy/reasoning_inversion.md",
+    "Modelos Mentales Universales/WorkSpace/26-01-26_nq_vwap_opening_strategy/backtesting_guide.md",
+    "Modelos Mentales Universales/WorkSpace/26-01-26_nq_vwap_opening_strategy/problem_diagnosis.md",
+    "Modelos Mentales Universales/WorkSpace/26-01-26_nq_vwap_opening_strategy/model_selection.md",
+    "Modelos Mentales Universales/WorkSpace/26-01-26_nq_vwap_opening_strategy",
+    "Modelos Mentales Universales/WorkSpace",
+    "Workspace",
+    "Chats",
+    "Modelos Mentales Universales"
+  ]
+}
