@@ -1,13 +1,13 @@
-"""
+﻿"""
 Claudette Knowledge Base
 ========================
-4 tools para búsqueda y gestión del vault de Obsidian indexado en PostgreSQL.
+4 tools para bÃºsqueda y gestiÃ³n del vault de Obsidian indexado en PostgreSQL.
 
 Tools:
-  - kb_search   → búsqueda full-text con ranking
-  - kb_list     → listar por tag, fecha o estadísticas
-  - kb_read     → leer documento completo
-  - kb_ingest   → re-indexar vault (manual o programático)
+  - kb_search   â†’ bÃºsqueda full-text con ranking
+  - kb_list     â†’ listar por tag, fecha o estadÃ­sticas
+  - kb_read     â†’ leer documento completo
+  - kb_ingest   â†’ re-indexar vault (manual o programÃ¡tico)
 
 Requiere en env vars:
   - DATABASE_URL        (ya existe en Render)
@@ -28,12 +28,12 @@ from psycopg2.extras import Json, RealDictCursor
 logger = logging.getLogger(__name__)
 
 
-# ──────────────────────────────────────────────
-# CONEXIÓN DB
-# ──────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# CONEXIÃ“N DB
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _get_conn():
-    """Conexión a PostgreSQL desde DATABASE_URL."""
+    """ConexiÃ³n a PostgreSQL desde DATABASE_URL."""
     db_url = os.environ.get("DATABASE_URL")
     if not db_url:
         raise ValueError("DATABASE_URL no configurado")
@@ -42,21 +42,21 @@ def _get_conn():
     return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
 
 
-# ──────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # TOOL 1: kb_search
-# ──────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def kb_search(query: str, limit: int = 5, tag_filter: Optional[str] = None) -> str:
     """
-    Búsqueda full-text en el vault con ranking por relevancia.
+    BÃºsqueda full-text en el vault con ranking por relevancia.
     
     Args:
-        query:      Término(s) de búsqueda en español
-        limit:      Máximo de resultados (default: 5)
-        tag_filter: Filtrar por tag específico (sin #)
+        query:      TÃ©rmino(s) de bÃºsqueda en espaÃ±ol
+        limit:      MÃ¡ximo de resultados (default: 5)
+        tag_filter: Filtrar por tag especÃ­fico (sin #)
     """
     if not query or not query.strip():
-        return "❌ Proporciona un término de búsqueda."
+        return "âŒ Proporciona un tÃ©rmino de bÃºsqueda."
 
     try:
         conn = _get_conn()
@@ -98,40 +98,40 @@ def kb_search(query: str, limit: int = 5, tag_filter: Optional[str] = None) -> s
         conn.close()
 
         if not rows:
-            return f"🔍 Sin resultados para: *{query}*"
+            return f"ðŸ” Sin resultados para: *{query}*"
 
-        out = [f"🔍 *{len(rows)} resultado(s)* para: _{query}_\n"]
+        out = [f"ðŸ” *{len(rows)} resultado(s)* para: _{query}_\n"]
         for i, r in enumerate(rows, 1):
             tags_str = " ".join(f"#{t}" for t in (r["tags"] or []))
             snippet = r["snippet"].replace("\n", " ").strip()[:280]
             out.append(
                 f"*{i}. {r['title']}*\n"
-                f"   📁 `{r['filepath']}`\n"
-                f"   🏷️ {tags_str or '(sin tags)'} · {r['word_count']} palabras\n"
-                f"   > {snippet}…\n"
+                f"   ðŸ“ `{r['filepath']}`\n"
+                f"   ðŸ·ï¸ {tags_str or '(sin tags)'} Â· {r['word_count']} palabras\n"
+                f"   > {snippet}â€¦\n"
             )
         return "\n".join(out)
 
     except Exception as e:
         logger.error(f"kb_search error: {e}")
-        return f"❌ Error en búsqueda: {e}"
+        return f"âŒ Error en bÃºsqueda: {e}"
 
 
-# ──────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # TOOL 2: kb_list
-# ──────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def kb_list(mode: str = "recent", tag: Optional[str] = None, limit: int = 10) -> str:
     """
     Lista documentos del vault.
 
     Args:
-        mode:  "recent"  → más recientes
-               "tags"    → todos los tags disponibles
-               "stats"   → estadísticas generales
-               "bytag"   → docs con un tag específico (requiere tag=)
+        mode:  "recent"  â†’ mÃ¡s recientes
+               "tags"    â†’ todos los tags disponibles
+               "stats"   â†’ estadÃ­sticas generales
+               "bytag"   â†’ docs con un tag especÃ­fico (requiere tag=)
         tag:   Tag a filtrar cuando mode="bytag"
-        limit: Máximo de resultados
+        limit: MÃ¡ximo de resultados
     """
     try:
         conn = _get_conn()
@@ -154,11 +154,11 @@ def kb_list(mode: str = "recent", tag: Optional[str] = None, limit: int = 10) ->
             conn.close()
             last = row["last_updated"].strftime("%d/%m/%Y %H:%M") if row["last_updated"] else "N/A"
             return (
-                f"📊 *Knowledge Base Stats*\n"
-                f"   📄 Documentos: {row['total_docs']:,}\n"
-                f"   📝 Palabras totales: {int(row['total_words']):,}\n"
-                f"   🏷️ Tags únicos: {tag_row['unique_tags'] or 0}\n"
-                f"   🕐 Última actualización: {last}"
+                f"ðŸ“Š *Knowledge Base Stats*\n"
+                f"   ðŸ“„ Documentos: {row['total_docs']:,}\n"
+                f"   ðŸ“ Palabras totales: {int(row['total_words']):,}\n"
+                f"   ðŸ·ï¸ Tags Ãºnicos: {tag_row['unique_tags'] or 0}\n"
+                f"   ðŸ• Ãšltima actualizaciÃ³n: {last}"
             )
 
         elif mode == "tags":
@@ -171,15 +171,15 @@ def kb_list(mode: str = "recent", tag: Optional[str] = None, limit: int = 10) ->
             rows = cur.fetchall()
             conn.close()
             if not rows:
-                return "🏷️ No hay tags indexados aún."
-            lines = ["🏷️ *Tags disponibles:*\n"]
+                return "ðŸ·ï¸ No hay tags indexados aÃºn."
+            lines = ["ðŸ·ï¸ *Tags disponibles:*\n"]
             for r in rows:
                 lines.append(f"   `#{r['tag']}` ({r['count']})")
             return "\n".join(lines)
 
         elif mode == "bytag":
             if not tag:
-                return "❌ Especifica un tag con el parámetro `tag=`."
+                return "âŒ Especifica un tag con el parÃ¡metro `tag=`."
             cur.execute(
                 """
                 SELECT filepath, title, word_count, updated_at
@@ -192,11 +192,11 @@ def kb_list(mode: str = "recent", tag: Optional[str] = None, limit: int = 10) ->
             rows = cur.fetchall()
             conn.close()
             if not rows:
-                return f"🏷️ No hay documentos con tag `#{tag}`."
-            lines = [f"🏷️ *Documentos con #{tag}:*\n"]
+                return f"ðŸ·ï¸ No hay documentos con tag `#{tag}`."
+            lines = [f"ðŸ·ï¸ *Documentos con #{tag}:*\n"]
             for r in rows:
                 date = r["updated_at"].strftime("%d/%m/%Y")
-                lines.append(f"   • *{r['title']}* — {r['word_count']} palabras · {date}")
+                lines.append(f"   â€¢ *{r['title']}* â€” {r['word_count']} palabras Â· {date}")
             return "\n".join(lines)
 
         else:  # recent
@@ -211,25 +211,25 @@ def kb_list(mode: str = "recent", tag: Optional[str] = None, limit: int = 10) ->
             rows = cur.fetchall()
             conn.close()
             if not rows:
-                return "📚 Knowledge base vacía. Ejecuta kb_ingest para indexar tu vault."
-            lines = [f"📚 *Documentos recientes ({len(rows)}):*\n"]
+                return "ðŸ“š Knowledge base vacÃ­a. Ejecuta kb_ingest para indexar tu vault."
+            lines = [f"ðŸ“š *Documentos recientes ({len(rows)}):*\n"]
             for r in rows:
                 date = r["updated_at"].strftime("%d/%m")
                 tags_str = " ".join(f"#{t}" for t in (r["tags"] or [])[:3])
                 lines.append(
-                    f"   • *{r['title']}* {tags_str}\n"
-                    f"     `{r['filepath']}` · {r['word_count']}p · {date}"
+                    f"   â€¢ *{r['title']}* {tags_str}\n"
+                    f"     `{r['filepath']}` Â· {r['word_count']}p Â· {date}"
                 )
             return "\n".join(lines)
 
     except Exception as e:
         logger.error(f"kb_list error: {e}")
-        return f"❌ Error en listado: {e}"
+        return f"âŒ Error en listado: {e}"
 
 
-# ──────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # TOOL 3: kb_read
-# ──────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def kb_read(filepath: str, max_chars: int = 3000) -> str:
     """
@@ -237,10 +237,10 @@ def kb_read(filepath: str, max_chars: int = 3000) -> str:
 
     Args:
         filepath:  Ruta relativa del doc (como aparece en kb_search)
-        max_chars: Máx caracteres a retornar (default: 3000)
+        max_chars: MÃ¡x caracteres a retornar (default: 3000)
     """
     if not filepath or not filepath.strip():
-        return "❌ Proporciona el filepath del documento."
+        return "âŒ Proporciona el filepath del documento."
 
     try:
         conn = _get_conn()
@@ -256,7 +256,7 @@ def kb_read(filepath: str, max_chars: int = 3000) -> str:
         )
         row = cur.fetchone()
 
-        # Fallback: busca por título parcial
+        # Fallback: busca por tÃ­tulo parcial
         if not row:
             cur.execute(
                 """
@@ -273,7 +273,7 @@ def kb_read(filepath: str, max_chars: int = 3000) -> str:
 
         if not row:
             return (
-                f"❌ Documento no encontrado: `{filepath}`\n"
+                f"âŒ Documento no encontrado: `{filepath}`\n"
                 f"Usa `kb_search` para encontrar el filepath correcto."
             )
 
@@ -285,11 +285,11 @@ def kb_read(filepath: str, max_chars: int = 3000) -> str:
             content = content[:max_chars]
 
         out = [
-            f"📄 *{row['title']}*",
-            f"   📁 `{row['filepath']}`",
-            f"   🏷️ {tags_str or '(sin tags)'}",
-            f"   📝 {row['word_count']} palabras · {date}",
-            "─" * 35,
+            f"ðŸ“„ *{row['title']}*",
+            f"   ðŸ“ `{row['filepath']}`",
+            f"   ðŸ·ï¸ {tags_str or '(sin tags)'}",
+            f"   ðŸ“ {row['word_count']} palabras Â· {date}",
+            "â”€" * 35,
             content,
         ]
         if truncated:
@@ -299,12 +299,12 @@ def kb_read(filepath: str, max_chars: int = 3000) -> str:
 
     except Exception as e:
         logger.error(f"kb_read error: {e}")
-        return f"❌ Error leyendo documento: {e}"
+        return f"âŒ Error leyendo documento: {e}"
 
 
-# ──────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # INGESTOR (usado por kb_ingest)
-# ──────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ObsidianIngestor:
     def __init__(self, vault_path: str):
@@ -428,9 +428,9 @@ class _ObsidianIngestor:
         return counts
 
 
-# ──────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # TOOL 4: kb_ingest
-# ──────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def kb_ingest(vault_path: Optional[str] = None, cleanup: bool = False) -> str:
     """
@@ -444,34 +444,34 @@ def kb_ingest(vault_path: Optional[str] = None, cleanup: bool = False) -> str:
     path = vault_path or os.environ.get("OBSIDIAN_VAULT_PATH")
     if not path:
         return (
-            "❌ No se encontró OBSIDIAN_VAULT_PATH.\n"
-            "Configúralo en las variables de entorno de Render."
+            "âŒ No se encontrÃ³ OBSIDIAN_VAULT_PATH.\n"
+            "ConfigÃºralo en las variables de entorno de Render."
         )
 
     try:
         ingestor = _ObsidianIngestor(path)
         counts = ingestor.run(cleanup=cleanup)
         lines = [
-            f"✅ *Ingestión completada*",
-            f"   📥 Insertados: {counts['inserted']}",
-            f"   ✏️ Actualizados: {counts['updated']}",
-            f"   ⏭️ Sin cambios: {counts['skipped']}",
-            f"   ❌ Errores: {counts['errors']}",
+            f"âœ… *IngestiÃ³n completada*",
+            f"   ðŸ“¥ Insertados: {counts['inserted']}",
+            f"   âœï¸ Actualizados: {counts['updated']}",
+            f"   â­ï¸ Sin cambios: {counts['skipped']}",
+            f"   âŒ Errores: {counts['errors']}",
         ]
         if cleanup and "deactivated" in counts:
-            lines.append(f"   🗑️ Desactivados: {counts['deactivated']}")
+            lines.append(f"   ðŸ—‘ï¸ Desactivados: {counts['deactivated']}")
         return "\n".join(lines)
 
     except FileNotFoundError as e:
-        return f"❌ {e}"
+        return f"âŒ {e}"
     except Exception as e:
         logger.error(f"kb_ingest error: {e}")
-        return f"❌ Error durante ingestión: {e}"
+        return f"âŒ Error durante ingestiÃ³n: {e}"
 
 
-# ──────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # SCHEMAS Y DISPATCHER (para bot.py)
-# ──────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 KB_TOOLS_SCHEMA = [
     {
@@ -479,14 +479,14 @@ KB_TOOLS_SCHEMA = [
         "description": (
             "Busca en el knowledge base personal de Pablo (vault de Obsidian). "
             "Usar cuando pregunte sobre sus propias notas, reflexiones, ideas, proyectos, "
-            "lecturas, el Camino de Santiago, trading, filosofía u otras cosas que podría "
-            "haber escrito. SIEMPRE buscar aquí antes de responder sobre temas personales de Pablo."
+            "lecturas, el Camino de Santiago, trading, filosofÃ­a u otras cosas que podrÃ­a "
+            "haber escrito. SIEMPRE buscar aquÃ­ antes de responder sobre temas personales de Pablo."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Términos de búsqueda en español"},
-                "limit": {"type": "integer", "description": "Máximo de resultados (default: 5)", "default": 5},
+                "query": {"type": "string", "description": "TÃ©rminos de bÃºsqueda en espaÃ±ol"},
+                "limit": {"type": "integer", "description": "MÃ¡ximo de resultados (default: 5)", "default": 5},
                 "tag_filter": {"type": "string", "description": "Filtrar por tag (sin #, ej: 'filosofia', 'trading')"}
             },
             "required": ["query"]
@@ -495,8 +495,8 @@ KB_TOOLS_SCHEMA = [
     {
         "name": "kb_list",
         "description": (
-            "Lista documentos del vault por fecha, tag, o muestra estadísticas. "
-            "Usar para explorar qué hay en el vault o cuando Pablo pida ver sus notas."
+            "Lista documentos del vault por fecha, tag, o muestra estadÃ­sticas. "
+            "Usar para explorar quÃ© hay en el vault o cuando Pablo pida ver sus notas."
         ),
         "input_schema": {
             "type": "object",
@@ -504,11 +504,11 @@ KB_TOOLS_SCHEMA = [
                 "mode": {
                     "type": "string",
                     "enum": ["recent", "tags", "stats", "bytag"],
-                    "description": "recent=más nuevos | tags=todos los tags | stats=estadísticas | bytag=por tag específico",
+                    "description": "recent=mÃ¡s nuevos | tags=todos los tags | stats=estadÃ­sticas | bytag=por tag especÃ­fico",
                     "default": "recent"
                 },
                 "tag": {"type": "string", "description": "Tag a filtrar (requerido si mode='bytag')"},
-                "limit": {"type": "integer", "description": "Máximo de resultados", "default": 10}
+                "limit": {"type": "integer", "description": "MÃ¡ximo de resultados", "default": 10}
             },
             "required": []
         }
@@ -517,13 +517,13 @@ KB_TOOLS_SCHEMA = [
         "name": "kb_read",
         "description": (
             "Lee el contenido completo de un documento del vault. "
-            "Usar después de kb_search para leer el documento completo de un resultado."
+            "Usar despuÃ©s de kb_search para leer el documento completo de un resultado."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "filepath": {"type": "string", "description": "Ruta relativa del doc (como aparece en kb_search)"},
-                "max_chars": {"type": "integer", "description": "Máximo de caracteres a retornar (default: 3000)", "default": 3000}
+                "max_chars": {"type": "integer", "description": "MÃ¡ximo de caracteres a retornar (default: 3000)", "default": 3000}
             },
             "required": ["filepath"]
         }
@@ -532,7 +532,7 @@ KB_TOOLS_SCHEMA = [
         "name": "kb_ingest",
         "description": (
             "Indexa o re-indexa el vault de Obsidian en la base de datos. "
-            "Usar cuando Pablo diga que actualizó sus notas o quiera refrescar el índice. "
+            "Usar cuando Pablo diga que actualizÃ³ sus notas o quiera refrescar el Ã­ndice. "
             "Solo procesa archivos nuevos o modificados."
         ),
         "input_schema": {
@@ -557,4 +557,5 @@ async def execute_kb_tool(name: str, args: dict) -> str:
         return kb_read(args.get("filepath", ""), args.get("max_chars", 3000))
     elif name == "kb_ingest":
         return kb_ingest(args.get("vault_path"), args.get("cleanup", False))
-    return f"❌ KB tool desconocido: {name}"
+    return f"âŒ KB tool desconocido: {name}"
+
