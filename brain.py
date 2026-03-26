@@ -372,6 +372,11 @@ async def generate_morning_summary(chat_id):
     import google_tasks
     from tools_registry import get_weather, search_news, user_locations
     from config import DEFAULT_LOCATION
+    try:
+        from midas_monitor import generate_midas_report
+        _midas_available = True
+    except Exception:
+        _midas_available = False
 
     tz = pytz.timezone('America/Costa_Rica')
     now = datetime.now(tz)
@@ -453,6 +458,14 @@ EXTRACTO:
         logger.warning(f"Morning library error: {e}")
         book_data = "\n(Biblioteca no disponible hoy)\n"
 
+    if _midas_available:
+        try:
+            midas_report = generate_midas_report()
+            if midas_report:
+                raw_data.append("\nMIDAS MONITOR:\n" + midas_report)
+        except Exception as e:
+            logger.warning("Morning midas error: " + str(e))
+
     context_block = "\n".join(raw_data)
 
     # --- 2. Prompt matutino para Claude ---
@@ -472,7 +485,10 @@ Genera un resumen matutino siguiendo EXACTAMENTE esta estructura:
 
 3. **Tareas pendientes** â€” una sola menciÃ³n, sin repetir despuÃ©s
 
-4. **3-4 noticias curadas** â€” SOLO geopolÃ­tica, economÃ­a/finanzas, filosofÃ­a, ciencia, tecnologÃ­a con impacto social, IA. EXCLUIR deportes, farÃ¡ndula, crÃ­menes, accidentes
+4. **Midas Monitor** (SOLO si hay datos de MIDAS MONITOR):
+   - Estado bot, PnL dia y semana, top 2 ganadoras y perdedoras, alerta si drawdown severo. Maximo 8 lineas.
+
+5. **3-4 noticias curadas** â€” SOLO geopolÃ­tica, economÃ­a/finanzas, filosofÃ­a, ciencia, tecnologÃ­a con impacto social, IA. EXCLUIR deportes, farÃ¡ndula, crÃ­menes, accidentes
 
 5. **ðŸ“– RincÃ³n de la Biblioteca** â€” Esta es la secciÃ³n nueva y mÃ¡s importante. Con el LIBRO DEL DÃA:
    a) PresentÃ¡ el libro: tÃ­tulo, autor, una lÃ­nea sobre su tesis central
