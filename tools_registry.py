@@ -134,20 +134,21 @@ def search_news(topics=None):
 
     # RSS feeds por categoria - mas confiables que DuckDuckGo
     RSS_FEEDS = {
-        "TECNOLOGIA/IA": [
-            "https://feeds.feedburner.com/oreilly/radar",
+        "INTELIGENCIA ARTIFICIAL": [
             "https://hnrss.org/frontpage?points=100",
-        ],
-        "ECONOMIA": [
-            "https://feeds.bbci.co.uk/mundo/economia/rss.xml",
-            "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
+            "https://feeds.feedburner.com/oreilly/radar",
         ],
         "GEOPOLITICA": [
             "https://feeds.bbci.co.uk/mundo/internacional/rss.xml",
             "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
         ],
-        "MERCADOS": [
+        "MERCADOS/ECONOMIA": [
+            "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
             "https://feeds.bbci.co.uk/mundo/economia/rss.xml",
+        ],
+        "CIENCIA/TECNOLOGIA": [
+            "https://rss.nytimes.com/services/xml/rss/nyt/Science.xml",
+            "https://www.sciencedaily.com/rss/top/science.xml",
         ],
     }
 

@@ -33,9 +33,8 @@ DEFAULT_LOCATION = {"lat": 9.9281, "lng": -84.0907, "name": "San JosÃ©, Costa 
 NEWS_TOPICS = [
     "inteligencia artificial AI noticias",
     "geopolitica internacional noticias",
-    "mercados financieros economia noticias",
-    "ciencia tecnologia noticias",
-    "filosofia pensamiento noticias"
+    "mercados financieros NQ futuros noticias",
+    "ciencia tecnologia noticias"
 ]
 
 # --- VALIDACIÃ“N ---
