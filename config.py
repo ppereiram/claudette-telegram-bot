@@ -1,4 +1,4 @@
-import os
+﻿import os
 import logging
 from dotenv import load_dotenv
 
@@ -26,16 +26,19 @@ DEFAULT_MODEL = "claude-sonnet-4-20250514"
 MAX_HISTORY = 20
 MAX_TOOL_ROUNDS = 5
 MAX_TOKENS_NORMAL = 4096
-MAX_TOKENS_DOCUMENT = 16000  # Para generación de documentos largos
+MAX_TOKENS_DOCUMENT = 16000  # Para generaciÃ³n de documentos largos
 
-DEFAULT_LOCATION = {"lat": 9.9281, "lng": -84.0907, "name": "San José, Costa Rica (Default)"}
+DEFAULT_LOCATION = {"lat": 9.9281, "lng": -84.0907, "name": "San JosÃ©, Costa Rica (Default)"}
 
 NEWS_TOPICS = [
     "inteligencia artificial AI noticias",
     "geopolitica internacional noticias",
-    "mercados financieros economia noticias"
+    "mercados financieros economia noticias",
+    "ciencia tecnologia noticias",
+    "filosofia pensamiento noticias"
 ]
 
-# --- VALIDACIÓN ---
+# --- VALIDACIÃ“N ---
 if not TELEGRAM_BOT_TOKEN or not ANTHROPIC_API_KEY:
     raise ValueError("Faltan TELEGRAM_BOT_TOKEN o ANTHROPIC_API_KEY")
+

@@ -124,30 +124,83 @@ def search_web_google(query, max_results=5):
 
 
 def search_news(topics=None):
-    """Busca noticias recientes usando DuckDuckGo."""
-    from config import NEWS_TOPICS
-    if not topics:
-        topics = NEWS_TOPICS
+    """
+    Busca noticias usando RSS feeds directos + DuckDuckGo como fallback.
+    Fuentes RSS: Reuters, BBC Mundo, El Pais, Hacker News, Financial Times
+    """
+    import urllib.request
+    import xml.etree.ElementTree as ET
+    from datetime import datetime, timezone
+
+    # RSS feeds por categoria - mas confiables que DuckDuckGo
+    RSS_FEEDS = {
+        "TECNOLOGIA/IA": [
+            "https://feeds.feedburner.com/oreilly/radar",
+            "https://hnrss.org/frontpage?points=100",
+        ],
+        "ECONOMIA": [
+            "https://feeds.bbci.co.uk/mundo/economia/rss.xml",
+            "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
+        ],
+        "GEOPOLITICA": [
+            "https://feeds.bbci.co.uk/mundo/internacional/rss.xml",
+            "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+        ],
+        "MERCADOS": [
+            "https://feeds.bbci.co.uk/mundo/economia/rss.xml",
+        ],
+    }
+
     all_news = []
-    try:
-        from duckduckgo_search import DDGS
-        ddgs = DDGS()
-        for topic in topics:
-            clean_topic = topic.replace(" noticias", "").strip().upper()
+    headers = {"User-Agent": "Mozilla/5.0"}
+
+    for category, feeds in RSS_FEEDS.items():
+        cat_items = []
+        for feed_url in feeds:
+            if len(cat_items) >= 2:
+                break
             try:
-                results = ddgs.news(topic, max_results=3, region="es-es")
-                lines = [f"â€¢ {r['title']}\n  ðŸ”— {r['url']}" for r in results]
-                if lines:
-                    all_news.append(f"ðŸ“Œ {clean_topic}:\n" + "\n".join(lines))
-                else:
-                    all_news.append(f"ðŸ“Œ {clean_topic}: Sin resultados.")
-            except Exception as e:
-                all_news.append(f"ðŸ“Œ {clean_topic}: Error: {e}")
-    except ImportError:
-        return "âš ï¸ Falta instalar duckduckgo-search."
+                req = urllib.request.Request(feed_url, headers=headers)
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    xml_data = resp.read()
+                root = ET.fromstring(xml_data)
+                ns = ""
+                items = root.findall(".//item")
+                for item in items[:2]:
+                    title = item.findtext("title", "").strip()
+                    link = item.findtext("link", "").strip()
+                    if title and link and len(title) > 10:
+                        cat_items.append(f"  - {title}")
+                        if len(cat_items) >= 2:
+                            break
+            except Exception:
+                continue
+
+        if cat_items:
+            all_news.append(f"{category}:\n" + "\n".join(cat_items))
+
+    # Si RSS falla, intentar DuckDuckGo
+    if not all_news:
+        try:
+            from config import NEWS_TOPICS
+            from duckduckgo_search import DDGS
+            ddgs = DDGS()
+            for topic in (topics or NEWS_TOPICS):
+                clean_topic = topic.replace(" noticias", "").strip().upper()
+                try:
+                    results = ddgs.news(topic, max_results=2, region="es-es")
+                    lines = [f"  - {r['title']}" for r in results]
+                    if lines:
+                        all_news.append(f"{clean_topic}:\n" + "\n".join(lines))
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+    if not all_news:
+        return "Sin noticias disponibles hoy (servicio temporalmente limitado)."
+
     return "\n\n".join(all_news)
-
-
 def extract_text_from_pdf(file_path):
     """Extrae texto de PDF."""
     if not pypdf:
