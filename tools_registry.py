@@ -304,6 +304,65 @@ def fetch_url(url):
             except Exception:
                 pass
 
+
+        # Manejar URLs de YouTube - extraer transcript
+        if 'youtube.com/watch' in clean_url or 'youtu.be/' in clean_url:
+            try:
+                from youtube_transcript_api import YouTubeTranscriptApi
+                import re as re_yt
+                # Extraer video ID
+                vid_match = re_yt.search(r'(?:v=|youtu\.be/)([\w-]{11})', clean_url)
+                if vid_match:
+                    video_id = vid_match.group(1)
+                    # Intentar transcript en espanol, luego ingles, luego cualquiera
+                    transcript_list = None
+                    for lang in [['es'], ['en'], None]:
+                        try:
+                            if lang:
+                                transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=lang)
+                            else:
+                                transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+                            break
+                        except Exception:
+                            continue
+                    if transcript_list:
+                        full_text = " ".join([t["text"] for t in transcript_list])
+                        if len(full_text) > 6000:
+                            full_text = full_text[:6000] + "\n\n[... Transcript truncado]"
+                        # Obtener titulo via oEmbed
+                        try:
+                            oembed = requests.get(
+                                "https://www.youtube.com/oembed",
+                                params={"url": clean_url, "format": "json"},
+                                timeout=5
+                            ).json()
+                            yt_title = oembed.get("title", "Video de YouTube")
+                            yt_author = oembed.get("author_name", "")
+                        except Exception:
+                            yt_title = "Video de YouTube"
+                            yt_author = ""
+                        result = f"\U0001f4fa **{yt_title}**"
+                        if yt_author:
+                            result += f"\nCanal: {yt_author}"
+                        result += f"\n\n**Transcript:**\n{full_text}"
+                        return result
+                    else:
+                        return "No hay transcript disponible para este video de YouTube."
+            except ImportError:
+                pass
+            except Exception as e:
+                pass
+            # Fallback: extraer metadata basica
+            try:
+                oembed = requests.get(
+                    "https://www.youtube.com/oembed",
+                    params={"url": clean_url, "format": "json"},
+                    timeout=5
+                ).json()
+                return f"\U0001f4fa **{oembed.get('title', '')}**\nCanal: {oembed.get('author_name', '')}\n\n(Transcript no disponible para este video)"
+            except Exception:
+                pass
+
         resp = requests.get(clean_url, headers=headers, timeout=15, allow_redirects=True)
         resp.raise_for_status()
 
