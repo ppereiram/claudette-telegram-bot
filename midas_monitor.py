@@ -29,7 +29,7 @@ def _load_latest_json(prefix="strategies_pnl") -> dict | None:
     if not files:
         return None
     try:
-        with open(files[-1], encoding="utf-8") as f:
+        with open(files[-1], encoding="utf-8-sig") as f:
             return json.load(f)
     except Exception as e:
         logger.error(f"midas_monitor: error leyendo {files[-1]}: {e}")
@@ -42,7 +42,7 @@ def _load_daily_json(date_str: str) -> dict | None:
     if not os.path.exists(path):
         return None
     try:
-        with open(path, encoding="utf-8") as f:
+        with open(path, encoding="utf-8-sig") as f:
             return json.load(f)
     except Exception as e:
         logger.error(f"midas_monitor: error leyendo {path}: {e}")
@@ -56,7 +56,7 @@ def _load_week_pnl() -> dict:
     files = sorted(glob.glob(pattern))[-7:]
     for f in files:
         try:
-            with open(f, encoding="utf-8") as fp:
+            with open(f, encoding="utf-8-sig") as fp:
                 data = json.load(fp)
                 date = data.get("fecha", Path(f).stem.replace("strategies_pnl_", ""))
                 pnl = data.get("strategies_pnl", {})
