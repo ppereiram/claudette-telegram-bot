@@ -383,7 +383,10 @@ async def generate_morning_summary(chat_id):
 
     # --- 1. Recolectar datos brutos ---
     raw_data = []
-    raw_data.append(f"FECHA: {now.strftime('%A %d de %B, %Y')} â€” {now.strftime('%H:%M')} hora Costa Rica")
+    _dias = ['lunes','martes','miercoles','jueves','viernes','sabado','domingo']
+    _meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
+    _fecha_es = f"{_dias[now.weekday()]} {now.day} de {_meses[now.month-1]} de {now.year}"
+    raw_data.append(f"FECHA: {_fecha_es} — {now.strftime('%H:%M')} hora Costa Rica")
 
     # Clima
     try:
@@ -416,10 +419,13 @@ async def generate_morning_summary(chat_id):
     # Noticias
     try:
         news = search_news()
-        if news:
+        if news and len(news) > 100:
             raw_data.append(f"\nNOTICIAS RECIENTES:\n{news}")
+        else:
+            raw_data.append("\nNOTICIAS: No disponibles hoy (servicio temporalmente limitado). No inventes noticias.")
     except Exception as e:
         logger.warning(f"Morning news error: {e}")
+        raw_data.append("\nNOTICIAS: No disponibles hoy. No inventes noticias.")
 
     # --- BIBLIOTECA: Libro aleatorio del dÃ­a ---
     book_data = ""
@@ -503,6 +509,9 @@ Genera un resumen matutino siguiendo EXACTAMENTE esta estructura:
 6. **Pensamiento del cierre** â€” UNA cita filosÃ³fica (puede ser del libro del dÃ­a o de otro autor: Marco Aurelio, Epicteto, SÃ©neca, Kierkegaard, Nietzsche, Heidegger, Han, Weil, Campbell, Jung). Breve, cortante, sin explicaciÃ³n.
 
 REGLAS:
+- CRITICO: Si no hay noticias disponibles, di "Sin noticias disponibles hoy" — NO inventes, NO rellenes con filosofia
+- CRITICO: Usa EXACTAMENTE la fecha que aparece en FECHA: — no la cambies ni la recalcules
+- CRITICO: La seccion Midas Monitor es OBLIGATORIA si hay datos de MIDAS MONITOR en los datos
 - Todo el resumen debe caber en UN mensaje de Telegram (mÃ¡ximo 4000 caracteres)
 - Tono: directo, filosÃ³fico, sin condescendencia
 - No uses "Â¡Excelente!" ni frases de chatbot
