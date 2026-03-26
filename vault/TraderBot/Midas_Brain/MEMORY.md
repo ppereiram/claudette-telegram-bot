@@ -11,7 +11,8 @@
 |---------|-----------|
 | `strategies_portfolio.md` | Params completos de cada estrategia, rankings, descartadas |
 | `brain_midas_arquitectura.md` | Stack matemático completo de Midas (Markov, Minimax, TfT, MC, RF, RL, GA + capas nuevas) |
-| `diario_lecciones.md` | Diario de trading 02/03-23/03 — lecciones para educación de Midas |
+| `diario_lecciones.md` | Diario de trading 02/03-26/03 — 8 lecciones con pérdidas reales documentadas |
+| `manual_buenas_practicas.md` | **7 niveles de reglas operativas** derivadas del paper trading — el escudo para real money |
 | `roadmap_abril2026.md` | Plan semana a semana desde 01/04/2026 hasta Darwin/X |
 | `quant_strategies.md` | Kelly, ML Meta-Labeling, Kalman, Hurst, OU process |
 | `libros_extraidos.md` | Conceptos extraídos de cada libro de la biblioteca de Pablo |

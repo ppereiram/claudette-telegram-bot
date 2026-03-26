@@ -1,0 +1,49 @@
+name: Midas Market Monitor
+
+on:
+  schedule:
+    # Lunes a viernes, 9:15 PM UTC = 4:15 PM ET (15 min despues del cierre)
+    - cron: '15 21 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      fecha:
+        description: 'Fecha opcional (YYYY-MM-DD). Vacio = hoy'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  run-monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install yfinance pandas numpy
+
+      - name: Correr Market Monitor
+        run: python "Bot_Quant_IA/market_monitor_logger.py"
+
+      - name: Commit y Push del log
+        run: |
+          git config user.email "midas-bot@noreply.github.com"
+          git config user.name "Midas Bot"
+          git add "Bot_Quant_IA/market_logs/"
+          if git diff --staged --quiet; then
+            echo "Sin cambios en market_logs"
+          else
+            TODAY=$(date +%Y-%m-%d)
+            git commit -m "market_log ${TODAY}"
+            git push
+          fi

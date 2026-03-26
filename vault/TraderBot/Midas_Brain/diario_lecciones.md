@@ -5,7 +5,7 @@ type: project
 ---
 
 # Diario de Lecciones — Educación del Brain Midas
-> Período inicial: 02/03/2026 – 20/03/2026 | 15 días hábiles | 710 trades | P&L: +$366
+> Período: 02/03/2026 – 26/03/2026 | 18 días hábiles | 900+ trades | P&L acumulado: ~+$1,200 (parcial)
 > Fuente de verdad: CSV exportado de NinjaTrader 8 (NO los strategies_pnl.json — fueron borrados por bug en auto_push_pnl.bat el 20/03)
 
 ---
@@ -143,6 +143,236 @@ type: project
 
 **Regla Midas derivada:**
 > Rollover de contrato = día de mantenimiento obligatorio. La semana del rollover (~2da semana de Marzo, Junio, Septiembre, Diciembre) NO contar los $0 como "sin señal" — es silencio técnico, no de mercado. Marcar en el calendario y excluir del análisis de frecuencia de Markov.
+
+---
+
+## LECCIÓN 08 — 26/03/2026: El Día del Gap — Caos en los Primeros 90 Minutos ⚡
+**P&L parcial (hasta 11:17 AM): -$2,262.90** | Día aún abierto
+
+**Contexto crítico de mercado:**
+- Cierre 25/03: 24,213.75
+- Apertura 26/03: ~24,100
+- **GAP DOWN: -113 puntos (-0.47%)** antes de la apertura
+- tide_score previo: -0.40 (bear 1D, breadth -3) → la macro YA advertía
+
+**Cronología del caos (primeros 90 minutos):**
+```
+09:32  ABCDHarmonic LONG 24104  → stop -$36 (mercado seguía cayendo)
+09:35  StatMean SHORT 24105     → stop en 09:37 -$463 (mercado rebotó)
+09:35  EMATrend SHORT 24105     → stop en 09:37 -$553 (mismo rebote)
+09:37  PivotReverse SHORT 24112 → stop en 09:43 -$42 (casi breakeven)
+09:42  DarvasBox LONG 24105     → PROFIT TARGET 24175 en 09:45 +$2,757 ✅
+09:53  MomentumZ LONG 24210     → stop -$571 (pullback post-bounce)
+10:05  DarvasBox SHORT 24180    → stop 24204 -$969 (mercado siguió subiendo)
+10:08  DarvasBox SHORT 24183    → stop 24226 -$1,740 (mercado ↑ a 24226)
+10:15  SuperTrendWave LONG 24218→ stop 24185 -$330 (mercado cayó de nuevo)
+11:13  BB_SCALPER SHORT 24098   → stop -$314 (mercado en 24098 — volvió al gap)
+```
+
+**Desglose por estrategia (hoy):**
+| Estrategia | P&L | Observación |
+|---|---|---|
+| DarvasBox Long (09:42) | **+$2,757** | Único ganador — capturó el bounce del gap |
+| EMATrendRenko Short | **-$553** | Entró en la dirección del gap, whipsawed |
+| StatMeanCross Short | **-$463** | Mismo: gap direction → whipsaw |
+| MomentumZ Long | **-$571** | Persiguió el bounce, que ya había terminado |
+| DarvasBox Short (x2) | **-$2,710** | Intentó la continuación bajista, mercado siguió up |
+| SuperTrendWave Long | **-$330** | Siguió el momentum alcista del bounce, se revirtió |
+| BB_SCALPER Short | **-$314** | Short correcto de dirección pero timing malo |
+| PivotReverse Short | **-$42** | Casi breakeven — stops casi no se movieron |
+
+---
+
+### LECCIÓN 08-A: El GAP — El Enemigo de las Estrategias de Momentum 💥
+
+**Qué es un "Gap Day":**
+- NQ abre 100+ puntos lejos del cierre anterior
+- Los primeros 15-20 minutos son un campo minado de whipsaws
+- El mercado tiene que "decidir": ¿llenar el gap (rebote) o continuarlo (fuga)?
+- TODAS las estrategias de momentum leen el gap como señal → TODAS entran en la misma dirección → TODAS se exponen a ser whipsawed si el mercado elige la otra opción
+
+**Lo que pasó exactamente hoy:**
+1. Gap DOWN de 113 puntos → StatMean y EMATrend vieron el bear momentum → SHORT inmediato
+2. El mercado hizo "bounce" (intento de llenar el gap) → StatMean y EMATrend paradas en 90 segundos
+3. DarvasBox vio el mismo bounce → LONG → profit target +$2,757 (capturó 70 puntos)
+4. DarvasBox entonces buscó la continuación SHORT (lógica: gap down = tendencia bajista) → el mercado siguió subiendo hasta 24226 → dos stops consecutivos
+5. SuperTrendWave siguió el momentum alcista del bounce → el mercado revirtió y bajó de nuevo
+
+**La estructura completa del día:**
+```
+24213 (cierre ayer)
+  ↓ Gap DOWN overnight
+24100 (apertura)
+  ↓ primer movimiento: caída a 24087
+  ↑ BOUNCE: sube a 24226 (rebote de 139 puntos desde el mínimo)
+  ↓ REVERSAL: vuelve a 24098 (sigue el gap original)
+```
+Mercado tipo "N invertida" — el peor patrón para estrategias tendenciales.
+
+**Regla Midas derivada — GAP FILTER:**
+> Si `precio_apertura - precio_cierre_ayer > 50 puntos` (en cualquier dirección) → **GAP DAY activo**.
+> En GAP DAY:
+> - Primeros 15 minutos: SIZE×0.25 en TODAS las estrategias
+> - Bloquear estrategias de momentum puro (StatMean, EMATrend) hasta que el rango de los primeros 15 min se consolide
+> - Solo DarvasBox y PivotReverse operan normalmente (tienen lógica de profit target que aguanta la volatilidad)
+> - Activar `condition_map.py` flag: `gap_day=True`
+
+---
+
+### LECCIÓN 08-B: StatMean y EMATrend — El Talón de Aquiles en Gaps ⚠️
+
+**El patrón específico:**
+- 09:35:23 StatMean SHORT — 09:37:01 stop = **98 segundos de vida**
+- 09:35:23 EMATrend SHORT — 09:37:13 stop = **110 segundos de vida**
+- Ambas entraron en el MISMO brick de Renko → correlación estructural EMA(21) confirmada una vez más
+- Ambas murieron en el mismo bounce → -$1,016 en 2 minutos
+
+**Por qué ocurre:** Renko 35 construye un brick bajista cuando el mercado cae 35 puntos. En un gap de 113 puntos, el primer brick de apertura es gigante y bajista → señal inmediata. Pero ese mismo brick absorbe todo el movimiento overnight → el siguiente movimiento probable es la corrección (bounce).
+
+**Regla Midas derivada:**
+> StatMean y EMATrend NO operan en la primera barra de Renko después de un gap >50 puntos. El primer brick de gap es "precio de descubrimiento", no señal de trend. Esperar al segundo brick confirmatorio.
+
+---
+
+### LECCIÓN 08-C: DarvasBox — El Único que Leyó Bien el Gap 🎯
+
+**Lo que hizo bien:**
+DarvasBox entró LONG a 24105 → profit target 24175. Capturó exactamente el bounce del gap (la tendencia de "gap fill" — el mercado intentó volver a 24213).
+
+**Por qué DarvasBox funcionó y StatMean no:**
+- StatMean sigue momentum → entró SHORT porque el gap era bajista → whipsaw
+- DarvasBox usa ruptura de range (Darvas Box) → esperó que se formara un box en el rango de los primeros minutos → entró en la dirección de la ruptura del box (que fue alcista, hacia el gap fill)
+- **DarvasBox es estructural, StatMean es momentum** → en gaps, la estructura manda antes que el momentum
+
+**El "error" de DarvasBox:**
+Después de ganar el Long, intentó SHORT dos veces (24180 y 24183) esperando la continuación bajista del gap. El mercado siguió subiendo hasta 24226. Perdió $2,710 — más del doble de lo que ganó.
+
+**Regla Midas derivada:**
+> Después de que DarvasBox capture el bounce del gap (Long en gap-down), NO intentar el Short en la misma sesión hasta que `tide_score_intraday` confirme nuevo impulso bajista via VWAP SD Bands. El bounce puede ser más fuerte de lo esperado.
+
+---
+
+### LECCIÓN 08-D: La Señal que Midas No Tiene Todavía 🔔
+
+**El problema fundamental de hoy:** Midas no tenía información del gap al momento de las entradas.
+
+El `market_monitor_logger.py` corre a las 4:30 PM ET del día anterior. Para las 9:35 AM de hoy, el tide_score de ayer (-0.40) es lo único disponible. Pero la condición crítica era:
+
+```
+GAP_SIZE = abs(precio_apertura - precio_cierre_ayer)
+GAP_SIZE = |24100 - 24213| = 113 puntos ← esta información NO existía en el brain
+```
+
+Esta es la pieza que falta: un **pre-market check** que calcule el gap antes de que abran las estrategias.
+
+**Cómo implementarlo (simple, sin infraestructura nueva):**
+```python
+# En market_monitor_logger.py — agregar función:
+def check_pre_market_gap(ticker="NQ=F") -> dict:
+    df = yf.download(ticker, period="2d", interval="1d")
+    prev_close = df["Close"].iloc[-2]
+    # Precio pre-mercado via ticker "NQ=F" a las 9:25 AM ET
+    pre_market = yf.download(ticker, period="1d", interval="5m")["Close"].iloc[-1]
+    gap = pre_market - prev_close
+    return {
+        "gap_points": round(gap, 2),
+        "gap_pct": round(gap / prev_close * 100, 3),
+        "gap_day": abs(gap) > 50,
+        "gap_direction": "up" if gap > 0 else "down"
+    }
+```
+Esto correría a las 9:25 AM ET (antes de apertura) y generaría `gap_day=True/False` en el JSON del día.
+
+---
+
+## LECCIÓN 07 — 25/03/2026: El Día que Todo Encajó ✅
+**P&L del día: +$5,318.10** (mejor día desde el inicio del período actual)
+
+**Desglose por estrategia:**
+| Estrategia | Dirección | P&L | Observación |
+|---|---|---|---|
+| StatMeanCross_v1 | Long × 17 entradas | **+$953.50** | Todas en Profit Target en 1 min |
+| PivotReverse_v1 | Long × 12 entradas | **+$3,106.00** | Todas en Profit Target — ayer fue Short y perdió $1,048 |
+| DarvasBox 2do batch | Short × 15 entradas | **+$2,675.50** | 09:47 — mercado cayó 67 puntos |
+| DarvasBox 3er batch | Short × 16 entradas | **+$2,805.50** | 10:59 — mercado cayó 71 puntos |
+| SuperTrendWave Short | Short × 2 entradas | **+$383.00** | Tarde — mercado bajó, Short funcionó |
+| DarvasBox 1er batch | Short × 3 entradas | **-$1,013.00** | 09:33 — entró early, mercado no había revertido |
+| SuperTrendWave Long | Long × 5 entradas | **-$852.00** | Mañana — luchó contra la caída |
+| OrderFlowReversal | Long × 3 entradas | **-$758.00** | Tarde — mercado seguía cayendo |
+| NYOpenBlast_v2 | Long × 3 entradas | **-$536.50** | Apertura — paró sobre el impulso inicial |
+| MomentumZ_v1 | Long × 4 entradas | **-$496.80** | Apertura — paró inmediatamente |
+| BreadButter_SCALPER | Long × 3 entradas | **-$354.00** | Apertura — 1 barra, stop |
+| BreadButter_ULTRA | Short × 3 entradas | **-$241.00** | Apertura — 1 barra, stop |
+| PivotTrendBreak | Long × 3 entradas | **-$323.00** | Paró en 1 barra |
+| EMATrendRenko | Long × 3 entradas | **-$1.80** | Breakeven — EMA Exit |
+
+**Estructura del mercado hoy:**
+- Apertura gap up → rally 24425 → 24467+
+- Reversión brusca → caída a 24367 (9:52) ← DarvasBox 2do batch
+- Rebote → 24505 (10:35)
+- Segunda caída → 24412 (11:10) ← DarvasBox 3er batch
+- Rebote → nueva caída tarde → 24330 ← OFR Long falló
+- Día volátil bidireccional con dos drops pronunciados intraday
+
+---
+
+### LECCIÓN 07-A: StatMeanCross — El Setup de Apertura Perfecto 🎯
+**Lo que pasó:** 17 entradas simultáneas en Long a las 09:30, TODAS en Profit Target a las 09:31 (1 minuto).
+
+**Condición**: Gap up en apertura + primer brick Renko confirmando momentum alcista → StatMean entra masivamente Long
+
+**Por qué funciona así:** StatMean usa EMA(21) en Renko 35 — cuando el mercado abre con gap y el primer brick es alcista, la EMA ya está en pendiente positiva del overnight → señal inmediata y fuerte → targets alcanzados antes de que aparezca counter-pressure
+
+**Regla Midas derivada:**
+> Gap apertura + momentum confirmado en primera barra Renko = condición ideal para StatMean. Si tide_score es positivo en ese momento → no filtrar, dejar operar. StatMean en esta condición captura $950+ sin exposición relevante (MAE máximo $30).
+
+---
+
+### LECCIÓN 07-B: PivotReverse — La Estrategia Ambidiestra 🔄
+**Lo que pasó:** Ayer 24/03 fue Short y perdió -$1,048. Hoy fue Long y ganó +$3,106.
+
+**Interpretación crítica:** La estrategia NO está rota. Tiene edge en ambas direcciones — simplemente necesita coincidir con la dirección del mercado. El 24/03 el mercado subía → el short falló. Hoy el mercado también subía en esa ventana → el long arrasó.
+
+**El problema que confirma:** PivotReverse no tiene filtro de tendencia diaria. Entra donde detecta el "pivot" pero no sabe si la tendencia macro apoya esa dirección. Cuando acierta la dirección: win masivo (+$3,106 con 12 entradas). Cuando se equivoca: pérdida igualmente masiva (-$1,048 ayer).
+
+**Regla Midas derivada:**
+> PivotReverse tiene uno de los win rates más altos del portafolio CUANDO está alineada con tide_score. Sin filtro = moneda al aire con tamaño grande. Con VWAP SD Bands intraday (B6-0a) habría confirmado Long hoy y bloqueado Short ayer. Prioridad de implementación confirmada.
+
+---
+
+### LECCIÓN 07-C: DarvasBox — El Edge de la Persistencia 💎
+**Lo que pasó:**
+- 09:33 Short → stop loss (-$1,013) — mercado no había revertido aún
+- 09:47 Short → profit target (+$2,675) — mercado cayó 67 puntos
+- 10:59 Short → profit target (+$2,805) — mercado cayó 71 puntos
+- **Net DarvasBox hoy: +$4,467**
+
+**Patrón identificado:** DarvasBox sigue intentando en la misma dirección después de un stop. La primera entrada es la "sonda" — si el mercado no confirma inmediatamente, para. La segunda o tercera entrada en la misma sesión, con más confirmación de precio, captura el movimiento real. El stop inicial es el "costo de sondeo".
+
+**Por qué el batch Short funcionó:** El mercado en los dos drops intraday cayó ~67-71 puntos. Eso es $134-142 por contrato en MNQ. Con 15-20+ contratos simultáneos, el profit target se alcanza en minutos.
+
+**Regla Midas derivada:**
+> DarvasBox tiene resiliencia incorporada — el primer stop no es señal de fallo de la estrategia, es parte del proceso de detección. Si la dirección es correcta (shorts en caída, longs en rally), la estrategia recupera y genera retornos asimétricos. El brain NO debe penalizar a DarvasBox en TfT por stops iniciales si los siguientes entries en la misma dirección son ganadores.
+
+---
+
+### LECCIÓN 07-D: Alineación vs Desalineación — La Diferencia Real 🧭
+**Resumen del patrón de hoy:**
+
+Los ganadores de hoy (+$9,923 bruto) tenían algo en común:
+- StatMean Long → mercado subió en apertura ✅ alineado
+- PivotReverse Long → mercado subía en ventana 10:09-10:22 ✅ alineado
+- DarvasBox Short → mercado cayó en ambos drops ✅ alineado
+- SuperTrendWave Short tarde → mercado bajó ✅ alineado
+
+Los perdedores de hoy (-$4,575 bruto) entraron contra el movimiento:
+- SuperTrendWave Long → mercado estaba en el drop ❌ desalineado
+- MomentumZ Long → apertura justo antes del pullback ❌ desalineado
+- NYOpenBlast Long → apertura antes del drop ❌ desalineado
+- OFR Long tarde → mercado seguía bajando ❌ desalineado
+
+**La conclusión que confirma la hipótesis central de Midas:**
+> El problema nunca fue que las estrategias fueran malas. El problema es que no tienen información de contexto de mercado. El 100% de los ganadores estaban alineados con el movimiento de precio en su ventana. El brain solo necesita saber la dirección del mercado ANTES de que entre la señal.
 
 ---
 

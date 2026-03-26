@@ -1,0 +1,22 @@
+{
+  "fecha": "2026-03-23",
+  "timestamp": "2026-03-23T21:50:14.449666",
+  "precio_cierre": 24291.78,
+  "trend_1D": 0,
+  "trend_4H": -1,
+  "trend_1H": -1,
+  "trend_30M": -1,
+  "choppiness_15M": 60.43,
+  "sea_state": "moderate",
+  "tide_score": -1.8,
+  "swim_ok": true,
+  "trend_1D_label": "neutral",
+  "trend_4H_label": "bear",
+  "trend_1H_label": "bear",
+  "trend_30M_label": "bear",
+  "strategies_pnl": {},
+  "total_pnl_day": 0,
+  "all_won": null,
+  "all_lost": null,
+  "notes": "Domingo — sin trading. tide_score=-1.8 (bear 4H/1H/30M). Script corrió correctamente. Contexto bajista confirmado para el lunes 24/03."
+}
