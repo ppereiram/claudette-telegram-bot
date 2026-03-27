@@ -20,6 +20,7 @@ ELEVENLABS_VOICE_ID = os.environ.get('ELEVENLABS_VOICE_ID', 'JBFqnCBsd6RMkjVDRZz
 OPENWEATHER_API_KEY = os.environ.get('OPENWEATHER_API_KEY')
 OWNER_CHAT_ID = os.environ.get('OWNER_CHAT_ID')
 DATABASE_URL = os.environ.get('DATABASE_URL')
+FIRECRAWL_API_KEY = os.environ.get('FIRECRAWL_API_KEY', '')
 
 # --- CONSTANTES ---
 DEFAULT_MODEL = "claude-sonnet-4-20250514"

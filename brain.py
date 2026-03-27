@@ -512,7 +512,7 @@ REGLAS:
 - CRITICO: Si no hay noticias disponibles, di "Sin noticias disponibles hoy" — NO inventes, NO rellenes con filosofia
 - CRITICO: Usa EXACTAMENTE la fecha que aparece en FECHA: — no la cambies ni la recalcules
 - CRITICO: La seccion Midas Monitor es OBLIGATORIA si hay datos de MIDAS MONITOR en los datos
-- Todo el resumen debe caber en UN mensaje de Telegram (mÃ¡ximo 4000 caracteres)
+- El resumen puede ocupar varios mensajes — no truncues secciones para ahorrar espacio, incluye TODO
 - Tono: directo, filosÃ³fico, sin condescendencia
 - No uses "Â¡Excelente!" ni frases de chatbot
 - La secciÃ³n de Biblioteca es la mÃ¡s valiosa â€” dedÃ­cale espacio y profundidad

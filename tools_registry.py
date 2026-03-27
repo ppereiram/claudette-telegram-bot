@@ -9,7 +9,7 @@ import tempfile
 import logging
 import requests
 from datetime import datetime
-from config import OPENAI_API_KEY, OPENWEATHER_API_KEY, DEFAULT_LOCATION, logger
+from config import OPENAI_API_KEY, OPENWEATHER_API_KEY, DEFAULT_LOCATION, FIRECRAWL_API_KEY, logger
 from memory_manager import save_fact, get_fact
 from library import search_library, search_by_author, search_by_tag, get_book_content, get_library_stats
 from knowledge_base import KB_TOOLS_SCHEMA, execute_kb_tool
@@ -325,6 +325,35 @@ def read_local_file(filename):
     return f"Archivo '{filename}' no encontrado."
 
 
+def _fetch_with_firecrawl(url):
+    """Usa Firecrawl API para extraer contenido de páginas que bloquean scraping directo."""
+    if not FIRECRAWL_API_KEY:
+        return None
+    try:
+        resp = requests.post(
+            "https://api.firecrawl.dev/v1/scrape",
+            headers={
+                "Authorization": f"Bearer {FIRECRAWL_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={"url": url, "formats": ["markdown"]},
+            timeout=30
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get("success"):
+                md = data.get("data", {}).get("markdown", "")
+                title = data.get("data", {}).get("metadata", {}).get("title", "")
+                if md:
+                    content = md[:8000]
+                    if title:
+                        return f"📰 **{title}**\n\n{content}"
+                    return content
+    except Exception as e:
+        logger.warning(f"Firecrawl error: {e}")
+    return None
+
+
 def fetch_url(url):
     """Lee el contenido de una pÃ¡gina web, tweet, artÃ­culo, etc."""
     import re as re_mod
@@ -467,14 +496,29 @@ def fetch_url(url):
             result += f"_{description}_\n\n"
         result += text
 
+        # Si el contenido extraido es pobre, intentar con Firecrawl
+        if len(result.strip()) < 200:
+            fc_result = _fetch_with_firecrawl(clean_url)
+            if fc_result:
+                return fc_result
         return result if result.strip() else "No pude extraer contenido legible de esa URL."
 
     except requests.exceptions.Timeout:
-        return "âš ï¸ La pÃ¡gina tardÃ³ demasiado en responder."
+        fc_result = _fetch_with_firecrawl(url.strip())
+        if fc_result:
+            return fc_result
+        return "⚠️ La pagina tardo demasiado en responder."
     except requests.exceptions.HTTPError as e:
-        return f"âš ï¸ Error HTTP {e.response.status_code} al acceder a la URL."
+        if e.response.status_code in (403, 401, 429):
+            fc_result = _fetch_with_firecrawl(url.strip())
+            if fc_result:
+                return fc_result
+        return f"⚠️ Error HTTP {e.response.status_code} al acceder a la URL."
     except Exception as e:
-        return f"âš ï¸ Error leyendo URL: {e}"
+        fc_result = _fetch_with_firecrawl(url.strip())
+        if fc_result:
+            return fc_result
+        return f"⚠️ Error leyendo URL: {e}"
 
 
 # =====================================================
