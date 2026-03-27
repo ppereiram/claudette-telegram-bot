@@ -949,6 +949,101 @@ def analyze_content_deep(content, title=''):
         return f'Error en analisis profundo: {e}'
 
 
+def verify_content(url_or_text, claim=None):
+    """
+    Escudo de Veracidad: verifica si una noticia, URL o claim es real o fake news.
+    Busca el mismo tema en 3 fuentes independientes (Reddit, HN, web) y analiza
+    señales lingüísticas de desinformación. Retorna veredicto estructurado.
+    """
+    import anthropic as _anthropic
+    from config import ANTHROPIC_API_KEY
+
+    content_to_check = ""
+    source_url = None
+
+    # Detectar si es URL o texto libre
+    stripped = url_or_text.strip()
+    if stripped.startswith("http://") or stripped.startswith("https://"):
+        source_url = stripped
+        fetched = fetch_url(source_url)
+        if fetched and not fetched.startswith("⚠️") and not fetched.startswith("❌"):
+            content_to_check = fetched[:3000]
+        else:
+            content_to_check = claim or stripped
+    else:
+        content_to_check = stripped
+
+    search_query = (claim or content_to_check)[:120]
+
+    # Fuente 1: Reddit
+    reddit_data = ""
+    try:
+        reddit_data = search_reddit(search_query, limit=3)[:600]
+    except Exception:
+        pass
+
+    # Fuente 2: Hacker News
+    hn_data = ""
+    try:
+        hn_data = fetch_hackernews_top(limit=5, min_points=10)[:600]
+    except Exception:
+        pass
+
+    # Fuente 3: Web (Google/DuckDuckGo)
+    web_data = ""
+    try:
+        web_data = search_web_google(search_query, max_results=3)[:600]
+    except Exception:
+        pass
+
+    verification_prompt = f"""Eres un detector de fake news y desinformación experto. Analiza el siguiente contenido.
+
+CONTENIDO A VERIFICAR:
+{content_to_check[:2000]}
+{("URL fuente: " + source_url) if source_url else ""}
+
+FUENTES INDEPENDIENTES ENCONTRADAS:
+--- Reddit ---
+{reddit_data or "Sin resultados"}
+
+--- Hacker News ---
+{hn_data or "Sin resultados"}
+
+--- Web ---
+{web_data or "Sin resultados"}
+
+Analiza y responde con este formato exacto:
+
+**VEREDICTO**: [✅ VERIFICADO / ⚠️ NO CONFIRMADO / 🚨 PROBABLE FAKE / 🔍 INSUFICIENTE PARA JUZGAR]
+
+**CONFIANZA**: X% — [una línea explicando por qué]
+
+**SEÑALES DETECTADAS**:
+- [señal 1: credibilidad o desinformación]
+- [señal 2]
+- [señal 3 si aplica]
+
+**CORROBORACIÓN**:
+[Qué fuentes confirman, contradicen o ignoran este claim. Si ninguna lo menciona, dilo.]
+
+**ANÁLISIS**: [2-3 oraciones de conclusión.]
+
+Sé directo. No inventes información que no esté en las fuentes."""
+
+    try:
+        _client = _anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        response = _client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1500,
+            messages=[{"role": "user", "content": verification_prompt}]
+        )
+        result = response.content[0].text if response.content else "Sin respuesta."
+        return "🛡️ *ESCUDO DE VERACIDAD*\n\n" + result
+    except Exception as e:
+        logger.error(f"verify_content error: {e}")
+        return f"❌ Error en verificación: {e}"
+
+
 TOOLS_SCHEMA = KB_TOOLS_SCHEMA + [
     {
         "name": "get_current_weather",
@@ -1322,6 +1417,30 @@ Soporta mÃºltiples hojas en un solo archivo. El Excel se genera con:
             },
             "required": ["content"]
         }
+    },
+    {
+        "name": "verify_content",
+        "description": (
+            "Escudo de Veracidad: verifica si una noticia, URL o claim es real o fake news. "
+            "Busca el mismo tema en 3 fuentes independientes (Reddit, HN, web) y analiza señales de desinformación. "
+            "ACTIVAR AUTOMATICAMENTE cuando Pablo comparta: una URL de noticias, un claim que suene dudoso, "
+            "una noticia viral, algo de X/Twitter, o cuando diga 'verifica esto', 'es fake?', 'es verdad?', "
+            "'chequea esto'. Retorna veredicto: VERIFICADO / NO CONFIRMADO / PROBABLE FAKE."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "url_or_text": {
+                    "type": "string",
+                    "description": "URL de la noticia a verificar, o texto/claim directo"
+                },
+                "claim": {
+                    "type": "string",
+                    "description": "El claim específico a verificar (opcional, se extrae del contenido si no se da)"
+                }
+            },
+            "required": ["url_or_text"]
+        }
     }
 ]
 
@@ -1544,8 +1663,14 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
                 title=tool_input.get("title", "")
             )
 
-                # Knowledge Base tools
-        if tool_name.startswith('kb_'):
+        elif tool_name == "verify_content":
+            return verify_content(
+                tool_input["url_or_text"],
+                claim=tool_input.get("claim")
+            )
+
+        # Knowledge Base tools
+        if tool_name.startswith('kb_') or tool_name == "search_everything":
             return await execute_kb_tool(tool_name, tool_input)
 
         return f"Herramienta '{tool_name}' no encontrada."

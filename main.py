@@ -438,6 +438,51 @@ async def cmd_memoria(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(memory_text)
 
 
+@restricted
+async def cmd_progreso(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Panel de progreso: KB stats + Biblioteca + insights guardados."""
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+    lines = ["=== PANEL DE PROGRESO - CLAUDETTE ===\n"]
+
+    # KB stats (Vault Obsidian)
+    try:
+        from knowledge_base import kb_list
+        lines.append(kb_list(mode="stats"))
+    except Exception as e:
+        lines.append(f"KB: error ({e})")
+
+    # Tags mas usados (top 10)
+    try:
+        from knowledge_base import kb_list
+        lines.append("\n" + kb_list(mode="tags", limit=10))
+    except Exception:
+        pass
+
+    # Biblioteca stats
+    try:
+        from library import get_library_stats
+        lines.append("\n" + get_library_stats())
+    except Exception as e:
+        lines.append(f"\nBiblioteca: error ({e})")
+
+    # Memoria rapida (hechos guardados)
+    try:
+        all_facts = get_all_facts() or {}
+        fact_count = len([k for k in all_facts if not k.startswith("System_")])
+        lines.append(f"\nMemoria rapida: {fact_count} hechos guardados")
+    except Exception:
+        pass
+
+    # Ultimas notas indexadas
+    try:
+        from knowledge_base import kb_list
+        lines.append("\n" + kb_list(mode="recent", limit=5))
+    except Exception:
+        pass
+
+    await send_long_message(update, "\n".join(lines))
+
+
 # =====================================================
 # UTILIDADES
 # =====================================================
@@ -508,6 +553,7 @@ def main():
     app.add_handler(CommandHandler("buenosdias", cmd_buenos_dias))
     app.add_handler(CommandHandler("noticias", cmd_noticias))
     app.add_handler(CommandHandler("memoria", cmd_memoria))
+    app.add_handler(CommandHandler("progreso", cmd_progreso))
 
     # Botones inline
     app.add_handler(CallbackQueryHandler(button_handler))

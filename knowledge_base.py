@@ -552,6 +552,92 @@ def kb_save_insight(category: str, title: str, content: str, project: str = "Gen
         return f"Error guardando insight: {e}"
 
 
+def search_everything(query: str, limit: int = 5) -> str:
+    """
+    Búsqueda cruzada simultánea en Vault de Obsidian (KB) Y Biblioteca (2000+ libros).
+    Más potente que kb_search o search_library por separado.
+
+    Args:
+        query: Términos de búsqueda
+        limit: Máximo de resultados por fuente (default: 5)
+    """
+    if not query or not query.strip():
+        return "❌ Proporciona un término de búsqueda."
+
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+
+        # Busca en KB (vault Obsidian)
+        cur.execute(
+            """
+            SELECT 'KB' AS source, filepath AS ref, title,
+                   LEFT(content, 300) AS snippet, tags, word_count,
+                   ts_rank_cd(content_vector, plainto_tsquery('spanish', %s)) AS rank
+            FROM documents
+            WHERE is_active = TRUE
+              AND content_vector @@ plainto_tsquery('spanish', %s)
+            ORDER BY rank DESC
+            LIMIT %s
+            """,
+            (query, query, limit)
+        )
+        kb_rows = cur.fetchall()
+
+        # Busca en biblioteca (libros)
+        cur.execute(
+            """
+            SELECT 'LIBRO' AS source,
+                   COALESCE(filename, CAST(id AS TEXT)) AS ref,
+                   title,
+                   COALESCE(author, '') AS author,
+                   LEFT(COALESCE(summary, content, ''), 300) AS snippet,
+                   tags, word_count,
+                   ts_rank(fts_vector, plainto_tsquery('spanish', %s)) AS rank
+            FROM library
+            WHERE fts_vector @@ plainto_tsquery('spanish', %s)
+            ORDER BY rank DESC
+            LIMIT %s
+            """,
+            (query, query, limit)
+        )
+        lib_rows = cur.fetchall()
+        conn.close()
+
+        if not kb_rows and not lib_rows:
+            return f"🔍 Sin resultados para: *{query}*\n_(buscado en Vault y Biblioteca)_"
+
+        out = [f"🔍 *Búsqueda cruzada:* _{query}_\n"]
+
+        if kb_rows:
+            out.append(f"📚 *VAULT — {len(kb_rows)} nota(s):*")
+            for i, r in enumerate(kb_rows, 1):
+                tags_str = " ".join(f"#{t}" for t in (r["tags"] or [])[:3])
+                snippet = (r["snippet"] or "").replace("\n", " ").strip()[:220]
+                out.append(
+                    f"  *{i}. {r['title']}*  {tags_str}\n"
+                    f"     📁 `{r['ref']}`\n"
+                    f"     > {snippet}…"
+                )
+
+        if lib_rows:
+            out.append(f"\n📖 *BIBLIOTECA — {len(lib_rows)} libro(s):*")
+            for i, r in enumerate(lib_rows, 1):
+                author = r.get("author") or ""
+                snippet = (r.get("snippet") or "").replace("\n", " ").strip()[:180]
+                author_str = f" · _{author}_" if author else ""
+                line = f"  *{i}. {r['title']}*{author_str}"
+                if snippet:
+                    line += f"\n     > {snippet}…"
+                out.append(line)
+
+        return "\n".join(out)
+
+    except Exception as e:
+        logger.error(f"search_everything error: {e}")
+        return f"❌ Error en búsqueda cruzada: {e}"
+
+
 KB_TOOLS_SCHEMA = [
     {
         "name": "kb_search",
@@ -624,6 +710,24 @@ KB_TOOLS_SCHEMA = [
         }
     },
     {
+        "name": "search_everything",
+        "description": (
+            "Búsqueda cruzada simultánea en el Vault de Obsidian (notas personales de Pablo) "
+            "Y en la Biblioteca de 2000+ libros. "
+            "USAR como primera opción cuando Pablo busque algo que podría estar en sus notas O en algún libro. "
+            "Ej: 'qué tengo sobre estoicismo', 'busca todo sobre Midas', 'qué libros y notas tengo de trading'. "
+            "Más potente que kb_search o search_library por separado."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Términos de búsqueda en español"},
+                "limit": {"type": "integer", "description": "Máximo de resultados por fuente (default: 5)", "default": 5}
+            },
+            "required": ["query"]
+        }
+    },
+    {
         "name": "kb_save_insight",
         "description": (
             "Guarda un aprendizaje, decisión importante, insight o contexto de proyecto "
@@ -664,8 +768,10 @@ KB_TOOLS_SCHEMA = [
 
 
 async def execute_kb_tool(name: str, args: dict) -> str:
-    """Dispatcher para los 5 KB tools. Llamar desde execute_tool_async()."""
-    if name == "kb_search":
+    """Dispatcher para los KB tools. Llamar desde execute_tool_async()."""
+    if name == "search_everything":
+        return search_everything(args.get("query", ""), args.get("limit", 5))
+    elif name == "kb_search":
         return kb_search(args.get("query", ""), args.get("limit", 5), args.get("tag_filter"))
     elif name == "kb_list":
         return kb_list(args.get("mode", "recent"), args.get("tag"), args.get("limit", 10))
