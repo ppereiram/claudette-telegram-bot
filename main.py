@@ -11,7 +11,7 @@ import tempfile
 import pytz
 from datetime import datetime, timedelta
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, filters, ContextTypes
@@ -60,24 +60,50 @@ if ELEVENLABS_API_KEY:
 async def show_menu(update, context):
     keyboard = [
         [
-            InlineKeyboardButton("â˜€ï¸ Buenos DÃ­as", callback_data='btn_morning'),
-            InlineKeyboardButton("ðŸ§˜ Modo Profundo", callback_data='btn_deep'),
+            InlineKeyboardButton("Boletin Matutino", callback_data='btn_morning'),
+            InlineKeyboardButton("Noticias", callback_data='btn_news'),
         ],
         [
-            InlineKeyboardButton("ðŸ“° Noticias", callback_data='btn_news'),
-            InlineKeyboardButton("ðŸŽ¨ Crear Imagen", callback_data='btn_img'),
+            InlineKeyboardButton("Progreso & Stats", callback_data='btn_progreso'),
+            InlineKeyboardButton("Sintesis Semanal", callback_data='btn_sintesis'),
         ],
         [
-            InlineKeyboardButton("ðŸ§  Ver Memoria", callback_data='btn_mem'),
-            InlineKeyboardButton("ðŸ—‘ï¸ Borrar Chat", callback_data='btn_clear'),
+            InlineKeyboardButton("Modo Profundo", callback_data='btn_deep'),
+            InlineKeyboardButton("Modo Normal", callback_data='btn_normal'),
         ],
         [
-            InlineKeyboardButton("âš¡ Modo Normal", callback_data='btn_normal'),
-            InlineKeyboardButton("ðŸ“ Mi UbicaciÃ³n", callback_data='btn_location'),
-        ]
+            InlineKeyboardButton("Ver Memoria", callback_data='btn_mem'),
+            InlineKeyboardButton("Borrar Chat", callback_data='btn_clear'),
+        ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("ðŸŽ›ï¸ **Centro de Control Claudette**:", reply_markup=reply_markup)
+    nl = chr(10)
+    capacidades = (
+        "CLAUDETTE v2 - Centro de Control" + nl + nl
+        + "COMANDOS:" + nl
+        + "/buenosdias  Boletin matutino (noticias + Midas + libro)" + nl
+        + "/noticias    Noticias curadas en tiempo real" + nl
+        + "/progreso    Panel: KB + biblioteca + modelos mentales" + nl
+        + "/sintesis    Sintesis semanal de aprendizajes" + nl
+        + "/profundo    Modo analisis profundo" + nl
+        + "/normal      Modo respuestas rapidas" + nl
+        + "/memoria     Lo que recuerdo de ti" + nl
+        + "/clear       Borrar historial de conversacion" + nl + nl
+        + "HABILIDADES (sin comando):" + nl
+        + "URL de noticia        -> la leo + verifico si es fake" + nl
+        + "'es esto verdad?'     -> Escudo de Veracidad" + nl
+        + "'8 modos' / 'analiza' -> analisis profundo de contenido" + nl
+        + "'busca todo sobre X'  -> KB + biblioteca simultaneo" + nl
+        + "'que notas tengo de X'-> vault Obsidian" + nl
+        + "'libros de [autor]'   -> biblioteca 2000+ libros" + nl
+        + "'conecta esta nota'   -> grafo de conocimiento" + nl
+        + "Reddit / HN           -> noticias tech en tiempo real" + nl
+        + "Nota de voz           -> Whisper + respuesta por audio" + nl
+        + "Foto                  -> vision Claude" + nl
+        + "'estoy en Madrid'     -> clima de esa ciudad" + nl
+        + "'agenda X para...'    -> Google Calendar/Tasks" + nl
+    )
+    await update.message.reply_text(capacidades, reply_markup=reply_markup)
 
 
 async def button_handler(update, context):
@@ -129,6 +155,25 @@ async def button_handler(update, context):
     elif query.data == 'btn_location':
         loc = user_locations.get(chat_id, DEFAULT_LOCATION)
         await query.edit_message_text(f"ðŸ“ {loc['name']} ({loc['lat']}, {loc['lng']})")
+
+    elif query.data == 'btn_progreso':
+        await query.edit_message_text("Generando panel de progreso...")
+        try:
+            from knowledge_base import kb_list, mental_models_stats
+            from library import get_library_stats
+            parts = [kb_list(mode='stats'), kb_list(mode='tags', limit=8), get_library_stats(), mental_models_stats(top_n=5)]
+            await send_long_message_raw(context, chat_id, chr(10).join(parts))
+        except Exception as e:
+            await context.bot.send_message(chat_id, "Error: " + str(e))
+
+    elif query.data == 'btn_sintesis':
+        await query.edit_message_text("Generando sintesis semanal...")
+        try:
+            from brain import generate_weekly_synthesis
+            synthesis = await generate_weekly_synthesis(chat_id)
+            await send_long_message_raw(context, chat_id, synthesis)
+        except Exception as e:
+            await context.bot.send_message(chat_id, "Error: " + str(e))
 
     elif query.data == 'btn_img':
         await query.edit_message_text("ðŸŽ¨ EscrÃ­beme quÃ© imagen quieres que genere.")
@@ -643,6 +688,28 @@ def main():
             )
     except Exception as e:
         logger.warning(f"Sintesis semanal no disponible: {e}")
+
+    # Registrar comandos en Telegram (aparecen al escribir /)
+    try:
+        commands = [
+            BotCommand("buenosdias",  "Boletin matutino: noticias + Midas + libro del dia"),
+            BotCommand("noticias",    "Noticias curadas en tiempo real (RSS + HN)"),
+            BotCommand("progreso",    "Panel: KB Obsidian + biblioteca + modelos mentales"),
+            BotCommand("sintesis",    "Sintesis semanal de aprendizajes e insights"),
+            BotCommand("profundo",    "Activar modo analisis profundo"),
+            BotCommand("normal",      "Volver al modo respuestas rapidas"),
+            BotCommand("memoria",     "Ver datos que Claudette recuerda de ti"),
+            BotCommand("clear",       "Borrar historial de conversacion"),
+            BotCommand("menu",        "Menu completo con todas las habilidades"),
+            BotCommand("start",       "Menu completo con todas las habilidades"),
+        ]
+        import asyncio
+        async def _set_cmds():
+            await app.bot.set_my_commands(commands)
+        asyncio.get_event_loop().run_until_complete(_set_cmds())
+        logger.info("Comandos Telegram registrados OK")
+    except Exception as e:
+        logger.warning("set_my_commands error: " + str(e))
 
     app.add_error_handler(error_handler)
     print("ðŸš€ Claudette 2.0 (Modular + YouTube + Google Services) ONLINE")
