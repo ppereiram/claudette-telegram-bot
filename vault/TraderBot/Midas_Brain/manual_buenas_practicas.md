@@ -167,6 +167,23 @@ Aplicar sobre DD intraday desde el high del día (no desde equity total).
 
 ---
 
+## NIVEL 4B — REGLA DE NO INTERVENCIÓN MANUAL
+
+**Origen:** 26/03/2026 — BBv5 Short +$3,022 → Pablo entró Long manual → -$897. Costo: -$633.
+
+| Situación | Regla |
+|---|---|
+| Trade activo en cualquier estrategia | Cero intervención. Manos fuera. |
+| Ganador grande corriendo (popcorn) | No cerrar manualmente — dejar el sistema operar |
+| Micro-rebote después de un Short | No es señal de Long — puede ser trampa |
+| Única excepción válida | Portfolio Stop Nivel 7 (pérdida día > $5,000) |
+
+**Por qué:** El miedo al "popcorn trade" (ver un ganador grande evaporarse) es la emoción más costosa del trading intraday. Genera exactamente lo que teme: cierra el ganador y abre un perdedor.
+
+**Costo documentado:** -$633 en una sola intervención (26/03/2026). En real money × 10 contratos = -$6,330.
+
+---
+
 ## NIVEL 5 — PATRONES POR ESTRATEGIA
 
 ### StatMeanCross_v1
@@ -247,7 +264,8 @@ Condiciones que activan pausa de TODO el portafolio:
 | 20/03 | -$X,XXX | StatMean+EMA Short simultáneos, bull market | F5 | Directional filter |
 | 24/03 | -$2,206 | PivotReverse Short en mercado alcista | F5 | tide_score direccional |
 | 25/03 | +$5,318 | DarvasBox+PivotReverse+StatMean alineados | — | Alineación = win |
-| 26/03 | -$2,263 | GAP 113pts, momentum strategies en gap direction | F1 | GAP FILTER |
+| 26/03 mañana | -$2,263 | GAP 113pts, momentum strategies en gap direction | F1 | GAP FILTER |
+| 26/03 tarde | **+$1,024** (final) | BBv5 Short capturó -381pts del día. Pablo intervino Long → -$633 innecesario | Nivel 4B | NO INTERVENCIÓN MANUAL |
 
 ---
 

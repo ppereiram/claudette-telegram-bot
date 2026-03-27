@@ -79,7 +79,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                 Name         = "DarvasBox_v1";
                 Calculate    = Calculate.OnBarClose;
                 EntriesPerDirection          = 1;
-                EntryHandling                = EntryHandling.AllEntries;
+                EntryHandling                = EntryHandling.UniqueEntries;
                 IsExitOnSessionCloseStrategy = true;
                 ExitOnSessionCloseSeconds    = 30;
 

@@ -285,6 +285,57 @@ Esto correría a las 9:25 AM ET (antes de apertura) y generaría `gap_day=True/F
 
 ---
 
+## LECCIÓN 08 — tarde 26/03/2026: BBv5 salva el día + costo de la intervención manual
+
+**P&L final 26/03: +$1,024.60** (de -$2,262 en la mañana a positivo al cierre)
+
+**Cronología tarde:**
+```
+13:35  BBv5 Short 23,961 → cierre 23,884  +$3,022 ✅  (caída 77 pts, 50 min)
+14:26  BBv5 Short 23,867 → cierre 23,883  -$710  ❌  (rebote técnico)
+14:51  Pablo → LONG 23,886 → cierre 23,865  -$897  ← intervención manual
+14:56  Short 23,865 → cierre 23,832  +$1,274 ✅
+15:06  Short 23,848 → cierre 23,832  +$598  ✅
+```
+
+NQ cerró en ~23,832. Caída total del día: 24,213 → 23,832 = **-381 puntos (-1.57%)**.
+Context market monitor del día anterior: 1D bear + breadth -3 + RSI 32 → la macro lo decía todo.
+
+Sin la intervención Long: **+$1,657** en lugar de +$1,024. Costo: **-$633**.
+
+---
+
+### LECCIÓN 08-E: BBv5 — El Héroe Silencioso del Portafolio ⚡
+
+**Lo que hizo bien:** Ignoró el caos de la mañana (gap, whipsaws, stops en 98s). Esperó. A las 13:35 el mercado tenía momentum bajista claro y NQ en caída libre → entró Short → capturó 77 puntos con 20 contratos → +$3,022 en 50 minutos.
+
+**Por qué el Filtro Accidental es edge:** La restricción de 1 trade/día la protegió de todo el ruido matutino. Mientras StatMean y EMATrend morían en segundos, BBv5 esperó pacientemente la señal real. El "bug" que nunca se corrige resultó ser el mejor filtro de volatilidad del portafolio — implementación involuntaria del Condition Map.
+
+**Regla Midas derivada:**
+> Estrategias con restricción natural de frecuencia (1 trade/día) son más robustas en días volátiles que estrategias de alta frecuencia. El Filtro Accidental de BBv5 = esperar hasta que el mercado muestre dirección real. No corregir nunca.
+
+---
+
+### LECCIÓN 08-F: La Intervención Manual — El Enemigo Dentro 🧠
+
+**Lo que pasó:** BBv5 cerró Short en 23,884 (+$3,022). Micro-rebote de 2 puntos a 23,886. Pablo entró Long. El mercado no rebotó — continuó a 23,865. Pérdida: -$897.
+
+**La psicología exacta:**
+1. Trade grande activo (+$3,022) → ansiedad de perderlo → urgencia de "asegurar"
+2. Micro-rebote de 2 puntos → cerebro lo lee como "confirmación de bounce"
+3. Miedo al "popcorn trade" → acción impulsiva → Long
+4. Resultado: creó exactamente lo que temía — cerró el ganador y entró en un perdedor
+
+**La ironía:** El miedo al popcorn trade generó un popcorn trade.
+
+**Regla Midas derivada — MANOS FUERA:**
+> Cuando BBv5 (o cualquier estrategia) tiene un trade activo: **cero intervención manual**.
+> El Filtro Accidental existe para eliminar exactamente esta tentación.
+> La única excepción: Portfolio Stop Nivel 7 (pérdida total día > $5,000).
+> **Costo documentado de ignorar esta regla: -$633 en un solo día.**
+
+---
+
 ## LECCIÓN 07 — 25/03/2026: El Día que Todo Encajó ✅
 **P&L del día: +$5,318.10** (mejor día desde el inicio del período actual)
 

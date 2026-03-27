@@ -435,6 +435,22 @@ if (contracts < 1) return; // umbral mínimo
     - Descorrelación esperada: alta — entrada basada en tiempo futuro, no en precio pasado
   - **Semana de evaluación**: Mayo (junto con S&D puro y HH/HL como estrategia)
 
+- **RQA Features — Recurrence Quantification Analysis (26/03/2026)**:
+  - **El concepto**: Analiza el espacio de fases de la serie de precios y extrae 3 métricas dinámicas que Choppiness Index no puede capturar: `recurrence_rate` (¿el mercado vuelve a estados similares?), `determinism` (¿hay estructura o ruido puro?) y `laminarity` (¿ranging o trending?). Librería: `pyrqa`.
+  - **Mapa directo a Midas**: `laminarity` alto → StatMean/DarvasBox ON | `laminarity` bajo → EMATrend/MomentumZ ON. `determinism` bajo → ConvictionScore=0, no operar. `recurrence_rate` bajo → régimen nuevo → sizing 50%.
+  - **Por qué es mejor que Choppiness Index**: CI mira solo ATR vs rango (1D). RQA mira el espacio de fases multidimensional — captura estructura de patrones que CI pierde. Son complementarios, no sustitutos.
+  - **Implementación**: `get_recurrence_features(price_window)` → 3 floats como features adicionales en `market_monitor_logger.py` + inputs directos para brain_v2 RF.
+  - **Nota técnica**: Usar `log(P_t/P_{t-1})` (log-returns) como input del RF en lugar de cambios absolutos — mejora estabilidad del modelo.
+  - **Semana de implementación**: Semana 4 Abril (junto con brain_v2 RF).
+
+- **MAE/MFE Analyzer — Stop/Target Empírico por Estrategia (26/03/2026)**:
+  - **El concepto** (inspirado en QuantZone, $346 — NO comprar): Maximum Adverse Excursion y Maximum Favorable Excursion por estrategia, calculados desde los CSV de NT8. El modelo: `Pwin = P(F ≥ MFE_target ∩ A ≤ MAE_stop)` — dado el stop X, ¿cuál es la probabilidad empírica de llegar al target Y?
+  - **Por qué es nuevo para Midas**: Hoy los stops son parámetros fijos del backtest. Con MAE/MFE real de paper trading, los stops se calibran con comportamiento VIVO, no histórico. Si StatMean tiene MAE mediano de 12 ticks → stop en 14 ticks = captura 85% de ganadores sin ser cortado prematuramente.
+  - **Caso de uso inmediato**: Días de GAP (26/03) la distribución MAE se infla 3x en momentum strategies → ajuste automático de stops o bloqueo de entry.
+  - **Implementación**: `mae_mfe_analyzer.py` — lee los CSV de NT8 (ya disponibles), calcula distribuciones por estrategia, genera `mae_mfe_profile_ESTRATEGIA.json`. NT8 ya exporta MAE/MFE en performance reports — costo = $0.
+  - **Output para brain_v2**: Pwin(stop, target) por estrategia = input directo para Kelly criterion mejorado (replace fixed f).
+  - **Semana de implementación**: Post-período de prueba (después de Semana 4 Abril). Necesita mínimo 30 días de trades reales para distribuciones estables.
+
 - **VoluTank Army → Zone Quality Score para S&D (20/03/2026)**:
   - **El concepto**: VoluTank Army (ninza.co) añade el ratio Buy/Sell DENTRO de cada zona de Supply/Demand. Una zona de demanda donde Buy volume > Sell volume = zona fuerte (alta probabilidad de rebote). Una zona de demanda donde Sell > Buy = zona débil (probable breakout a través de ella).
   - **Por qué mejora nuestro S&D existente**: El roadmap ya contempla S&D como Capa Midas y como estrategia futura. VoluTank agrega el criterio de CALIDAD de la zona, no solo su existencia.
