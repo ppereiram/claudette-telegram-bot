@@ -14,7 +14,20 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-VAULT_PATH = os.environ.get("OBSIDIAN_VAULT_PATH", "/opt/render/project/src/vault")
+def _find_vault_path():
+    """Busca el vault en múltiples ubicaciones posibles."""
+    candidates = [
+        os.environ.get("OBSIDIAN_VAULT_PATH", ""),
+        "/opt/render/project/src/vault",
+        os.path.join(os.path.dirname(__file__), "vault"),
+        "vault",
+    ]
+    for p in candidates:
+        if p and os.path.isdir(os.path.join(p, "TraderBot")):
+            return p
+    return candidates[1]  # fallback al default de Render
+
+VAULT_PATH = _find_vault_path()
 MARKET_LOGS_PATH = os.path.join(VAULT_PATH, "TraderBot", "Bot_Quant_IA", "market_logs")
 
 # Umbrales de alerta

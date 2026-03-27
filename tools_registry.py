@@ -221,7 +221,7 @@ def search_news(topics=None):
             pass
 
     if not all_news:
-        return "Sin noticias disponibles hoy (servicio temporalmente limitado)."
+        return "[NOTICIAS NO DISPONIBLES — los RSS fallaron hoy. No menciones noticias en el boletin, omite esa sección.]"
 
     return "\n\n".join(all_news)
 def extract_text_from_pdf(file_path):
