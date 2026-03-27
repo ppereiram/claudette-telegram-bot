@@ -1,4 +1,4 @@
-﻿"""
+"""
 Tools Registry para Claudette Bot.
 Define TODOS los schemas de herramientas y su ejecuciÃ³n.
 Portado completo desde bot.py monolÃ­tico.
@@ -793,6 +793,162 @@ def generate_spreadsheet(title, sheets_data):
 # SCHEMAS DE HERRAMIENTAS (para Anthropic API)
 # =====================================================
 
+
+# =====================================================
+# REDDIT SCRAPING (API publica sin auth)
+# =====================================================
+
+def search_reddit(query, subreddit=None, sort='relevance', time_filter='week', limit=5):
+    """Busca posts en Reddit usando la API publica JSON."""
+    try:
+        headers = {
+            'User-Agent': 'ClaudetteBot/1.0 (personal assistant bot)',
+            'Accept': 'application/json'
+        }
+        if subreddit:
+            url = f'https://www.reddit.com/r/{subreddit}/search.json'
+            params = {'q': query, 'sort': sort, 't': time_filter, 'limit': limit, 'restrict_sr': 1}
+        else:
+            url = 'https://www.reddit.com/search.json'
+            params = {'q': query, 'sort': sort, 't': time_filter, 'limit': limit}
+
+        resp = requests.get(url, headers=headers, params=params, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+
+        posts = data.get('data', {}).get('children', [])
+        if not posts:
+            return 'Sin resultados en Reddit para esa busqueda.'
+
+        results = []
+        for p in posts[:limit]:
+            post = p.get('data', {})
+            title = post.get('title', '')
+            score = post.get('score', 0)
+            comments = post.get('num_comments', 0)
+            sub = post.get('subreddit', '')
+            url_post = 'https://reddit.com' + post.get('permalink', '')
+            selftext = post.get('selftext', '')[:300]
+            item = f'\U0001f4cc **{title}**\n   r/{sub} - {score} pts - {comments} comentarios\n   {url_post}'
+            if selftext and selftext.strip():
+                item += f'\n   _{selftext.strip()}..._'
+            results.append(item)
+
+        return f'\U0001f534 Reddit - {len(results)} resultados para "{query}":\n\n' + '\n\n'.join(results)
+
+    except Exception as e:
+        logger.warning(f'Reddit search error: {e}')
+        return f'Error buscando en Reddit: {e}'
+
+
+# =====================================================
+# HACKER NEWS (API oficial Firebase)
+# =====================================================
+
+def fetch_hackernews_top(limit=10, min_points=50):
+    """Obtiene top stories de Hacker News con titulo, puntos y URL."""
+    try:
+        resp = requests.get(
+            'https://hacker-news.firebaseio.com/v0/topstories.json',
+            timeout=10
+        )
+        resp.raise_for_status()
+        story_ids = resp.json()[:50]
+
+        results = []
+        for story_id in story_ids:
+            if len(results) >= limit:
+                break
+            try:
+                item_resp = requests.get(
+                    f'https://hacker-news.firebaseio.com/v0/item/{story_id}.json',
+                    timeout=5
+                )
+                item = item_resp.json()
+                if not item or item.get('type') != 'story':
+                    continue
+                score = item.get('score', 0)
+                if score < min_points:
+                    continue
+                title = item.get('title', '')
+                url = item.get('url', f'https://news.ycombinator.com/item?id={story_id}')
+                comments = item.get('descendants', 0)
+                results.append(f'\U0001f536 **{title}**\n   {score} pts - {comments} comentarios\n   {url}')
+            except Exception:
+                continue
+
+        if not results:
+            return 'No hay stories en HN con suficientes puntos ahora.'
+
+        return f'\U0001f536 Hacker News - Top {len(results)} stories:\n\n' + '\n\n'.join(results)
+
+    except Exception as e:
+        logger.warning(f'HN fetch error: {e}')
+        return f'Error obteniendo HN: {e}'
+
+
+# =====================================================
+# ANALIZADOR DE CONTENIDO 8 MODOS
+# =====================================================
+
+ANALYZE_MODES_PROMPT = """Analiza en exactamente 8 modos. Directo, sin preambulos.
+
+**1. MODELOS MENTALES**
+Que marcos de pensamiento aplican (primeros principios, segundo orden, inversion, Occam, etc). Max 3 modelos aplicados al contenido especifico.
+
+**2. DETECTOR DE HUMO**
+Que no se esta diciendo. Que puede ser exagerado, falso o interesado. Que incentivos tiene quien lo publico. Sin piedad.
+
+**3. IDEAS DE NEGOCIO**
+Que oportunidades de negocio o arbitraje de informacion emergen. Al menos 2 ideas concretas y accionables.
+
+**4. ESTRUCTURA NARRATIVA**
+Como esta construido el argumento. Que tecnica persuasiva usa. Donde esta el giro o la tension.
+
+**5. PUNTOS CIEGOS**
+Que esta ignorando o dando por sentado. Que preguntas no se hace. Que perspectiva falta.
+
+**6. PLAN DE ACCION**
+Si Pablo quisiera actuar basandose en esto, que haria en los proximos 7 dias. 3 pasos concretos.
+
+**7. SUBTEXTO**
+Que se esta comunicando sin decirlo explicitamente. Tensiones, miedos, ambiciones no declaradas.
+
+**8. CONEXION FILOSOFICA**
+Conecta la idea central con un pensador o libro que Pablo conoce (Heidegger, Han, Fisher, Taleb, Jung, etc). Una conexion inesperada pero real."""
+
+
+def analyze_content_deep(content, title=''):
+    """
+    Analiza contenido con 8 modos simultaneos de pensamiento profundo.
+    Ideal para YouTube, articulos, Reddit, HN, tweets o cualquier texto.
+    """
+    import anthropic as _anthropic
+    from config import ANTHROPIC_API_KEY, DEFAULT_MODEL
+    _client = _anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+
+    if len(content) > 8000:
+        content = content[:8000] + '\n\n[... contenido truncado]'
+
+    title_line = f'Titulo: {title}\n' if title else ''
+    prompt = f'CONTENIDO A ANALIZAR:\n{title_line}{content}\n\n---\n{ANALYZE_MODES_PROMPT}'
+
+    try:
+        response = _client.messages.create(
+            model=DEFAULT_MODEL,
+            max_tokens=3000,
+            messages=[{'role': 'user', 'content': prompt}]
+        )
+        result = ''
+        for block in response.content:
+            if block.type == 'text':
+                result += block.text
+        return result if result else 'No se pudo generar el analisis.'
+    except Exception as e:
+        logger.error(f'analyze_content_deep error: {e}')
+        return f'Error en analisis profundo: {e}'
+
+
 TOOLS_SCHEMA = KB_TOOLS_SCHEMA + [
     {
         "name": "get_current_weather",
@@ -1128,6 +1284,44 @@ Soporta mÃºltiples hojas en un solo archivo. El Excel se genera con:
             "type": "object",
             "properties": {}
         }
+    },
+    {
+        "name": "search_reddit",
+        "description": "Busca posts en Reddit sobre cualquier tema. Util para saber debates actuales, noticias de nicho, opiniones sobre tecnologia, trading, filosofia, etc.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Termino de busqueda"},
+                "subreddit": {"type": "string", "description": "Subreddit especifico (opcional)"},
+                "sort": {"type": "string", "description": "Orden: relevance, new, top, hot"},
+                "time_filter": {"type": "string", "description": "Filtro: day, week, month, year, all"},
+                "limit": {"type": "integer", "description": "Cantidad de resultados (default: 5)"}
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "name": "fetch_hackernews_top",
+        "description": "Obtiene top stories actuales de Hacker News. Mejor fuente para noticias de tecnologia, startups, IA, ciencias y cultura tech.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "description": "Cantidad de stories (default: 10)"},
+                "min_points": {"type": "integer", "description": "Minimo de puntos (default: 50)"}
+            }
+        }
+    },
+    {
+        "name": "analyze_content_deep",
+        "description": "Analiza cualquier contenido con 8 modos simultaneos: modelos mentales, detector de humo, ideas de negocio, estructura narrativa, puntos ciegos, plan de accion, subtexto, conexion filosofica. Usar cuando Pablo diga analiza esto, 8 modos, analisis profundo, o mande contenido extenso.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "content": {"type": "string", "description": "Texto o contenido a analizar"},
+                "title": {"type": "string", "description": "Titulo del contenido (opcional)"}
+            },
+            "required": ["content"]
+        }
     }
 ]
 
@@ -1328,6 +1522,27 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
 
         elif tool_name == "library_stats":
             return get_library_stats()
+
+        elif tool_name == "search_reddit":
+            return search_reddit(
+                tool_input["query"],
+                subreddit=tool_input.get("subreddit"),
+                sort=tool_input.get("sort", "relevance"),
+                time_filter=tool_input.get("time_filter", "week"),
+                limit=tool_input.get("limit", 5)
+            )
+
+        elif tool_name == "fetch_hackernews_top":
+            return fetch_hackernews_top(
+                limit=tool_input.get("limit", 10),
+                min_points=tool_input.get("min_points", 50)
+            )
+
+        elif tool_name == "analyze_content_deep":
+            return analyze_content_deep(
+                tool_input["content"],
+                title=tool_input.get("title", "")
+            )
 
                 # Knowledge Base tools
         if tool_name.startswith('kb_'):
