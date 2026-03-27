@@ -171,7 +171,7 @@ def search_news(topics=None):
                     title = item.findtext("title", "").strip()
                     link = item.findtext("link", "").strip()
                     if title and link and len(title) > 10:
-                        cat_items.append(f"  - {title}")
+                        cat_items.append("  - " + title + " | " + link)
                         if len(cat_items) >= 2:
                             break
             except Exception:

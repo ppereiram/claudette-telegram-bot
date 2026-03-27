@@ -1,4 +1,4 @@
-﻿"""
+"""
 Brain de Claudette Bot.
 System prompt rico + loop de herramientas multi-ronda + safe history trimming.
 Portado completo desde bot.py monolÃ­tico.
@@ -429,11 +429,37 @@ async def generate_morning_summary(chat_id):
     except Exception as e:
         logger.warning(f"Morning tasks error: {e}")
 
-    # Noticias
+    # Noticias enriquecidas: RSS titulos + contenido real de top articulos + HN
     try:
-        news = search_news()
-        if news and len(news) > 100:
-            raw_data.append(f"\nNOTICIAS RECIENTES:\n{news}")
+        from tools_registry import fetch_url, fetch_hackernews_top
+        news_raw = search_news()
+        if news_raw and len(news_raw) > 100:
+            # Extraer URLs del output RSS para leer contenido real
+            urls_found = re.findall(r'URL: (https?://[^\s\n]+)', news_raw)
+            articles_content = []
+            for url in urls_found[:3]:  # Leer max 3 articulos para no demorar
+                try:
+                    art = fetch_url(url)
+                    if art and len(art) > 200:
+                        # Truncar a 800 chars por articulo para no explotar tokens
+                        articles_content.append(f"ARTICULO ({url}):\n{art[:800]}\n[...]")
+                except Exception:
+                    continue
+
+            # HN para perspectiva tech
+            hn_data = ""
+            try:
+                hn_data = fetch_hackernews_top(limit=5, min_points=100)
+            except Exception:
+                pass
+
+            news_block = f"TITULARES RSS:\n{news_raw}"
+            if articles_content:
+                news_block += "\n\nCONTENIDO DE ARTICULOS (para que no inventes - usa esto):\n" + "\n\n".join(articles_content)
+            if hn_data:
+                news_block += f"\n\nHACKER NEWS (perspectiva tech/IA):\n{hn_data}"
+
+            raw_data.append(f"\nNOTICIAS ENRIQUECIDAS:\n{news_block}")
         else:
             raw_data.append("\nNOTICIAS: No disponibles hoy (servicio temporalmente limitado). No inventes noticias.")
     except Exception as e:
@@ -507,7 +533,13 @@ Genera un resumen matutino siguiendo EXACTAMENTE esta estructura:
 4. **Midas Monitor** (SOLO si hay datos de MIDAS MONITOR):
    - Estado bot, PnL dia y semana, top 2 ganadoras y perdedoras, alerta si drawdown severo. Maximo 8 lineas.
 
-5. **3-4 noticias curadas** â€” SOLO geopolÃ­tica, economÃ­a/finanzas, filosofÃ­a, ciencia, tecnologÃ­a con impacto social, IA. EXCLUIR deportes, farÃ¡ndula, crÃ­menes, accidentes
+5. **3-4 noticias curadas** — SOLO geopolitica, economia/finanzas, filosofia, ciencia, tecnologia, IA.
+   EXCLUIR: deportes, farandula, crimenes, accidentes
+   Para cada noticia:
+   - **Titulo** + fuente (URL si la tienes en los datos)
+   - 2-3 oraciones de contexto real usando el CONTENIDO DE ARTICULOS disponible — no inventes
+   - Un angulo no obvio: que no dice la noticia, que implica, o perspectiva de HN/Reddit si hay
+
 
 5. **ðŸ“– RincÃ³n de la Biblioteca** â€” Esta es la secciÃ³n nueva y mÃ¡s importante. Con el LIBRO DEL DÃA:
    a) PresentÃ¡ el libro: tÃ­tulo, autor, una lÃ­nea sobre su tesis central
