@@ -1,4 +1,4 @@
-﻿"""
+"""
 Claudette Bot - Entry Point Modular.
 Todos los handlers: texto, voz, foto, ubicaciÃ³n, comandos, recordatorios.
 """
@@ -21,7 +21,7 @@ from config import (
     TELEGRAM_BOT_TOKEN, OPENAI_API_KEY, ELEVENLABS_API_KEY,
     ELEVENLABS_VOICE_ID, OWNER_CHAT_ID, DEFAULT_LOCATION, logger
 )
-from brain import process_chat, conversation_history, user_modes, build_system_prompt, generate_morning_summary
+from brain import process_chat, conversation_history, user_modes, build_system_prompt, generate_morning_summary, generate_weekly_synthesis
 from tools_registry import (
     user_locations, get_weather, search_news, search_web_google
 )
@@ -30,6 +30,13 @@ from memory_manager import get_all_facts, save_fact, get_fact, setup_database
 
 # --- Inicializar base de datos ---
 setup_database()
+
+# --- Inicializar tablas KB extra (document_links, mental_model_usage) ---
+try:
+    from knowledge_base import setup_kb_extra_tables
+    setup_kb_extra_tables()
+except Exception as _e:
+    pass
 
 # --- Clients opcionales ---
 openai_client = None
@@ -169,6 +176,25 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         summary = await generate_morning_summary(chat_id)
         await send_long_message(update, summary)
         return
+
+    # Detectar mencion de ubicacion (G - Geolocalizacion inteligente)
+    _loc_patterns = [
+        r"(?:estoy en|llegue a|voy a|viajando a|desde) ([A-Za-z][a-zA-Z ]{2,30})(?:[,.]|$)",
+    ]
+    for _pat in _loc_patterns:
+        _m = re.search(_pat, text, re.IGNORECASE)
+        if _m:
+            _city = _m.group(1).strip()
+            _stopwords = ["que", "un", "el", "la", "mi", "tu", "se", "te", "me", "lo"]
+            if not any(w == _city.lower() for w in _stopwords):
+                user_locations[chat_id] = {"lat": 0, "lng": 0, "name": _city}
+                try:
+                    from tools_registry import get_weather_by_city as _gwc
+                    _w = _gwc(_city)
+                    text += chr(10) + chr(10) + "[SISTEMA: Pablo menciono estar en " + _city + ". Clima: " + _w + "]"
+                except Exception:
+                    text += chr(10) + chr(10) + "[SISTEMA: Ubicacion actualizada a " + _city + ".]"
+            break
 
     # Detectar YouTube
     yt_transcript = get_youtube_transcript(text)
@@ -483,6 +509,18 @@ async def cmd_progreso(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_long_message(update, "\n".join(lines))
 
 
+@restricted
+async def cmd_sintesis(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Genera la sintesis semanal bajo demanda."""
+    await update.message.reply_text("Generando sintesis semanal...")
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+    try:
+        synthesis = await generate_weekly_synthesis(update.effective_chat.id)
+        await send_long_message(update, synthesis)
+    except Exception as e:
+        await update.message.reply_text(f"Error: {e}")
+
+
 # =====================================================
 # UTILIDADES
 # =====================================================
@@ -554,6 +592,7 @@ def main():
     app.add_handler(CommandHandler("noticias", cmd_noticias))
     app.add_handler(CommandHandler("memoria", cmd_memoria))
     app.add_handler(CommandHandler("progreso", cmd_progreso))
+    app.add_handler(CommandHandler("sintesis", cmd_sintesis))
 
     # Botones inline
     app.add_handler(CallbackQueryHandler(button_handler))
@@ -581,6 +620,29 @@ def main():
             logger.warning("âš ï¸ Recordatorios desactivados (falta OWNER_CHAT_ID o job-queue).")
     except Exception as e:
         logger.warning(f"âš ï¸ Recordatorios no disponibles: {e}")
+
+    # Sintesis semanal - domingos 6pm Costa Rica = lunes 00:00 UTC
+    try:
+        if OWNER_CHAT_ID and app.job_queue:
+            from datetime import time as dt_time
+
+            async def send_weekly_synthesis(context):
+                chat_id = int(OWNER_CHAT_ID)
+                try:
+                    synthesis = await generate_weekly_synthesis(chat_id)
+                    await send_long_message_raw(context, chat_id, synthesis)
+                    logger.info("Sintesis semanal enviada")
+                except Exception as e:
+                    logger.error(f"Sintesis semanal error: {e}")
+
+            app.job_queue.run_daily(
+                send_weekly_synthesis,
+                time=dt_time(hour=0, minute=0, second=0),
+                days=(0,),  # 0 = lunes (lunes 00:00 UTC = domingo 6pm CR)
+                name="weekly_synthesis"
+            )
+    except Exception as e:
+        logger.warning(f"Sintesis semanal no disponible: {e}")
 
     app.add_error_handler(error_handler)
     print("ðŸš€ Claudette 2.0 (Modular + YouTube + Google Services) ONLINE")

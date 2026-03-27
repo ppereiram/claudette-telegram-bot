@@ -97,6 +97,28 @@ def get_weather(lat, lon):
         return f"Error obteniendo clima: {e}"
 
 
+def get_weather_by_city(city_name: str) -> str:
+    """Obtener clima de OpenWeather por nombre de ciudad o pais."""
+    if not OPENWEATHER_API_KEY:
+        return "No tengo la API Key de OpenWeather."
+    try:
+        url = f"https://api.openweathermap.org/data/2.5/weather?q={city_name}&appid={OPENWEATHER_API_KEY}&units=metric&lang=es"
+        res = requests.get(url, timeout=10).json()
+        if res.get('cod') != 200:
+            return f"No encontre el clima para '{city_name}': {res.get('message')}"
+        desc = res['weather'][0]['description']
+        temp = res['main']['temp']
+        temp_min = res['main'].get('temp_min', temp)
+        temp_max = res['main'].get('temp_max', temp)
+        hum = res['main']['humidity']
+        city = res['name']
+        country = res.get('sys', {}).get('country', '')
+        wind = res.get('wind', {}).get('speed', 0)
+        return ("Clima en " + city + ", " + country + ": " + desc.capitalize() + chr(10) + "Temperatura: " + str(round(temp,1)) + "C (min " + str(round(temp_min)) + " / max " + str(round(temp_max)) + ")" + chr(10) + "Humedad: " + str(hum) + "% | Viento: " + str(wind) + " m/s")
+    except Exception as e:
+        return f"Error obteniendo clima: {e}"
+
+
 def search_web_google(query, max_results=5):
     """Busca en web con fallback DuckDuckGo."""
     if google_search_func:
@@ -1055,6 +1077,21 @@ TOOLS_SCHEMA = KB_TOOLS_SCHEMA + [
         }
     },
     {
+        "name": "get_weather_by_city",
+        "description": (
+            "Obtener el clima actual por nombre de ciudad. "
+            "USAR cuando Pablo mencione estar en un lugar ('estoy en Madrid', 'llegue a Tokyo') "
+            "o pida el clima de una ciudad sin GPS."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "city_name": {"type": "string", "description": "Nombre de la ciudad (ej: 'San Jose, Costa Rica', 'Madrid')"}
+            },
+            "required": ["city_name"]
+        }
+    },
+    {
         "name": "search_nearby_places",
         "description": "Buscar lugares cercanos (restaurantes, tiendas, etc).",
         "input_schema": {
@@ -1459,6 +1496,9 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
     try:
         if tool_name == "get_current_weather":
             return get_weather(tool_input['lat'], tool_input['lon'])
+
+        elif tool_name == "get_weather_by_city":
+            return get_weather_by_city(tool_input["city_name"])
 
         elif tool_name == "search_contact_and_call":
             query = tool_input['name_query']

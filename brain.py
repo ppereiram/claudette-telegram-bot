@@ -204,6 +204,29 @@ PREFERIR sobre kb_search o search_library por separado cuando:
 - La busqueda podria estar en el vault de Obsidian O en la biblioteca
 Retorna resultados de ambas fuentes en una sola respuesta.
 
+=== GRAFO DE CONOCIMIENTO (D) ===
+Usa 'kb_graph' para mostrar las conexiones entre notas del vault (via wikilinks de Obsidian).
+USAR cuando Pablo diga 'que notas se relacionan con X', 'muestra las conexiones de esta nota', 'como esta conectado X en el vault'.
+Retorna: notas que esta nota enlaza + notas que la enlazan.
+
+=== MODELOS MENTALES TRACKER (E) ===
+REGISTRA SILENCIOSAMENTE con 'track_mental_model' cada vez que apliques uno de los 216 modelos mentales.
+NO lo anuncias, simplemente lo llamas en segundo plano cuando uses un modelo.
+Ejemplos: si aplicas Navaja de Occam, llama track_mental_model(model_name='Navaja de Occam', context='...', project='General').
+Usa 'mental_models_stats' cuando Pablo pida ver que modelos usamos mas, su perfil de pensamiento, o en /progreso.
+
+=== GEOLOCALIZACIÓN INTELIGENTE (G) ===
+Cuando Pablo mencione estar en un lugar ('estoy en Madrid', 'llegue a Tokyo', 'voy a Guadalupe'):
+- El sistema ya detecta el texto y obtiene el clima automaticamente
+- Tu TAREA: usar esa info de ubicacion para personalizar la respuesta (clima, zona horaria, sugerencias locales)
+- Usa 'get_weather_by_city' para obtener clima de cualquier ciudad por nombre
+- Si Pablo pregunta el clima de una ciudad sin dar GPS, usa este tool
+
+=== SINTESIS SEMANAL (J) ===
+Cada domingo a las 6pm CR, Claudette envia automaticamente la sintesis semanal.
+Pablo tambien puede pedirla con /sintesis en cualquier momento.
+La sintesis integra: vault reciente, modelos mentales aplicados, contexto global, memoria persistente.
+
 === GENERACIÃ“N DE DOCUMENTOS ===
 Puedes generar documentos largos (.docx Word o .md Markdown) que se envÃ­an como archivo descargable.
 - Usa 'generate_document' cuando Pablo pida reportes, bitÃ¡coras, ensayos, compilaciones o cualquier texto extenso.
@@ -606,3 +629,97 @@ REGLAS:
         logger.error(f"Morning Claude error: {e}")
         return f"â˜€ï¸ Buenos dÃ­as, Pablo.\n{context_block}\n\nâ€” Claudette"
 
+
+
+# =====================================================
+# SINTESIS SEMANAL (J)
+# =====================================================
+
+async def generate_weekly_synthesis(chat_id: int) -> str:
+    """
+    Genera la sintesis semanal de aprendizajes, decisiones, modelos mentales
+    e insights. Se envia domingos a las 6pm CR o bajo demanda con /sintesis.
+    """
+    tz = pytz.timezone('America/Costa_Rica')
+    now = datetime.now(tz)
+
+    kb_recent = ""
+    mm_stats = ""
+    news_context = ""
+
+    try:
+        from knowledge_base import kb_list
+        kb_recent = kb_list(mode='recent', limit=8)
+    except Exception:
+        pass
+
+    try:
+        from knowledge_base import mental_models_stats
+        mm_stats = mental_models_stats(top_n=5)
+    except Exception:
+        pass
+
+    try:
+        from tools_registry import search_news
+        news_context = search_news()[:1200]
+    except Exception:
+        pass
+
+    all_facts = get_all_facts() or {}
+    memory_text = chr(10).join(
+        "- " + k + ": " + v for k, v in all_facts.items() if not k.startswith("System_")
+    )[:600]
+
+    synthesis_prompt = f"""Genera la SINTESIS SEMANAL de Pablo. Es momento de integrar la semana.
+
+DATOS DISPONIBLES:
+
+=== NOTAS RECIENTES EN EL VAULT ===
+{kb_recent or 'Sin actividad en el vault esta semana.'}
+
+=== MODELOS MENTALES APLICADOS ESTA SEMANA ===
+{mm_stats or 'Sin registros.'}
+
+=== NOTICIAS DEL MUNDO ===
+{news_context or 'Sin datos.'}
+
+=== MEMORIA PERSISTENTE ===
+{memory_text or 'Sin datos.'}
+
+Genera la sintesis en este formato:
+
+## Sintesis Semanal --- {now.strftime('%d/%m/%Y')}
+
+### Temas centrales de la semana
+[2-3 temas que dominaron la actividad de Pablo. Basa esto en los datos.]
+
+### Insights clave
+[Los 3 aprendizajes mas importantes que emergen de los datos.]
+
+### Conexiones no obvias
+[1-2 conexiones entre ideas de la semana que quizas no se vieron en el momento.]
+
+### Modelos mentales dominantes
+[Patrones de pensamiento aplicados. Si no hay registros, sugiere cuales dado el contexto.]
+
+### El mundo esta semana
+[1-2 tendencias globales relevantes para Pablo y sus proyectos.]
+
+### Pregunta para la proxima semana
+[UNA pregunta poderosa y personal que emerge de la sintesis.]
+
+REGLAS: basa todo en los datos, tono reflexivo y directo, si hay pocos datos dilo, la pregunta debe ser personal e incomoda."""
+
+    try:
+        system = build_system_prompt(chat_id)
+        response = client.messages.create(
+            model=DEFAULT_MODEL,
+            max_tokens=2000,
+            system=system,
+            messages=[{"role": "user", "content": synthesis_prompt}]
+        )
+        result = "".join(b.text for b in response.content if b.type == "text")
+        return result if result else "No se pudo generar la sintesis semanal."
+    except Exception as e:
+        logger.error(f"generate_weekly_synthesis error: {e}")
+        return f"Error generando sintesis: {e}"

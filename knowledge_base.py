@@ -382,6 +382,7 @@ class _ObsidianIngestor:
                     (doc["title"], doc["content"], doc["tags"], doc["metadata"],
                      doc["word_count"], doc["file_modified_at"], existing["id"])
                 )
+                self._upsert_links(conn, doc)
                 return "updated"
             return "skipped"
         else:
@@ -391,7 +392,36 @@ class _ObsidianIngestor:
                 (doc["filepath"], doc["title"], doc["content"], doc["tags"],
                  doc["metadata"], doc["word_count"], doc["file_modified_at"])
             )
+            self._upsert_links(conn, doc)
             return "inserted"
+
+    def _upsert_links(self, conn, doc: Dict):
+        """Actualiza document_links para este documento."""
+        try:
+            cur = conn.cursor()
+            # Extraer wikilinks del contenido original
+            links = self._links(doc["content"])
+            if not links:
+                return
+            # Borrar links previos de este source
+            cur.execute("DELETE FROM document_links WHERE source_filepath = %s", (doc["filepath"],))
+            for target_title in set(links):
+                # Intentar resolver el filepath del target
+                cur.execute(
+                    "SELECT filepath FROM documents WHERE title ILIKE %s AND is_active = TRUE LIMIT 1",
+                    (target_title,)
+                )
+                row = cur.fetchone()
+                target_fp = row["filepath"] if row else None
+                cur.execute(
+                    """INSERT INTO document_links (source_filepath, target_title, target_filepath)
+                       VALUES (%s, %s, %s)
+                       ON CONFLICT (source_filepath, target_title) DO UPDATE
+                       SET target_filepath = EXCLUDED.target_filepath""",
+                    (doc["filepath"], target_title, target_fp)
+                )
+        except Exception as e:
+            logger.warning(f"_upsert_links warning: {e}")
 
     def run(self, cleanup: bool = False) -> Dict:
         if not self.vault.exists():
@@ -467,6 +497,194 @@ def kb_ingest(vault_path: Optional[str] = None, cleanup: bool = False) -> str:
     except Exception as e:
         logger.error(f"kb_ingest error: {e}")
         return f"❌ Error durante ingestión: {e}"
+
+
+# ──────────────────────────────────────────────
+# SETUP TABLAS EXTRA (D + E)
+# ──────────────────────────────────────────────
+
+def setup_kb_extra_tables():
+    """Crea tablas document_links y mental_model_usage si no existen."""
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS document_links (
+                id SERIAL PRIMARY KEY,
+                source_filepath TEXT NOT NULL,
+                target_title TEXT NOT NULL,
+                target_filepath TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(source_filepath, target_title)
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_doclinks_source ON document_links (source_filepath)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_doclinks_target ON document_links (target_filepath)")
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS mental_model_usage (
+                id SERIAL PRIMARY KEY,
+                model_name TEXT NOT NULL,
+                context TEXT,
+                project TEXT DEFAULT 'General',
+                used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_mm_name ON mental_model_usage (LOWER(model_name))")
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        logger.info("Tablas document_links y mental_model_usage verificadas/creadas")
+        return True
+    except Exception as e:
+        logger.error(f"setup_kb_extra_tables error: {e}")
+        return False
+
+
+# ──────────────────────────────────────────────
+# TOOL D: kb_graph
+# ──────────────────────────────────────────────
+
+def kb_graph(filepath: str) -> str:
+    """
+    Muestra el grafo de conexiones de un documento del vault.
+    Retorna documentos que enlaza (salientes) y documentos que lo enlazan (entrantes).
+
+    Args:
+        filepath: Ruta relativa del documento (como aparece en kb_search)
+    """
+    if not filepath or not filepath.strip():
+        return "❌ Proporciona el filepath del documento."
+
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+
+        # Links salientes: este doc enlaza a otros
+        cur.execute(
+            """
+            SELECT dl.target_title, dl.target_filepath, d.title AS resolved_title
+            FROM document_links dl
+            LEFT JOIN documents d ON d.filepath = dl.target_filepath
+            WHERE dl.source_filepath = %s
+            ORDER BY dl.target_title
+            """,
+            (filepath.strip(),)
+        )
+        outgoing = cur.fetchall()
+
+        # Links entrantes: otros docs enlazan a este
+        cur.execute(
+            """
+            SELECT dl.source_filepath, d.title AS src_title
+            FROM document_links dl
+            LEFT JOIN documents d ON d.filepath = dl.source_filepath
+            WHERE dl.target_filepath = %s
+            ORDER BY dl.source_filepath
+            """,
+            (filepath.strip(),)
+        )
+        incoming = cur.fetchall()
+
+        conn.close()
+
+        out = [f"🕸️ *Grafo:* `{filepath}`\n"]
+
+        if outgoing:
+            out.append(f"*→ Enlaza a ({len(outgoing)}):*")
+            for r in outgoing:
+                resolved = r["resolved_title"] or r["target_filepath"] or r["target_title"]
+                out.append(f"  • [[{r['target_title']}]] → _{resolved}_")
+        else:
+            out.append("*→ Sin enlaces salientes*")
+
+        if incoming:
+            out.append(f"\n*← Referenciado por ({len(incoming)}):*")
+            for r in incoming:
+                src_title = r["src_title"] or r["source_filepath"]
+                out.append(f"  • `{r['source_filepath']}` — _{src_title}_")
+        else:
+            out.append("\n*← Sin referencias entrantes*")
+
+        return "\n".join(out)
+
+    except Exception as e:
+        logger.error(f"kb_graph error: {e}")
+        return f"❌ Error en grafo: {e}"
+
+
+# ──────────────────────────────────────────────
+# TOOL E: track_mental_model + mental_models_stats
+# ──────────────────────────────────────────────
+
+def track_mental_model(model_name: str, context: str = "", project: str = "General") -> str:
+    """
+    Registra que se aplicó un modelo mental en la conversación actual.
+    Llamar silenciosamente cuando Claudette aplique uno de los 216 modelos mentales.
+    """
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO mental_model_usage (model_name, context, project) VALUES (%s, %s, %s)",
+            (model_name.strip(), (context or "")[:500], project or "General")
+        )
+        conn.commit()
+        conn.close()
+        return f"✓ Modelo mental registrado: {model_name}"
+    except Exception as e:
+        logger.error(f"track_mental_model error: {e}")
+        return f"Error registrando: {e}"
+
+
+def mental_models_stats(top_n: int = 10) -> str:
+    """
+    Estadísticas de los modelos mentales más usados por Claudette con Pablo.
+
+    Args:
+        top_n: Cuántos modelos mostrar (default: 10)
+    """
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+
+        cur.execute("SELECT COUNT(*) AS total FROM mental_model_usage")
+        total = cur.fetchone()["total"]
+
+        cur.execute(
+            """
+            SELECT model_name, COUNT(*) AS count,
+                   MAX(used_at) AS last_used,
+                   array_agg(DISTINCT project ORDER BY project) AS projects
+            FROM mental_model_usage
+            GROUP BY model_name
+            ORDER BY count DESC
+            LIMIT %s
+            """,
+            (top_n,)
+        )
+        rows = cur.fetchall()
+        conn.close()
+
+        if not rows:
+            return "🧩 Sin modelos mentales registrados aún. Claudette los registrará al aplicarlos."
+
+        out = [f"🧩 *Modelos Mentales más aplicados* (total: {total} usos)\n"]
+        for i, r in enumerate(rows, 1):
+            last = r["last_used"].strftime("%d/%m/%Y") if r["last_used"] else "N/A"
+            projects = ", ".join(r["projects"] or [])
+            out.append(
+                f"  *{i}. {r['model_name']}* — {r['count']}x\n"
+                f"     Último uso: {last} · Proyectos: _{projects}_"
+            )
+
+        return "\n".join(out)
+
+    except Exception as e:
+        logger.error(f"mental_models_stats error: {e}")
+        return f"❌ Error: {e}"
 
 
 # ──────────────────────────────────────────────
@@ -728,6 +946,53 @@ KB_TOOLS_SCHEMA = [
         }
     },
     {
+        "name": "kb_graph",
+        "description": (
+            "Muestra el grafo de conexiones de un documento del vault: a qué otros documentos enlaza "
+            "y qué documentos lo enlazan a él (via [[wikilinks]] de Obsidian). "
+            "Usar cuando Pablo quiera explorar conexiones entre notas, o diga 'qué notas se relacionan con X'."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Ruta relativa del doc (como aparece en kb_search)"}
+            },
+            "required": ["filepath"]
+        }
+    },
+    {
+        "name": "track_mental_model",
+        "description": (
+            "Registra silenciosamente que se aplicó un modelo mental en la conversación actual. "
+            "LLAMAR AUTOMÁTICAMENTE y sin anunciarlo cuando Claudette aplique uno de los 216 modelos mentales "
+            "de su sistema (Navaja de Occam, Ley de Goodhart, Segunda Orden, etc.). "
+            "Esto construye estadísticas de qué modelos usa Pablo más."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "model_name": {"type": "string", "description": "Nombre exacto del modelo mental aplicado"},
+                "context": {"type": "string", "description": "Breve descripción de cómo se aplicó (1 oración)"},
+                "project": {"type": "string", "description": "Proyecto o tema: Midas, Arepartir, General, etc.", "default": "General"}
+            },
+            "required": ["model_name"]
+        }
+    },
+    {
+        "name": "mental_models_stats",
+        "description": (
+            "Muestra estadísticas de los modelos mentales más usados por Claudette con Pablo. "
+            "Usar cuando Pablo pida '/progreso', 'qué modelos usamos más', o quiera ver su perfil de pensamiento."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "top_n": {"type": "integer", "description": "Cuántos modelos mostrar (default: 10)", "default": 10}
+            },
+            "required": []
+        }
+    },
+    {
         "name": "kb_save_insight",
         "description": (
             "Guarda un aprendizaje, decisión importante, insight o contexto de proyecto "
@@ -779,6 +1044,12 @@ async def execute_kb_tool(name: str, args: dict) -> str:
         return kb_read(args.get("filepath", ""), args.get("max_chars", 3000))
     elif name == "kb_ingest":
         return kb_ingest(args.get("vault_path"), args.get("cleanup", False))
+    elif name == "kb_graph":
+        return kb_graph(args.get("filepath", ""))
+    elif name == "track_mental_model":
+        return track_mental_model(args.get("model_name", ""), args.get("context", ""), args.get("project", "General"))
+    elif name == "mental_models_stats":
+        return mental_models_stats(args.get("top_n", 10))
     elif name == "kb_save_insight":
         return kb_save_insight(
             args.get("category", "decision"),
