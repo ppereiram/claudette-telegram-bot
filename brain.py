@@ -144,7 +144,7 @@ def build_system_prompt(chat_id):
     current_mode = user_modes.get(chat_id, "normal")
     mode_instruction = "MODO: NORMAL ⚡. Sé breve."
     if current_mode == "profundo":
-        mode_instruction = "MODO: PROFUNDO ðŸ§˜â€â™€️. Analiza detalladamente."
+        mode_instruction = "MODO: PROFUNDO 🧘â€♀️. Analiza detalladamente."
 
     # Mini-calendario de referencia (próximos 7 días)
     from datetime import timedelta

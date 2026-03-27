@@ -1,7 +1,7 @@
 """
 Tools Registry para Claudette Bot.
-Define TODOS los schemas de herramientas y su ejecuciÃ³n.
-Portado completo desde bot.py monolÃ­tico.
+Define TODOS los schemas de herramientas y su ejecución.
+Portado completo desde bot.py monolítico.
 """
 
 import os
@@ -32,7 +32,7 @@ try:
 except ImportError:
     pypdf = None
 
-# --- Import para generaciÃ³n de documentos ---
+# --- Import para generación de documentos ---
 try:
     from docx import Document as DocxDocument
     from docx.shared import Pt, Inches, Cm, RGBColor
@@ -54,7 +54,7 @@ try:
 except ImportError:
     ebooklib = None
 
-# --- BÃºsqueda web ---
+# --- Búsqueda web ---
 try:
     from googlesearch import search as google_search_func
 except ImportError:
@@ -73,7 +73,7 @@ def clean_date_iso(date_str, is_end=False):
     # Si tiene T pero no tiene timezone, agregar -06:00
     if '+' not in date_str and '-06:00' not in date_str and not date_str.endswith('Z'):
         return f"{date_str}-06:00"
-    # Si viene con Z (UTC), reemplazar por -06:00 â€” Claude a veces manda UTC
+    # Si viene con Z (UTC), reemplazar por -06:00 — Claude a veces manda UTC
     if date_str.endswith('Z'):
         return date_str[:-1] + "-06:00"
     return date_str
@@ -82,7 +82,7 @@ def clean_date_iso(date_str, is_end=False):
 def get_weather(lat, lon):
     """Obtener clima de OpenWeather."""
     if not OPENWEATHER_API_KEY:
-        return "âš ï¸ No tengo configurada la API Key de OpenWeather."
+        return "⚠️ No tengo configurada la API Key de OpenWeather."
     try:
         url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={OPENWEATHER_API_KEY}&units=metric&lang=es"
         res = requests.get(url, timeout=10).json()
@@ -92,7 +92,7 @@ def get_weather(lat, lon):
         temp = res['main']['temp']
         hum = res['main']['humidity']
         city = res['name']
-        return f"ðŸŒ¦ï¸ El clima en {city}: {desc.capitalize()}, {temp}Â°C, Humedad {hum}%."
+        return f"ðŸŒ¦️ El clima en {city}: {desc.capitalize()}, {temp}°C, Humedad {hum}%."
     except Exception as e:
         return f"Error obteniendo clima: {e}"
 
@@ -129,7 +129,7 @@ def search_web_google(query, max_results=5):
             if results:
                 return "\n".join(results)
         except Exception as e:
-            logger.warning(f"Google Search fallÃ³: {e}, usando DuckDuckGo...")
+            logger.warning(f"Google Search falló: {e}, usando DuckDuckGo...")
 
     try:
         from duckduckgo_search import DDGS
@@ -140,7 +140,7 @@ def search_web_google(query, max_results=5):
         if results:
             return "\n".join(results)
     except Exception as e:
-        logger.error(f"DuckDuckGo tambiÃ©n fallÃ³: {e}")
+        logger.error(f"DuckDuckGo también falló: {e}")
 
     return "No se encontraron resultados."
 
@@ -227,7 +227,7 @@ def search_news(topics=None):
 def extract_text_from_pdf(file_path):
     """Extrae texto de PDF."""
     if not pypdf:
-        return "Error: pypdf no estÃ¡ instalado."
+        return "Error: pypdf no está instalado."
     text = ""
     try:
         reader = pypdf.PdfReader(file_path)
@@ -242,7 +242,7 @@ def extract_text_from_pdf(file_path):
 def extract_text_from_epub(file_path):
     """Extrae texto de EPUB."""
     if not ebooklib:
-        return "Error: ebooklib no estÃ¡ instalado."
+        return "Error: ebooklib no está instalado."
     text = ""
     try:
         book = epub.read_epub(file_path, options={'ignore_ncx': True})
@@ -258,7 +258,7 @@ def extract_text_from_epub(file_path):
 
 
 def read_book_from_drive(query):
-    """Busca y lee documentos desde Drive â€” soporta Google Docs, PDF, EPUB, TXT, MD."""
+    """Busca y lee documentos desde Drive — soporta Google Docs, PDF, EPUB, TXT, MD."""
     service = google_drive.get_drive_service()
     if not service:
         return "Error conectando a Drive."
@@ -270,7 +270,7 @@ def read_book_from_drive(query):
         ).execute()
         items = results.get('files', [])
         if not items:
-            return "No hallÃ© el archivo."
+            return "No hallé el archivo."
 
         file_id = items[0]['id']
         file_name = items[0]['name']
@@ -278,7 +278,7 @@ def read_book_from_drive(query):
 
         content = ""
 
-        # Google Docs â†’ exportar como texto plano
+        # Google Docs → exportar como texto plano
         if mime_type == 'application/vnd.google-apps.document':
             export = service.files().export(fileId=file_id, mimeType='text/plain').execute()
             content = export.decode('utf-8') if isinstance(export, bytes) else str(export)
@@ -301,15 +301,15 @@ def read_book_from_drive(query):
                 with open(temp_path, 'r', encoding='utf-8', errors='ignore') as f:
                     content = f.read()
             else:
-                content = f"Formato '{file_name.split('.')[-1]}' no soportado. VÃ¡lidos: Google Docs, PDF, EPUB, TXT, MD."
+                content = f"Formato '{file_name.split('.')[-1]}' no soportado. Válidos: Google Docs, PDF, EPUB, TXT, MD."
 
             os.unlink(temp_path)
 
         if not content.strip():
-            return f"ðŸ“– EncontrÃ© '{file_name}' pero no pude extraer texto."
+            return f"📖 Encontré '{file_name}' pero no pude extraer texto."
         if len(content) > 8000:
-            return f"ðŸ“– {file_name} (Primeras pÃ¡ginas):\n{content[:8000]}\n\n[... Truncado. PÃ­deme una secciÃ³n especÃ­fica.]"
-        return f"ðŸ“– {file_name}:\n{content}"
+            return f"📖 {file_name} (Primeras páginas):\n{content[:8000]}\n\n[... Truncado. Pídeme una sección específica.]"
+        return f"📖 {file_name}:\n{content}"
 
     except Exception as e:
         return f"Error leyendo libro: {e}"
@@ -323,7 +323,7 @@ def read_local_file(filename):
     ]
 
     if filename not in ALLOWED_FILES:
-        return f"Archivo '{filename}' no permitido. Archivos vÃ¡lidos: {', '.join(ALLOWED_FILES)}"
+        return f"Archivo '{filename}' no permitido. Archivos válidos: {', '.join(ALLOWED_FILES)}"
 
     # Buscar en varias rutas posibles
     possible_paths = [
@@ -339,8 +339,8 @@ def read_local_file(filename):
                 with open(path, 'r', encoding='utf-8') as f:
                     content = f.read()
                 if len(content) > 15000:
-                    return f"ðŸ“– {filename} (truncado a 15000 chars):\n{content[:15000]}\n\n[... Truncado. Pide una secciÃ³n especÃ­fica.]"
-                return f"ðŸ“– {filename}:\n{content}"
+                    return f"📖 {filename} (truncado a 15000 chars):\n{content[:15000]}\n\n[... Truncado. Pide una sección específica.]"
+                return f"📖 {filename}:\n{content}"
             except Exception as e:
                 return f"Error leyendo {filename}: {e}"
 
@@ -377,7 +377,7 @@ def _fetch_with_firecrawl(url):
 
 
 def fetch_url(url):
-    """Lee el contenido de una pÃ¡gina web, tweet, artÃ­culo, etc."""
+    """Lee el contenido de una página web, tweet, artículo, etc."""
     import re as re_mod
     try:
         headers = {
@@ -479,7 +479,7 @@ def fetch_url(url):
 
         html = resp.text
 
-        # Extraer tÃ­tulo
+        # Extraer título
         title_match = re_mod.search(r'<title[^>]*>(.*?)</title>', html, re_mod.IGNORECASE | re_mod.DOTALL)
         title = title_match.group(1).strip() if title_match else ''
 
@@ -493,7 +493,7 @@ def fetch_url(url):
             if desc_match:
                 description = desc_match.group(1).strip()
 
-        # Limpiar HTML â†’ texto
+        # Limpiar HTML → texto
         text = html
         text = re_mod.sub(r'<script[^>]*>.*?</script>', '', text, flags=re_mod.DOTALL | re_mod.IGNORECASE)
         text = re_mod.sub(r'<style[^>]*>.*?</style>', '', text, flags=re_mod.DOTALL | re_mod.IGNORECASE)
@@ -550,12 +550,12 @@ def fetch_url(url):
 def generate_document(title, content, doc_format="docx"):
     """
     Genera un documento descargable (.docx o .md) a partir del contenido.
-    Parsea formato Markdown bÃ¡sico para crear documentos Word con estilo.
+    Parsea formato Markdown básico para crear documentos Word con estilo.
     Retorna la ruta del archivo temporal generado.
     """
     import re as re_mod
 
-    # Sanitizar tÃ­tulo para nombre de archivo
+    # Sanitizar título para nombre de archivo
     safe_title = re_mod.sub(r'[^\w\s-]', '', title).strip().replace(' ', '_')[:50]
     timestamp = datetime.now().strftime("%Y%m%d")
 
@@ -570,7 +570,7 @@ def generate_document(title, content, doc_format="docx"):
 
     # --- DOCX ---
     if not DocxDocument:
-        # Fallback a markdown si python-docx no estÃ¡
+        # Fallback a markdown si python-docx no está
         logger.warning("python-docx no instalado, generando .md")
         return generate_document(title, content, "md")
 
@@ -586,36 +586,36 @@ def generate_document(title, content, doc_format="docx"):
     font.size = Pt(11)
     font.color.rgb = RGBColor(30, 30, 30)
 
-    # MÃ¡rgenes
+    # Márgenes
     for section in doc.sections:
         section.top_margin = Cm(2.5)
         section.bottom_margin = Cm(2.5)
         section.left_margin = Cm(3)
         section.right_margin = Cm(3)
 
-    # TÃ­tulo principal
+    # Título principal
     title_para = doc.add_heading(title, level=0)
     title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    # SubtÃ­tulo con fecha y autor
+    # Subtítulo con fecha y autor
     date_str = datetime.now().strftime("%d de %B, %Y")
     subtitle = doc.add_paragraph()
     subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = subtitle.add_run(f"Pablo Pereiram â€” {date_str}")
+    run = subtitle.add_run(f"Pablo Pereiram — {date_str}")
     run.font.size = Pt(10)
     run.font.color.rgb = RGBColor(120, 120, 120)
     run.font.italic = True
 
     doc.add_paragraph("")  # Espacio
 
-    # --- Parsear contenido Markdown â†’ DOCX ---
+    # --- Parsear contenido Markdown → DOCX ---
     lines = content.split('\n')
     i = 0
     while i < len(lines):
         line = lines[i]
         stripped = line.strip()
 
-        # LÃ­nea vacÃ­a
+        # Línea vacía
         if not stripped:
             i += 1
             continue
@@ -635,7 +635,7 @@ def generate_document(title, content, doc_format="docx"):
             p = doc.add_paragraph()
             p.add_run('â”€' * 50).font.color.rgb = RGBColor(180, 180, 180)
 
-        # Listas con viÃ±etas
+        # Listas con viñetas
         elif stripped.startswith(('- ', 'â€¢ ', '* ')):
             text = stripped[2:]
             p = doc.add_paragraph(style='List Bullet')
@@ -656,9 +656,9 @@ def generate_document(title, content, doc_format="docx"):
             run.font.italic = True
             run.font.color.rgb = RGBColor(100, 100, 100)
 
-        # PÃ¡rrafos normales
+        # Párrafos normales
         else:
-            # Acumular lÃ­neas consecutivas como un solo pÃ¡rrafo
+            # Acumular líneas consecutivas como un solo párrafo
             para_lines = [stripped]
             while i + 1 < len(lines):
                 next_line = lines[i + 1].strip()
@@ -680,10 +680,10 @@ def generate_document(title, content, doc_format="docx"):
 
 
 def _add_formatted_text(paragraph, text):
-    """Agrega texto con formato inline (bold, italic) a un pÃ¡rrafo docx."""
+    """Agrega texto con formato inline (bold, italic) a un párrafo docx."""
     import re as re_mod
 
-    # PatrÃ³n unificado: ***bold+italic***, **bold**, *italic*
+    # Patrón unificado: ***bold+italic***, **bold**, *italic*
     pattern = re_mod.compile(r'\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*(.+?)\*')
 
     last_end = 0
@@ -706,7 +706,7 @@ def _add_formatted_text(paragraph, text):
 
         last_end = match.end()
 
-    # Texto restante despuÃ©s del Ãºltimo match
+    # Texto restante después del último match
     if last_end < len(text):
         paragraph.add_run(text[last_end:])
 
@@ -717,7 +717,7 @@ def _add_formatted_text(paragraph, text):
 
 def generate_spreadsheet(title, sheets_data):
     """
-    Genera un archivo Excel (.xlsx) con mÃºltiples hojas.
+    Genera un archivo Excel (.xlsx) con múltiples hojas.
     
     sheets_data: lista de dicts con:
       - sheet_name: nombre de la hoja
@@ -729,7 +729,7 @@ def generate_spreadsheet(title, sheets_data):
     import re as re_mod
 
     if not openpyxl:
-        raise Exception("openpyxl no estÃ¡ instalado")
+        raise Exception("openpyxl no está instalado")
 
     safe_title = re_mod.sub(r'[^\w\s-]', '', title).strip().replace(' ', '_')[:50]
     timestamp = datetime.now().strftime("%Y%m%d")
@@ -773,7 +773,7 @@ def generate_spreadsheet(title, sheets_data):
         for row_idx, row_data in enumerate(rows, 2):
             is_alt = (row_idx % 2 == 0)
             for col_idx, value in enumerate(row_data, 1):
-                # Intentar convertir nÃºmeros
+                # Intentar convertir números
                 try:
                     if isinstance(value, str):
                         if '.' in value or ',' in value:
@@ -1097,7 +1097,7 @@ TOOLS_SCHEMA = KB_TOOLS_SCHEMA + [
         "input_schema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "QuÃ© buscar (ej: pizza, veterinaria)"}
+                "query": {"type": "string", "description": "Qué buscar (ej: pizza, veterinaria)"}
             },
             "required": ["query"]
         }
@@ -1113,7 +1113,7 @@ TOOLS_SCHEMA = KB_TOOLS_SCHEMA + [
     },
     {
         "name": "read_book_from_drive",
-        "description": "Buscar y leer documentos desde Google Drive. Soporta: Google Docs (mÃ¡s liviano), PDF, EPUB, TXT, MD. Usa para leer escritos de Pablo, libros, el INDICE_BIBLIOTECA, o cualquier documento en Drive.",
+        "description": "Buscar y leer documentos desde Google Drive. Soporta: Google Docs (más liviano), PDF, EPUB, TXT, MD. Usa para leer escritos de Pablo, libros, el INDICE_BIBLIOTECA, o cualquier documento en Drive.",
         "input_schema": {
             "type": "object",
             "properties": {"query": {"type": "string", "description": "Nombre o parte del nombre del libro/archivo"}},
@@ -1126,8 +1126,8 @@ TOOLS_SCHEMA = KB_TOOLS_SCHEMA + [
         "input_schema": {
             "type": "object",
             "properties": {
-                "category": {"type": "string", "description": "CategorÃ­a: Familia, Ubicacion, Preferencia, Trabajo, Personal, Fecha, etc."},
-                "key": {"type": "string", "description": "QuÃ© es (ej: 'mamÃ¡ vive en', 'color favorito')"},
+                "category": {"type": "string", "description": "Categoría: Familia, Ubicacion, Preferencia, Trabajo, Personal, Fecha, etc."},
+                "key": {"type": "string", "description": "Qué es (ej: 'mamá vive en', 'color favorito')"},
                 "value": {"type": "string", "description": "El valor a recordar"}
             },
             "required": ["category", "key", "value"]
@@ -1144,7 +1144,7 @@ TOOLS_SCHEMA = KB_TOOLS_SCHEMA + [
     },
     {
         "name": "search_news",
-        "description": "Buscar noticias recientes. Sin temas busca AI, geopolÃ­tica y mercados. Con topics personaliza.",
+        "description": "Buscar noticias recientes. Sin temas busca AI, geopolítica y mercados. Con topics personaliza.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1214,7 +1214,7 @@ TOOLS_SCHEMA = KB_TOOLS_SCHEMA + [
     },
     {
         "name": "get_email",
-        "description": "Leer el contenido completo de un email especÃ­fico por su ID (obtenido de search_emails).",
+        "description": "Leer el contenido completo de un email específico por su ID (obtenido de search_emails).",
         "input_schema": {
             "type": "object",
             "properties": {"email_id": {"type": "string", "description": "ID del email"}},
@@ -1237,16 +1237,16 @@ TOOLS_SCHEMA = KB_TOOLS_SCHEMA + [
     },
     {
         "name": "generate_image",
-        "description": "Generar una imagen usando AI (DALL-E 3) basada en una descripciÃ³n.",
+        "description": "Generar una imagen usando AI (DALL-E 3) basada en una descripción.",
         "input_schema": {
             "type": "object",
-            "properties": {"prompt": {"type": "string", "description": "DescripciÃ³n visual detallada"}},
+            "properties": {"prompt": {"type": "string", "description": "Descripción visual detallada"}},
             "required": ["prompt"]
         }
     },
     {
         "name": "read_local_file",
-        "description": "Leer archivos del sistema de modelos mentales. Archivos disponibles: MODELS_DEEP.md (176 modelos adicionales por dominio), FRAMEWORK.md (metodologÃ­a paso-a-paso), ANTIPATTERNS.md (cuÃ¡ndo NO usar modelos), TEMPLATES.md (plantillas ejecutables para decisiones, negocios, riesgo, Ã©tica, innovaciÃ³n). USAR cuando anÃ¡lisis profundo requiere mÃ¡s de los 40 modelos core.",
+        "description": "Leer archivos del sistema de modelos mentales. Archivos disponibles: MODELS_DEEP.md (176 modelos adicionales por dominio), FRAMEWORK.md (metodología paso-a-paso), ANTIPATTERNS.md (cuándo NO usar modelos), TEMPLATES.md (plantillas ejecutables para decisiones, negocios, riesgo, ética, innovación). USAR cuando análisis profundo requiere más de los 40 modelos core.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1261,7 +1261,7 @@ TOOLS_SCHEMA = KB_TOOLS_SCHEMA + [
     },
     {
         "name": "fetch_url",
-        "description": "Lee el contenido de una URL/link que Pablo comparta. Funciona con artÃ­culos web, tweets/posts de X (Twitter), blogs, noticias, y cualquier pÃ¡gina pÃºblica. Usa cuando Pablo mande un link y quiera que lo leas o analices.",
+        "description": "Lee el contenido de una URL/link que Pablo comparta. Funciona con artículos web, tweets/posts de X (Twitter), blogs, noticias, y cualquier página pública. Usa cuando Pablo mande un link y quiera que lo leas o analices.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1275,27 +1275,27 @@ TOOLS_SCHEMA = KB_TOOLS_SCHEMA + [
     },
     {
         "name": "generate_document",
-        "description": """Genera un documento largo y descargable (.docx o .md) que se envÃ­a como archivo adjunto en Telegram. 
+        "description": """Genera un documento largo y descargable (.docx o .md) que se envía como archivo adjunto en Telegram. 
 USA ESTA HERRAMIENTA cuando Pablo pida:
-- Generar un reporte, informe, ensayo, bitÃ¡cora, resumen extenso, documento de trabajo
+- Generar un reporte, informe, ensayo, bitácora, resumen extenso, documento de trabajo
 - Compilar conversaciones o impresiones en un documento
 - Cualquier texto que supere las limitaciones de un mensaje de Telegram (~4000 chars)
-- 'Hazme un documento', 'generame un reporte', 'arma la bitÃ¡cora', 'compila esto en un doc'
+- 'Hazme un documento', 'generame un reporte', 'arma la bitácora', 'compila esto en un doc'
 
 IMPORTANTE: El campo 'content' es el documento COMPLETO que quieres generar. Usa formato Markdown:
-- # TÃ­tulo, ## SecciÃ³n, ### SubsecciÃ³n
+- # Título, ## Sección, ### Subsección
 - **negrita**, *cursiva*
 - Listas con - o 1. 2. 3.
 - > para citas
 - --- para separadores
 
-El contenido se convierte automÃ¡ticamente en un Word (.docx) con formato profesional.""",
+El contenido se convierte automáticamente en un Word (.docx) con formato profesional.""",
         "input_schema": {
             "type": "object",
             "properties": {
                 "title": {
                     "type": "string",
-                    "description": "TÃ­tulo del documento"
+                    "description": "Título del documento"
                 },
                 "content": {
                     "type": "string",
@@ -1313,14 +1313,14 @@ El contenido se convierte automÃ¡ticamente en un Word (.docx) con formato prof
     },
     {
         "name": "generate_spreadsheet",
-        "description": """Genera un archivo Excel (.xlsx) con formato profesional que se envÃ­a como archivo adjunto en Telegram.
+        "description": """Genera un archivo Excel (.xlsx) con formato profesional que se envía como archivo adjunto en Telegram.
 USA ESTA HERRAMIENTA cuando Pablo pida:
 - Tablas, comparativas, matrices de datos
-- Hojas de cÃ¡lculo, presupuestos, tracking, inventarios
-- AnÃ¡lisis comparativo en formato tabular
-- 'Hazme una tabla en Excel', 'ponlo en una hoja de cÃ¡lculo', 'generame un spreadsheet'
+- Hojas de cálculo, presupuestos, tracking, inventarios
+- Análisis comparativo en formato tabular
+- 'Hazme una tabla en Excel', 'ponlo en una hoja de cálculo', 'generame un spreadsheet'
 
-Soporta mÃºltiples hojas en un solo archivo. El Excel se genera con:
+Soporta múltiples hojas en un solo archivo. El Excel se genera con:
 - Encabezados azules con texto blanco
 - Filas alternadas en gris claro
 - Auto-filtros en cada columna
@@ -1331,7 +1331,7 @@ Soporta mÃºltiples hojas en un solo archivo. El Excel se genera con:
             "properties": {
                 "title": {
                     "type": "string",
-                    "description": "TÃ­tulo del archivo Excel"
+                    "description": "Título del archivo Excel"
                 },
                 "sheets": {
                     "type": "array",
@@ -1366,7 +1366,7 @@ Soporta mÃºltiples hojas en un solo archivo. El Excel se genera con:
     },
     {
         "name": "search_library",
-        "description": "Buscar en la biblioteca personal de Pablo (2100+ libros). Busca por tema, concepto, autor o tag. Usa para responder preguntas sobre filosofÃ­a, ciencias sociales, esoterismo, psicologÃ­a, y cualquier tema de sus libros. Retorna extractos relevantes con contexto.",
+        "description": "Buscar en la biblioteca personal de Pablo (2100+ libros). Busca por tema, concepto, autor o tag. Usa para responder preguntas sobre filosofía, ciencias sociales, esoterismo, psicología, y cualquier tema de sus libros. Retorna extractos relevantes con contexto.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1378,7 +1378,7 @@ Soporta mÃºltiples hojas en un solo archivo. El Excel se genera con:
     },
     {
         "name": "search_library_by_author",
-        "description": "Listar todos los libros de un autor especÃ­fico en la biblioteca de Pablo.",
+        "description": "Listar todos los libros de un autor específico en la biblioteca de Pablo.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1393,25 +1393,25 @@ Soporta mÃºltiples hojas en un solo archivo. El Excel se genera con:
         "input_schema": {
             "type": "object",
             "properties": {
-                "tag": {"type": "string", "description": "Tag a buscar (minÃºsculas, sin espacios)"}
+                "tag": {"type": "string", "description": "Tag a buscar (minúsculas, sin espacios)"}
             },
             "required": ["tag"]
         }
     },
     {
         "name": "get_book_detail",
-        "description": "Obtener el extracto completo de un libro especÃ­fico de la biblioteca. Usa cuando Pablo pide profundizar en un libro encontrado.",
+        "description": "Obtener el extracto completo de un libro específico de la biblioteca. Usa cuando Pablo pide profundizar en un libro encontrado.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "title": {"type": "string", "description": "TÃ­tulo o parte del tÃ­tulo del libro"}
+                "title": {"type": "string", "description": "Título o parte del título del libro"}
             },
             "required": ["title"]
         }
     },
     {
         "name": "library_stats",
-        "description": "Mostrar estadÃ­sticas de la biblioteca de Pablo (total libros, autores, categorÃ­as).",
+        "description": "Mostrar estadísticas de la biblioteca de Pablo (total libros, autores, categorías).",
         "input_schema": {
             "type": "object",
             "properties": {}
@@ -1504,33 +1504,33 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
             query = tool_input['name_query']
             results = google_contacts.search_contact(query)
             if not results:
-                return f"âŒ No encontrÃ© a '{query}'."
+                return f"âŒ No encontré a '{query}'."
             contact = results[0]
             await context.bot.send_contact(
                 chat_id=chat_id,
                 phone_number=contact['phone'],
                 first_name=contact['name']
             )
-            return f"âœ… Contacto: {contact['name']}."
+            return f"✅ Contacto: {contact['name']}."
 
         elif tool_name == "search_nearby_places":
             loc = user_locations.get(chat_id, DEFAULT_LOCATION)
             lat, lng = loc['lat'], loc['lng']
-            loc_name = loc.get('name', 'San JosÃ©, Costa Rica')
+            loc_name = loc.get('name', 'San José, Costa Rica')
             query = tool_input['query']
 
             try:
                 places_result = google_places.search_nearby_places(query, lat, lng)
-                if not places_result or "âš ï¸" in str(places_result):
+                if not places_result or "⚠️" in str(places_result):
                     raise Exception(str(places_result))
                 return places_result
             except Exception as e:
-                logger.warning(f"Places API fallÃ³: {e}. Fallback a web search.")
+                logger.warning(f"Places API falló: {e}. Fallback a web search.")
                 fallback_query = f"{query} near {loc_name}"
                 web_result = search_web_google(fallback_query)
-                if web_result and "no devolviÃ³ resultados" not in web_result:
-                    return f"ðŸ” (BÃºsqueda web, Places API no disponible):\n{web_result}"
-                return f"ðŸ” (BÃºsqueda general):\n{search_web_google(f'{query} Costa Rica')}"
+                if web_result and "no devolvió resultados" not in web_result:
+                    return f"ðŸ” (Búsqueda web, Places API no disponible):\n{web_result}"
+                return f"ðŸ” (Búsqueda general):\n{search_web_google(f'{query} Costa Rica')}"
 
         elif tool_name == "read_book_from_drive":
             return read_book_from_drive(tool_input['query'])
@@ -1538,7 +1538,7 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
         elif tool_name == "save_user_fact":
             full_key = f"{tool_input.get('category', 'General')}: {tool_input.get('key', 'Dato')}"
             save_fact(full_key, tool_input['value'])
-            return f"âœ… Guardado: {full_key}"
+            return f"✅ Guardado: {full_key}"
 
         elif tool_name == "search_web":
             return search_web_google(tool_input['query'])
@@ -1600,7 +1600,7 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
                 caption=f"ðŸŽ¨ {tool_input['prompt']}"
             )
             await context.bot.delete_message(chat_id, msg.message_id)
-            return "âœ… Imagen generada y enviada."
+            return "✅ Imagen generada y enviada."
 
         elif tool_name == "read_local_file":
             return read_local_file(tool_input['filename'])
@@ -1631,12 +1631,12 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
                 os.unlink(filepath)
                 await context.bot.delete_message(chat_id, msg.message_id)
 
-                return f"âœ… Documento '{title}' generado y enviado como {filename}"
+                return f"✅ Documento '{title}' generado y enviado como {filename}"
 
             except Exception as e:
                 logger.error(f"Document generation error: {e}")
                 await context.bot.delete_message(chat_id, msg.message_id)
-                return f"âš ï¸ Error generando documento: {e}"
+                return f"⚠️ Error generando documento: {e}"
 
         elif tool_name == "generate_spreadsheet":
             title = tool_input['title']
@@ -1660,12 +1660,12 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
 
                 total_rows = sum(len(s.get('rows', [])) for s in sheets_data)
                 total_sheets = len(sheets_data)
-                return f"âœ… Excel '{title}' generado: {total_sheets} hoja(s), {total_rows} filas"
+                return f"✅ Excel '{title}' generado: {total_sheets} hoja(s), {total_rows} filas"
 
             except Exception as e:
                 logger.error(f"Spreadsheet generation error: {e}")
                 await context.bot.delete_message(chat_id, msg.message_id)
-                return f"âš ï¸ Error generando Excel: {e}"
+                return f"⚠️ Error generando Excel: {e}"
 
         elif tool_name == "search_library":
             return search_library(tool_input['query'], tool_input.get('limit', 5))
