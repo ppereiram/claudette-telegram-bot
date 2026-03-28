@@ -400,14 +400,20 @@ def fetch_url(url):
                     author = tweet.get('author', {}).get('name', 'Unknown')
                     handle = tweet.get('author', {}).get('screen_name', '')
                     text = tweet.get('text', '')
-                    media = tweet.get('media', {})
-                    photos = media.get('photos', []) if media else []
-                    result = f"ðŸ¦ Tweet de {author} (@{handle}):\n{text}"
-                    if photos:
-                        result += f"\nðŸ“· {len(photos)} imagen(es) adjunta(s)"
-                    return result
+                    if text:
+                        media = tweet.get('media', {})
+                        photos = media.get('photos', []) if media else []
+                        result = f"Tweet de {author} (@{handle}):\n{text}"
+                        if photos:
+                            result += f"\n[{len(photos)} imagen(es) adjunta(s)]"
+                        return result
             except Exception:
                 pass
+            # X.com bloquea scraping — no caer al fetch generico
+            return (
+                "No pude leer el tweet (X.com bloquea bots).\n"
+                "Pega el texto del tweet en el chat y lo analizo."
+            )
 
 
         # Manejar URLs de YouTube - extraer transcript
