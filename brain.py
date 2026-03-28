@@ -351,21 +351,30 @@ async def process_chat(update, context, text, image_data=None):
 
             # Procesar herramientas
             tool_results = []
+            deep_analysis_result = None
             for block in response.content:
-                if block.type == "tool_use":
-                    logger.info(f"ðŸ”§ Tool (ronda {round_num + 1}): {block.name}")
-                    await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+                if block.type == “tool_use”:
+                    logger.info(f”Tool (ronda {round_num + 1}): {block.name}”)
+                    await context.bot.send_chat_action(chat_id=chat_id, action=”typing”)
                     try:
                         tool_result = await execute_tool(block.name, block.input, chat_id, context)
                     except Exception as e:
-                        tool_result = f"Error: {str(e)}"
+                        tool_result = f”Error: {str(e)}”
+                    # analyze_content_deep devuelve el analisis completo — usarlo directamente
+                    if block.name == “analyze_content_deep”:
+                        deep_analysis_result = str(tool_result)
                     tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": str(tool_result)
+                        “type”: “tool_result”,
+                        “tool_use_id”: block.id,
+                        “content”: str(tool_result)
                     })
 
-            messages.append({"role": "user", "content": tool_results})
+            # Si el analisis de 8 modos fue el unico tool, devolver directamente sin ronda extra
+            if deep_analysis_result and len(tool_results) == 1:
+                final_text = deep_analysis_result
+                break
+
+            messages.append({“role”: “user”, “content”: tool_results})
 
             # Si se usó generate_document o generate_spreadsheet, asegurar tokens altos
             for block in response.content:
