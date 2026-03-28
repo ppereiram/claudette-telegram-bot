@@ -420,6 +420,27 @@ if (contracts < 1) return; // umbral mínimo
   - **Implementación gratuita en NinjaScript**: `barDuration` en NT8 mide el tiempo de cada barra en segundos. Rolling percentile de los últimos N bricks para calibrar "rápido" vs "lento".
   - **Integración**: KDL Gate 2.5 upgrade — `trend_phase` pasa de binario (CONTINUE/FLAT) a escalar [0-100]: `brick_momentum_score`. Feeding directo al ConvictionScore.
   - **Semana de implementación**: Semana 2 Abril (junto con KDL completa, como upgrade del Gate 2.5)
+  - **UPGRADE 27/03/2026 — Burst Zones como S/R dinámico (inspirado en Origin Recoil, $276 — NO comprar)**:
+    - Cuando un brick es FAST o SUPERFAST → marcar la zona (High/Low del brick o secuencia) como **Burst Zone** persistente
+    - Cuando precio regresa a retestear esa zona → señal de alta probabilidad (dirección = misma que el burst original)
+    - `BurstZone_indicator.cs` — indicador NinjaScript que dibuja zonas y emite eventos a las estrategias
+    - Features para brain_v2: `burst_zone_active` (bool), `burst_zone_direction` (+1/-1), `dist_to_burst_zone` (ticks)
+    - Implementación: `(Time[0] - Time[1]).TotalSeconds` + rolling percentile. NT8 tiene todo. Costo = $0.
+
+- **LIQ Sweep Hunter → KDL Gate 1.5: Sweep Filter (27/03/2026)**:
+  - **El concepto** (LIQ Sweep Hunter ninZa, $396 — NO comprar): El ciclo completo de liquidez: `Build-Up → Sweep → Control Shift → Expansion`. Detecta si un breakout es real o un stop-hunt (sweep) usando Delta Comparison: si el Delta del retest OPONE al Delta del break → sweep confirmado → el breakout era falso.
+  - **Por qué es crítico para Midas**: DarvasBox y PivotTrendBreak entran EN el breakout. Si ese breakout es un sweep, entran exactamente cuando el mercado está comiendo stops para moverse en dirección contraria. El 26/03 09:59 fue un sweep — DarvasBox entró Long justo cuando el sweep UP absorbió liquidez para caer.
+  - **Implementación libre** (sin Level 2 — ninZa lo confirma en FAQ):
+    ```csharp
+    // Delta proxy: volumen con signo según dirección del brick
+    double breakDelta  = isBreakUp ? Volume[breakBar] : -Volume[breakBar];
+    double retestDelta = Close[0] > Open[0] ? Volume[0] : -Volume[0];
+    bool sweepConfirmed = returnedToLevel && (Math.Sign(retestDelta) != Math.Sign(breakDelta));
+    // sweepConfirmed → bloquear entrada en dirección del break
+    ```
+  - **Integración en KDL**: nuevo Gate 1.5 entre Trend Structure (Gate 1) y Trend Strength (Gate 2). Si sweep activo en dirección de la señal → ConvictionScore = 0, no entrar.
+  - **Beneficio directo**: DarvasBox/PivotTrendBreak dejan de entrar en false breakouts. Reduce MAE en días de gap. Mode 2 (Counter Direction) = nueva señal para OrderFlowReversal.
+  - **Semana de implementación**: Semana 2 Abril (junto con KDL Gate 2.5 y BurstZone).
 
 - **Sky Fibomoku → FiboCloud_v1: Nueva Estrategia Candidata (20/03/2026)**:
   - **El concepto**: Sky Fibomoku (ninza.co) usa el **Ichimoku Leading Span B** (promedio del high más alto y low más bajo de los últimos 52 períodos, desplazado 26 barras hacia adelante) como nivel del 50% Fibonacci. Desde ahí proyecta los niveles 23.6%, 38.2%, 61.8%, 76.4% **delante del precio actual**. El precio "encuentra" esos niveles antes de llegar — zonas predictivas, no reactivas.
@@ -450,6 +471,20 @@ if (contracts < 1) return; // umbral mínimo
   - **Implementación**: `mae_mfe_analyzer.py` — lee los CSV de NT8 (ya disponibles), calcula distribuciones por estrategia, genera `mae_mfe_profile_ESTRATEGIA.json`. NT8 ya exporta MAE/MFE en performance reports — costo = $0.
   - **Output para brain_v2**: Pwin(stop, target) por estrategia = input directo para Kelly criterion mejorado (replace fixed f).
   - **Semana de implementación**: Post-período de prueba (después de Semana 4 Abril). Necesita mínimo 30 días de trades reales para distribuciones estables.
+
+- **Quantum Vol-Delta → Adaptive MinVolRatio (27/03/2026)**:
+  - **El concepto** (inspirado en Quantum Vol-Delta, $296 — NO comprar): reemplazar el `MinVolRatio` fijo en todas las estrategias por un umbral adaptativo basado en el volumen reciente. En lugar de `volDelta > 1.2` fijo, calcular percentil del delta de las últimas N velas.
+  - **Por qué mejora Midas**: `MinVolRatio = 1.2` es ciego al régimen. En días de baja volatilidad, 1.2 es demasiado exigente → pocas entradas. En días de alta volatilidad, 1.2 es insuficiente → demasiadas señales falsas. El umbral adaptativo se ajusta solo.
+  - **Implementación gratuita**:
+    ```
+    double avgDelta = EMA(Abs(VolDelta), 20)[0];   // umbral adaptativo
+    double signalState = VolDelta[0] / avgDelta;    // normalizado
+    // Niveles: >1.5=strong(3), 0.8-1.5=moderate(2), 0.3-0.8=weak(1), análogo negativo
+    // Triple-filter: signalState > threshold && vela confirma dirección && volLado > avgVol
+    ```
+  - **Signal_State como feature de brain_v2**: exportar Signal_State (-3 a +3) como input del RF. Reemplaza la binaria `volDelta > MinVolRatio`.
+  - **Aplicar en**: OrderFlowReversal_v1 primero (más obvio), luego todas las que usan `MinVolRatio`.
+  - **Semana de implementación**: Post-período de prueba (después de Semana 4 Abril). Aplicar junto con MAE/MFE analyzer.
 
 - **VoluTank Army → Zone Quality Score para S&D (20/03/2026)**:
   - **El concepto**: VoluTank Army (ninza.co) añade el ratio Buy/Sell DENTRO de cada zona de Supply/Demand. Una zona de demanda donde Buy volume > Sell volume = zona fuerte (alta probabilidad de rebote). Una zona de demanda donde Sell > Buy = zona débil (probable breakout a través de ella).

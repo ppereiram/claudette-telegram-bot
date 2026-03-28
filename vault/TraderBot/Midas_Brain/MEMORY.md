@@ -17,6 +17,8 @@
 | `roadmap_abril2026.md` | Plan semana a semana desde 01/04/2026 hasta Darwin/X |
 | `quant_strategies.md` | Kelly, ML Meta-Labeling, Kalman, Hurst, OU process |
 | `libros_extraidos.md` | Conceptos extraídos de cada libro de la biblioteca de Pablo |
+| `feedback_ninza_pipeline.md` | Pipeline ninZa/RenkoKings — extraer ideas sin comprar. Registro de 6 productos analizados |
+| `feedback_session_continuity.md` | Al reanudar sesión interrumpida, retomar hilo activo — no ejecutar pending tasks fuera de contexto |
 
 ## Top 5 estrategias (por Sortino)
 | Estrategia | PF | Sortino | MaxDD | Profit/mes |
@@ -41,7 +43,7 @@
 - **Módulo 1** (Market Monitor): ✅ ACTIVO desde 09/03/2026 — `Bot_Quant_IA/market_monitor_logger.py`
 - **Módulo 1b** (Auto-Crítica Diaria): 🔲 IMPLEMENTAR AHORA — agregar a market_monitor_logger.py. Compara predicción de ayer vs realidad de hoy. Output: `autocritica_YYYY-MM-DD.json` + `midas_accuracy_historico.json`
 - **Módulo 2** (Markov): 🔲 Semana 1 Abril — necesita 30+ días de logs + auto-críticas
-- **Módulo 3** (News Filter): 🔲 Semana 2 Abril
+- **Módulo 3** (News Filter): ✅ ACTIVO desde 27/03/2026 — integrado en market_monitor_logger.py. VIX + Fear&Greed + Forex Factory calendar. Output en `macro_context` del JSON diario.
 - **Módulo 4** (Tit for Tat): 🔲 Semana 2 Abril
 - **Módulo 5** (Von Neumann Regret): 🔲 Semana 3 Abril
 - **Módulo 6** (Monte Carlo): 🔲 Semana 3 Abril
@@ -62,6 +64,12 @@
 - **Arquitectura Elswee** (Sem 2 Abril): ConvictionScore secuencial Exhaustion→Realignment→Volume
 - **OBOrderFlow_v1.cs** (Mayo): Bo$$ Order Block concept en 1-min chart (no Renko)
 
+## Pendientes críticos — Lunes 30/03/2026
+1. **Bug AllEntries** → corregir `EntryHandling.UniqueEntries` en: `EMATrendRenko_v1.cs`, `OrderFlowReversal_v1.cs`, `PivotTrendBreak_v1.cs` (DarvasBox ya corregido 27/03)
+2. **Módulo 3 fix** → `avoid_shorts` debe cruzar con `tide_score`: si `tide_score <= -2.0`, no aplicar avoid_shorts (la tendencia domina sobre el VIX)
+3. **BBv5 re-entradas** → investigar por qué trades 29-38 del 27/03 aparecen sin nombre de estrategia en CSV post-Filtro-Accidental
+4. **Encoding UTF-8** → carácter → se pierde en Windows en el JSON (`â sin shorts`). Verificar `ensure_ascii=False` en save_log (ya está, revisar el campo `regime_reasons`)
+
 ## Insights clave no obvios
 - Filtro Accidental (ULTRA/SCALPER): `dailyPnL += Commission + AverageFillPrice * Quantity` suma nominal → dispara MaxLoss → 1 trade/día. NO tocar.
 - BreadButterBALANCED: combined PF=1.31 — el edge viene de la competición long/short por el slot
@@ -70,6 +78,8 @@
 - EMA Touch es el setup dominante de ULTRA — los otros 3 setups no añaden PF
 - Rollover MNQ cambia datos Renko → re-validar estrategias con nuevo contrato
 - **NUEVO 24/03**: PivotReverse+DarvasBox+SuperTrendWave = 3 estrategias short sin filtro direccional → suspender shorts hasta implementar tide_score_intraday + VWAP SD Bands
+- **NUEVO 27/03**: avoid_shorts NO aplica cuando tide_score <= -2.0 — tendencia estructural domina sobre VIX EXTREME. BBv5 short +$6,103 con VIX=31 y F&G=10 lo confirma
+- **NUEVO 27/03**: Bug AllEntries genera qty inflado en 4 estrategias → pérdidas 10-18x mayores de lo real. Día fue +$5,641 real vs +$3,431 registrado por el bug
 
 ## Métricas target Darwin/X 2027
 | Métrica | Mínimo | Ideal | Darwin/X |

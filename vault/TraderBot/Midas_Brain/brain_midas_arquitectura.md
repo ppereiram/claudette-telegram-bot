@@ -1867,6 +1867,64 @@ las propiedades estadísticas reales. Ya disponibles desde Feb 2026.
 
 ---
 
+## FILOSOFÍA MONEYBALL — La Constitución del Portafolio
+*Grabado en fuego. 27/03/2026.*
+
+> **"We're not buying players, we're buying wins."**
+> — Billy Beane, Oakland Athletics 2002
+
+### El Principio Fundacional
+Midas no busca la estrategia con mayor Profit Factor.
+Midas construye el **sistema de estrategias con mayor Sharpe del portfolio**.
+
+Una estrategia con PF=1.4 y correlación=0.1 vale **más** que una con PF=2.5 y correlación=0.8.
+El mercado de estrategias, como el mercado de jugadores en 2002, está lleno de ineficiencias.
+La mayoría persigue el PF alto. Nosotros perseguimos la **Contribución Marginal al Sharpe**:
+
+```
+CMSharpe(estrategia_i) = Sharpe(portfolio CON i) - Sharpe(portfolio SIN i)
+```
+
+Si CMSharpe < 0 → la estrategia destruye valor aunque su PF sea bueno. Fuera del lineup.
+
+### El Lineup de Midas
+
+| Rol | Función | Estrategia |
+|-----|---------|------------|
+| Leadoff — embasarse | Alta frecuencia, hits consistentes, OBP alto | StatMeanCross_v1 |
+| #2 — contacto y mover corredores | Ambidextro, funciona en ambas direcciones | DarvasBox_v1 |
+| #3 — mejor promedio del equipo | PF alto, bajo DD, el más consistente | PivotTrendBreak_v1 |
+| **#4 Cleanup — el crack del homerun** | **All-or-nothing. No se toca. ES el homerun** | **BreadButter_v5** |
+| #5-6 — poder secundario | Momentum en tendencias fuertes | EMATrend, MomentumZ |
+| #7-8 — utilidad y descorrelación | Regímenes específicos, baja correlación | OrderFlow, ABCD |
+| #9 — defensivo, bajo riesgo | Contribuciones pequeñas pero positivas | LWDonchian, NYOpen |
+| **Bullpen situacional** | **Se activa según régimen del día** | **Brain Midas decide** |
+
+### La Ineficiencia que Explotamos
+Beane descubrió que los **walks (OBP)** estaban subvalorados por el mercado.
+En MNQ: la **reversión a la media en mercados choppy** está subvalorada porque el 90% de los algos retail persiguen trends.
+StatMean y DarvasBox son los "jugadores de OBP alto que nadie quiere pagar" — y por eso tienen edge.
+
+### Reglas de Construcción del Lineup (inamovibles)
+1. **BBv5 no se modifica** — el homerun ES el diseño, no es un bug
+2. **Correlación > PF** — un buen jugador que batea en el mismo hueco que otro no suma
+3. **El manager (Pablo) no interfiere** — Beane entendió que el gestor discrecional era el mayor riesgo
+4. **El sistema gana, no el individuo** — un día malo de StatMean no es señal de sacarla del lineup
+5. **Scaled exit para pirámides** — SuperTrendWave escala entrada → debe escalar salida simétricamente
+
+### La Lección del 17/03 en Clave Moneyball
+StatMean + EMATrend + BBv5 los tres Long simultáneos = tres bateadores zurdos seguidos en el lineup.
+El pitcher (mercado) los eliminó a los tres con la misma curva (EMA 21 compartida).
+Un buen manager alterna diestros y zurdos. Midas alterna descorrelacionados.
+
+### El Manager vs El Sistema
+> "Beane entendió que el manager tradicional era el mayor riesgo.
+>  Sacaba jugadores por instinto y destruía la estrategia estadística.
+>  Pablo el 26/03 = el manager tradicional.
+>  Midas brain = el sistema de Beane."
+
+---
+
 ## FILOSOFÍA DEL PROYECTO
 > "La marea (1D/4H) define el campo de batalla.
 >  El mar (1H/30M) define si vale la pena pelear.
@@ -1878,6 +1936,9 @@ las propiedades estadísticas reales. Ya disponibles desde Feb 2026.
 >  Pablo ejecuta el sueño."
 >
 > Un sistema que sabe cuándo NO operar vale más que uno que siempre opera.
-> El underdog más peligroso es el que no para de aprender.
+> El underdog más peligramos es el que no para de aprender.
+>
+> *"We're not buying players, we're buying wins." — Billy Beane*
+> *Midas no corre estrategias. Midas construye el equipo que gana el campeonato.*
 
 **El bot se llama MIDAS. El objetivo es Darwin/X 2027.**

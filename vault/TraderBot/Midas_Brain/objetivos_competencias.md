@@ -33,6 +33,8 @@ type: project
 - La data histórica de 2023-2024 (bull market tranquilo) puede no ser representativa del régimen actual
 - **Ventaja:** La mayoría entrena con data pasada favorable. Midas entrena con el mercado más difícil.
 
+**El sueño declarado (26/03/2026):** Ser el próximo Larry Williams — USIC Champion usando únicamente Claude como co-piloto. "A regular joe, an outlier, becoming the next champion using only Claude."
+
 ---
 
 ## Darwin/X 2027

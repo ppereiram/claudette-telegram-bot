@@ -336,6 +336,102 @@ Sin la intervención Long: **+$1,657** en lugar de +$1,024. Costo: **-$633**.
 
 ---
 
+## LECCIÓN 09 — 27/03/2026: Primer Día con Módulo 3 + El Bug del Ejército 🐛
+**P&L del día: +$3,431.90** | Semana 4 completa
+
+**Contexto macro (primer día con datos automáticos):**
+- tide_score: **-3.0** (full bear — todos los TFs bajistas, breadth -3/3)
+- VIX: **31.05 EXTREME** (+3.61 del día anterior)
+- Fear & Greed: **10.2 EXTREME_FEAR**
+- NQ: 23,500 → 23,313 (-187 puntos en el día)
+- Sin eventos económicos high-impact
+
+**Desglose por estrategia:**
+| Estrategia | P&L | Observación |
+|---|---|---|
+| BBv5 | **+$6,103.50** | Short 10:13 → cerró 14:15 (+$5,999) + re-entradas +$104 |
+| DarvasBox | **-$904.50** | Bug AllEntries qty=18 — pérdida inflada artificialmente |
+| EMATrendRenko | **-$235.80** | Bug AllEntries qty=15 |
+| OrderFlowReversal | **-$757.50** | Bug AllEntries qty=3+3+9 |
+| PivotTrendBreak | **-$312.00** | Bug AllEntries qty=2+2+2+14 |
+| SuperTrendWave | **-$443.00** | Short y Long alternados — net negativo |
+| ABCDHarmonic | **-$18.80** | 1 stop normal |
+
+---
+
+### LECCIÓN 09-A: El Bug del Ejército — AllEntries en 4 Estrategias ⚠️
+
+**El patrón en el CSV:**
+```
+DarvasBox:          qty=1 + qty=1 + qty=18  → 3 órdenes simultáneas 09:59:59
+EMATrendRenko:      qty=1 + qty=15          → 2 órdenes simultáneas 10:00:00
+OrderFlowReversal:  qty=3 + qty=3 + qty=9  → 3 órdenes simultáneas 11:24:14
+PivotTrendBreak:    qty=2+2+2+14           → 4 órdenes simultáneas 11:34:40
+```
+
+**Por qué ocurre:** NT8 llama a `OnBarUpdate()` múltiples veces durante la transición
+Historical→Realtime. Con `EntryHandling.AllEntries`, cada llamada genera una orden separada.
+Con `EntryHandling.UniqueEntries`, la segunda llamada es ignorada si ya hay posición abierta.
+
+**DarvasBox ya fue corregido** (27/03/2026). Las otras 3 estrategias pendientes para el lunes.
+
+**Impacto real del bug:**
+- DarvasBox perdió -$904.50 (con qty=18 real serían ~$50 normales → pérdida inflada ~18x)
+- Las 4 estrategias con bug perdieron un total de **-$2,209.80**
+- Sin el bug, el día habría sido **+$5,641** en lugar de +$3,431
+
+---
+
+### LECCIÓN 09-B: La Paradoja del Módulo 3 — avoid_shorts vs tide_score ⚡
+
+**El conflicto del día:**
+- `macro_context.avoid_shorts = True` (VIX EXTREME + Fear EXTREME → lógica defensiva)
+- `tide_score = -3.0` (full bear — dirección bajista confirmada en todos los TFs)
+- **Resultado real**: BBv5 SHORT fue el gran ganador del día (+$6,103)
+
+**El insight:** `avoid_shorts` está diseñado para proteger de shorts aleatorios en pánico de mercado.
+Pero cuando `tide_score = -3.0`, el mercado NO está en pánico aleatorio — está en tendencia bajista
+estructurada. El VIX EXTREME y el F&G=10 SON la explicación de la caída, no una señal de reversal.
+
+**Regla Midas derivada — corrección al Módulo 3:**
+> `avoid_shorts` se aplica SOLO cuando `tide_score > -1.5`.
+> Si `tide_score <= -2.0`, la tendencia bajista domina sobre el VIX — los shorts estructurales
+> (BBv5, estrategias con filtro) siguen siendo válidos. El pánico extremo en tendencia = aceleración,
+> no reversal. Ajustar lógica en `compute_macro_context()` el lunes.
+
+---
+
+### LECCIÓN 09-C: BBv5 Re-entradas Post-Cierre — Comportamiento a Investigar 🔍
+
+**Lo que muestra el CSV:**
+- Trades 26-28: Short 10:13 AM → 14:15 PM → **+$5,999** (con nombre "BreadButter_v5_Apex")
+- Trades 29-38: Múltiples entradas 14:22-15:09 → **+$104 neto** (SIN nombre de estrategia)
+
+**Hipótesis:** El Filtro Accidental cerró el primer trade (1 trade/día). Las re-entradas posteriores
+son del mismo bot pero sin el nombre registrado correctamente en NT8 — posible comportamiento
+en `State.Transition` tras el cierre manual del primer trade.
+
+**Acción pendiente el lunes:** Revisar el código de BBv5 — ¿hay lógica de re-entrada después
+del MaxDailyLoss? ¿El Filtro Accidental se resetea en el mismo día?
+
+---
+
+### LECCIÓN 09-D: Módulo 3 Funcionó — Con Un Ajuste Pendiente ✅
+
+**Lo que entregó correctamente:**
+- VIX=31.05 → EXTREME ✓
+- F&G=10.2 → EXTREME_FEAR ✓
+- Sin eventos económicos hoy → no_trade_windows vacías ✓
+- Encodig issue menor: "â sin shorts" en el JSON (carácter → se perdió en Windows UTF-8)
+
+**El único error de lógica**: `trade_mode = "LONG_ONLY_REDUCED"` cuando en realidad
+el mercado era full bear. El modo correcto con `tide_score=-3.0` sería `"SHORT_STRUCTURAL"`.
+
+**Fix para el lunes:** añadir `tide_score` como input a `compute_macro_context()` para
+cruzar el régimen macro con el régimen técnico antes de asignar `trade_mode`.
+
+---
+
 ## LECCIÓN 07 — 25/03/2026: El Día que Todo Encajó ✅
 **P&L del día: +$5,318.10** (mejor día desde el inicio del período actual)
 

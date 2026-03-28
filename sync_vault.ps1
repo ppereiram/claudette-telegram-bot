@@ -46,13 +46,8 @@ foreach ($src in $vaults.Keys) {
         continue
     }
 
-    # Copiar (sobreescribe archivos modificados)
-    xcopy "$srcPath" "$dstPath" /E /I /Y /Q 2>$null
-    
-    # Eliminar .git internos si existen (evita submodule problem)
-    Get-ChildItem "$dstPath" -Recurse -Filter ".git" -Force |
-        Where-Object { $_.PSIsContainer } |
-        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    # Copiar SOLO archivos .md, excluyendo carpetas de sistema
+    robocopy "$srcPath" "$dstPath" *.md /E /XD .obsidian .trash .claude .git __pycache__ node_modules /XF *.py *.db *.pyc *.env *.html *.txt *.lnk *.js *.ts *.json *.css *.log /NFL /NDL /NJH /NJS /nc /ns /np 2>$null | Out-Null
 
     Log "OK: $src -> vault/$dst"
     $changed = $true

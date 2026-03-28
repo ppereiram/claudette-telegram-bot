@@ -1,0 +1,11 @@
+Edificio Torre B Proyecto Iconnia Sabana Norte San José, Marzo 2026, terreno total 3.264m2 valor $1000 x m2 solo torre B usa 1564.31m2 (costo terreno: USD 1,564,310)
+   
+Area privativa es el area vendible, compuesta por bodegas, estacionamientos y apartamentos total fincas filiales (unidades vendibles) 406 distribuidos en 13.533,19m2 
+
+Cada apartamento incluye en el precio una bodega y dos parqueos 
+
+tres tipos de apartamentos: tipo A 1 hab 2 baños (areas oscilan ver en la table de excel) USD 200k promedio dependera por piso (altura y vista) y area pero van entre (185k-230K) desde los 48m2 hasta los 60m2
+
+tipo B 2 habitaciones 3 baños precio promedio $280k (60m2 hasta 79m2)
+
+tipo C 3 hab 3 baños con un precio promedio $320K (son los que superan los 80m2)

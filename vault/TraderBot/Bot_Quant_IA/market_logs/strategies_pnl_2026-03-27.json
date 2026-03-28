@@ -1,0 +1,23 @@
+﻿{
+  "fecha": "2026-03-27",
+  "timestamp": "2026-03-27T14:00:58",
+  "strategies_pnl": {
+    "SimBreadButter_v5_Apex": 6103.5,
+    "SimNYOpenBlast_v2": 0,
+    "SimSuperTrendWave ": -443,
+    "SimOpeningRange_v1": 0,
+    "SimVAWAPOrderBlock": 0,
+    "SimPivotTrendBreak": -312,
+    "SimPivotReverse_V1": 0,
+    "SimVWAPFlux_v1 ": 0,
+    "SimABCDHarmonic_v1": -18.8,
+    "SimLWDonchianBreak_v": 0,
+    "SimBreadButter_ULTRA": 0,
+    "SimBreadButter_SCALPER": 0,
+    "SimOrderFlowReversal ": -757.5,
+    "SimDarvasBox_v1": -904.5,
+    "SimMomentumZ_v1": 0,
+    "SimEMATrendRenko_v1 ": -235.8,
+    "SimStatMeanCross_v1": 0
+  }
+}

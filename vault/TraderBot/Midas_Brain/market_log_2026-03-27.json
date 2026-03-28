@@ -1,0 +1,72 @@
+{
+  "fecha": "2026-03-27",
+  "timestamp": "2026-03-27T15:41:02.786560",
+  "precio_cierre": 23794.25,
+  "trend_1D": -1,
+  "trend_4H": -1,
+  "trend_1H": -1,
+  "trend_30M": -1,
+  "choppiness_15M": 53.5,
+  "sea_state": "moderate",
+  "tide_score": -3.0,
+  "swim_ok": true,
+  "market_breadth_score": -3,
+  "breadth_alignment": true,
+  "breadth_divergence": [],
+  "breadth_ES": -1,
+  "breadth_YM": -1,
+  "breadth_RTY": -1,
+  "rsi_1d": 34.7,
+  "mfi_1d": 43.5,
+  "stoch_1d": 2.13,
+  "multi_osc_score": 1,
+  "multi_osc_overlap": false,
+  "multi_osc_label": "neutral",
+  "trend_1D_label": "bear",
+  "trend_4H_label": "bear",
+  "trend_1H_label": "bear",
+  "trend_30M_label": "bear",
+  "macro_context": {
+    "vix": {
+      "value": 31.05,
+      "prev_close": 27.44,
+      "change": 3.61,
+      "category": "EXTREME"
+    },
+    "fear_greed": {
+      "score": 10.2,
+      "rating": "extreme fear",
+      "signal": "EXTREME_FEAR",
+      "source": "CNN"
+    },
+    "today_events": [],
+    "tomorrow_events": [],
+    "no_trade_windows_today": [],
+    "no_trade_windows_tomorrow": [],
+    "events_today_count": 0,
+    "trade_mode": "LONG_ONLY_REDUCED",
+    "avoid_shorts": true,
+    "long_bias": true,
+    "regime_reasons": [
+      "VIX EXTREME (31.05)",
+      "Fear&Greed EXTREME_FEAR (10.2) → sin shorts"
+    ]
+  },
+  "strategies_pnl": {
+    "BBv5": 6103.50,
+    "SuperTrendWave": -443.00,
+    "PivotTrendBreak": -312.00,
+    "OrderFlowReversal": -757.50,
+    "DarvasBox": -904.50,
+    "EMATrendRenko": -235.80,
+    "ABCDHarmonic": -18.80,
+    "StatMeanCross": 0,
+    "MomentumZ": 0,
+    "BreadButter_ULTRA": 0,
+    "BreadButter_SCALPER": 0
+  },
+  "total_pnl_day": 3431.90,
+  "all_won": false,
+  "all_lost": false,
+  "notes": "Primer dia con Modulo 3 activo. VIX=31.05 EXTREME, F&G=10.2 EXTREME_FEAR. tide_score=-3.0 full bear. BBv5 short +$6,103 capturó la caída del mercado (NQ 23,500→23,300). Bug AllEntries masivo confirmado en DarvasBox(qty=18), EMATrend(qty=15), OrderFlowReversal(qty=3+3+9), PivotTrendBreak(qty=2+2+2+14) — pendiente fix el lunes. Paradoja del dia: avoid_shorts=True por VIX EXTREME pero tide_score=-3 (full bear) — BBv5 short fue el gran ganador. Lección: cuando tide_score<=-2.0, la tendencia domina sobre el VIX para la dirección. BBv5 hizo re-entradas post-14:15 sin nombre de estrategia en CSV — investigar si es bug o comportamiento normal post-Filtro-Accidental."
+}
