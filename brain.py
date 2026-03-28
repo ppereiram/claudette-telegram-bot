@@ -316,7 +316,9 @@ async def process_chat(update, context, text, image_data=None):
         doc_keywords = ['documento', 'reporte', 'informe', 'bitácora', 'bitacora',
                         'compila', 'genera un doc', 'genera un archivo', 'word',
                         'ensayo largo', 'resumen extenso', 'docx', 'exporta',
-                        'excel', 'xlsx', 'spreadsheet', 'hoja de cálculo', 'tabla comparativa']
+                        'excel', 'xlsx', 'spreadsheet', 'hoja de cálculo', 'tabla comparativa',
+                        '8 modos', 'ocho modos', 'analiza con', 'análisis profundo',
+                        'transcripcion video', 'youtu', 'youtube']
         text_lower = text.lower() if isinstance(text, str) else ""
         needs_document = any(kw in text_lower for kw in doc_keywords)
         max_tokens = MAX_TOKENS_DOCUMENT if needs_document else MAX_TOKENS_NORMAL

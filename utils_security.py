@@ -137,7 +137,7 @@ def get_youtube_transcript(text):
 
             if full_text.strip():
                 logger.info(f"Transcripcion directa obtenida ({len(full_text)} chars)")
-                return f"TRANSCRIPCION VIDEO (https://youtube.com/watch?v={video_id}):\n{full_text[:12000]}\n(Fin de transcripcion)"
+                return f"TRANSCRIPCION VIDEO (https://youtube.com/watch?v={video_id}):\n{full_text[:50000]}\n(Fin de transcripcion)"
 
         except Exception as e:
             error_str = str(e)
