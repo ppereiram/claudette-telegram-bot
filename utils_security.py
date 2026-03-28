@@ -154,16 +154,27 @@ def get_youtube_transcript(text):
         try:
             url = f"https://api.supadata.ai/v1/youtube/transcript?url=https://youtube.com/watch?v={video_id}"
             resp = http_requests.get(url, headers={"x-api-key": supadata_key}, timeout=15)
+            logger.info(f"Supadata status: {resp.status_code} | body: {resp.text[:300]}")
             if resp.status_code == 200:
                 data = resp.json()
-                segments = data.get("content", [])
-                if segments:
-                    full_text = " ".join(s.get("text", "") for s in segments if s.get("text"))
-                    if full_text.strip():
-                        logger.info(f"Supadata transcript obtenido ({len(full_text)} chars)")
-                        return f"TRANSCRIPCION VIDEO (https://youtube.com/watch?v={video_id}):\n{full_text[:50000]}\n(Fin de transcripcion)"
+                content = data.get("content", "")
+                # content puede ser string o lista de segmentos {text, start, duration}
+                if isinstance(content, str):
+                    full_text = content
+                elif isinstance(content, list):
+                    full_text = " ".join(
+                        s.get("text", "") if isinstance(s, dict) else str(s)
+                        for s in content
+                    )
+                else:
+                    full_text = ""
+                if full_text.strip():
+                    logger.info(f"Supadata transcript obtenido ({len(full_text)} chars)")
+                    return f"TRANSCRIPCION VIDEO (https://youtube.com/watch?v={video_id}):\n{full_text[:50000]}\n(Fin de transcripcion)"
+                else:
+                    logger.warning(f"Supadata: respuesta 200 pero sin texto. Data keys: {list(data.keys())}")
             else:
-                logger.warning(f"Supadata error {resp.status_code}: {resp.text[:200]}")
+                logger.warning(f"Supadata error {resp.status_code}: {resp.text[:300]}")
         except Exception as e:
             logger.warning(f"Supadata fallo: {e}")
 
