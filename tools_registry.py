@@ -432,8 +432,8 @@ def fetch_url(url):
                             continue
                     if transcript_list:
                         full_text = " ".join([t["text"] for t in transcript_list])
-                        if len(full_text) > 6000:
-                            full_text = full_text[:6000] + "\n\n[... Transcript truncado]"
+                        if len(full_text) > 50000:
+                            full_text = full_text[:50000] + "\n\n[... Transcript truncado — video muy largo]"
                         # Obtener titulo via oEmbed
                         try:
                             oembed = requests.get(
