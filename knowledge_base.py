@@ -699,10 +699,11 @@ def mental_models_stats(top_n: int = 10) -> str:
 MEMORY_FILENAME = "CLAUDETTE_MEMORY.md"
 
 CATEGORY_HEADERS = {
-    "decision":    "## Decisiones Importantes",
-    "proyecto":    "## Estado de Proyectos",
-    "estrategia":  "## Estrategias que Funcionaron",
-    "preferencia": "## Preferencias de Respuesta",
+    "decision":       "## Decisiones Importantes",
+    "proyecto":       "## Estado de Proyectos",
+    "estrategia":     "## Estrategias que Funcionaron",
+    "preferencia":    "## Preferencias de Respuesta",
+    "claudette_dev":  "## Desarrollo de Claudette",
 }
 
 

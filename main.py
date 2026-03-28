@@ -621,6 +621,69 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 
 
 # =====================================================
+# AUTO-LOG DE DESARROLLO
+# =====================================================
+
+def _log_dev_commits_to_kb():
+    """
+    Lee los ultimos 30 commits de git y guarda los nuevos en la KB bajo
+    la categoria 'claudette_dev'. Usa el SHA como deduplicacion para no
+    repetir entradas ya guardadas.
+    """
+    import subprocess
+    from knowledge_base import kb_save_insight, _get_conn
+
+    vault_path = os.environ.get("OBSIDIAN_VAULT_PATH")
+    if not vault_path:
+        return
+
+    # Leer commits recientes
+    result = subprocess.run(
+        ["git", "log", "--oneline", "-30", "--no-merges"],
+        capture_output=True, text=True,
+        cwd=os.path.dirname(os.path.abspath(__file__))
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        return
+
+    lines = result.stdout.strip().splitlines()
+
+    # Verificar cuales SHAs ya existen en KB para no duplicar
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT content FROM knowledge_chunks WHERE source ILIKE '%CLAUDETTE_MEMORY%'")
+        existing_text = " ".join(row[0] for row in cur.fetchall() if row[0])
+        conn.close()
+    except Exception:
+        existing_text = ""
+
+    saved = 0
+    for line in reversed(lines):  # de mas antiguo a mas nuevo
+        if not line.strip():
+            continue
+        parts = line.split(" ", 1)
+        if len(parts) < 2:
+            continue
+        sha, msg = parts[0], parts[1]
+
+        # Deduplicar por SHA
+        if sha in existing_text:
+            continue
+
+        kb_save_insight(
+            category="claudette_dev",
+            title=msg,
+            content=f"Commit: `{sha}`\nCambio: {msg}",
+            project="Claudette"
+        )
+        saved += 1
+
+    if saved:
+        logger.info(f"Auto-log: {saved} commits guardados en KB (claudette_dev)")
+
+
+# =====================================================
 # MAIN
 # =====================================================
 
@@ -712,6 +775,13 @@ def main():
         logger.warning("set_my_commands error: " + str(e))
 
     app.add_error_handler(error_handler)
+
+    # Auto-log de commits de desarrollo al vault
+    try:
+        _log_dev_commits_to_kb()
+    except Exception as e:
+        logger.warning(f"Auto-log dev commits: {e}")
+
     print("🚀 Claudette 2.0 (Modular + YouTube + Google Services) ONLINE")
     app.run_polling()
 

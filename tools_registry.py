@@ -919,10 +919,10 @@ def fetch_hackernews_top(limit=10, min_points=50):
 # ANALIZADOR DE CONTENIDO 8 MODOS
 # =====================================================
 
-ANALYZE_MODES_PROMPT = """Analiza en exactamente 8 modos. Directo, sin preambulos.
+ANALYZE_MODES_PROMPT = """Analiza el contenido en exactamente estos 8 modos. Sin preambulos. Sin agregar secciones extra. Sin conectar con la vida personal de Pablo ni sus proyectos (La Ecuacion Final, slowness, Camino de Santiago, etc). Analiza el CONTENIDO, no al receptor.
 
 **1. MODELOS MENTALES**
-Que marcos de pensamiento aplican (primeros principios, segundo orden, inversion, Occam, etc). Max 3 modelos aplicados al contenido especifico.
+Selecciona 2-3 modelos del siguiente repertorio que mejor apliquen al contenido: primeros principios, segundo orden, inversion, navaja de Occam, mapa vs territorio, sesgo de confirmacion, efecto Dunning-Kruger, costo hundido, pensamiento probabilistico, ciclos de retroalimentacion, emergencia, antifragilidad, teoria de juegos, razonamiento bayesiano, OODA loop, marco de Kelly, 80/20, arbitraje cognitivo, pensamiento contrafactual. Explica como aplica cada modelo seleccionado al contenido especifico.
 
 **2. DETECTOR DE HUMO**
 Que no se esta diciendo. Que puede ser exagerado, falso o interesado. Que incentivos tiene quien lo publico. Sin piedad.
@@ -943,7 +943,7 @@ Si Pablo quisiera actuar basandose en esto, que haria en los proximos 7 dias. 3 
 Que se esta comunicando sin decirlo explicitamente. Tensiones, miedos, ambiciones no declaradas.
 
 **8. CONEXION FILOSOFICA**
-Conecta la idea central con un pensador o libro que Pablo conoce (Heidegger, Han, Fisher, Taleb, Jung, etc). Una conexion inesperada pero real."""
+Conecta la idea central con un pensador o corriente filosofica EXTERNA (Heidegger, Han, Fisher, Taleb, Jung, Foucault, Zizek, Harari, Nassim, Cioran, etc). NO conectar con libros o proyectos personales de Pablo. Una conexion inesperada pero real entre el CONTENIDO y el pensador."""
 
 
 def analyze_content_deep(content, title=''):
@@ -955,8 +955,8 @@ def analyze_content_deep(content, title=''):
     from config import ANTHROPIC_API_KEY, DEFAULT_MODEL
     _client = _anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
-    if len(content) > 8000:
-        content = content[:8000] + '\n\n[... contenido truncado]'
+    if len(content) > 40000:
+        content = content[:40000] + '\n\n[... contenido truncado]'
 
     title_line = f'Titulo: {title}\n' if title else ''
     prompt = f'CONTENIDO A ANALIZAR:\n{title_line}{content}\n\n---\n{ANALYZE_MODES_PROMPT}'
@@ -964,7 +964,8 @@ def analyze_content_deep(content, title=''):
     try:
         response = _client.messages.create(
             model=DEFAULT_MODEL,
-            max_tokens=3000,
+            max_tokens=6000,
+            system="Eres un analizador de contenido. Responde SOLO con los 8 modos solicitados, en ese orden, sin agregar secciones adicionales, sin síntesis personal, sin conectar con la vida, historia o proyectos personales del usuario. Analiza el contenido objetivamente.",
             messages=[{'role': 'user', 'content': prompt}]
         )
         result = ''
