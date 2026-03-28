@@ -1,6 +1,6 @@
 """
 Utilidades de seguridad y YouTube para Claudette Bot.
-YouTube: Intenta transcript directo -> si IP bloqueada -> oEmbed titulo + busqueda web.
+YouTube: Intenta transcript directo -> Supadata API -> oEmbed titulo + busqueda web.
 """
 
 from functools import wraps
@@ -110,8 +110,9 @@ def get_youtube_transcript(text):
     Extrae contenido de un video de YouTube.
     Estrategia:
     1. Intentar transcripcion directa (puede fallar desde cloud IPs)
-    2. Si falla -> obtener titulo via oEmbed + buscar resumen en web
-    3. Si todo falla -> dar contexto minimo a Claude para que ayude
+    2. Si falla -> Supadata API (proxy externo, no bloqueado)
+    3. Si falla -> obtener titulo via oEmbed + buscar resumen en web
+    4. Si todo falla -> dar contexto minimo a Claude para que ayude
     """
     video_id = _extract_video_id(text)
     if not video_id:
@@ -146,7 +147,27 @@ def get_youtube_transcript(text):
             else:
                 logger.error(f"YouTube Transcript Error: {e}")
 
-    # --- INTENTO 2: oEmbed (titulo) + Web Search (resumen) ---
+    # --- INTENTO 2: Supadata API ---
+    import os
+    supadata_key = os.environ.get("SUPADATA_API_KEY", "")
+    if supadata_key:
+        try:
+            url = f"https://api.supadata.ai/v1/youtube/transcript?url=https://youtube.com/watch?v={video_id}"
+            resp = http_requests.get(url, headers={"x-api-key": supadata_key}, timeout=15)
+            if resp.status_code == 200:
+                data = resp.json()
+                segments = data.get("content", [])
+                if segments:
+                    full_text = " ".join(s.get("text", "") for s in segments if s.get("text"))
+                    if full_text.strip():
+                        logger.info(f"Supadata transcript obtenido ({len(full_text)} chars)")
+                        return f"TRANSCRIPCION VIDEO (https://youtube.com/watch?v={video_id}):\n{full_text[:50000]}\n(Fin de transcripcion)"
+            else:
+                logger.warning(f"Supadata error {resp.status_code}: {resp.text[:200]}")
+        except Exception as e:
+            logger.warning(f"Supadata fallo: {e}")
+
+    # --- INTENTO 3: oEmbed (titulo) + Web Search (resumen) ---
     logger.info("Intentando fallback: oEmbed + web search...")
 
     metadata = _get_video_metadata(video_id)
