@@ -28,6 +28,10 @@ $vaults = @{
     "Claudette Agent\Claudette Agent" = "ClaudetteAgent"
     "Graficador matematico" = "GraficadorMatematico"
     "Soluciones GR"       = "SolucionesGR"
+    "Biblioteca Viva"     = "BibliotecaViva"
+    "CEREBRO2"            = "CEREBRO2"
+    "Desarrollador Inmobiliario" = "DesarrolladorInmobiliario"
+    "Libros"              = "Libros"
 }
 
 $changed = $false
