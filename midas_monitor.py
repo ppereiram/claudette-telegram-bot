@@ -32,7 +32,25 @@ MARKET_LOGS_PATH = os.path.join(VAULT_PATH, "TraderBot", "Bot_Quant_IA", "market
 
 # Umbrales de alerta
 DRAWDOWN_ALERT = -2000   # PnL diario total bajo este valor = alerta
-INACTIVITY_DAYS = 2      # Sin datos después de N días = alerta bot caído
+
+# Feriados NYSE 2025-2026 (mercado cerrado)
+NYSE_HOLIDAYS = {
+    # 2025
+    "2025-01-01", "2025-01-20", "2025-02-17", "2025-04-18",
+    "2025-05-26", "2025-07-04", "2025-09-01", "2025-11-27",
+    "2025-12-25",
+    # 2026
+    "2026-01-01", "2026-01-19", "2026-02-16", "2026-04-03",
+    "2026-05-25", "2026-07-03", "2026-09-07", "2026-11-26",
+    "2026-12-25",
+}
+
+
+def is_market_closed(date: datetime) -> bool:
+    """True si NYSE estaba cerrado ese día (fin de semana o feriado)."""
+    if date.weekday() >= 5:  # sábado=5, domingo=6
+        return True
+    return date.strftime("%Y-%m-%d") in NYSE_HOLIDAYS
 
 
 def _load_latest_json(prefix="strategies_pnl") -> dict | None:
@@ -121,23 +139,38 @@ def generate_midas_report() -> str:
     pnl_semana = sum(week_pnl.values())
     dias_datos = len(week_pnl)
 
-    # Estado del bot
-    dias_sin_datos = 0
-    check_date = datetime.now()
-    for i in range(INACTIVITY_DAYS + 1):
-        d = (check_date - timedelta(days=i)).strftime("%Y-%m-%d")
-        if any(d in f for f in glob.glob(os.path.join(MARKET_LOGS_PATH, "*.json"))):
-            break
-        dias_sin_datos += 1
+    # Estado del bot (respeta calendario NYSE)
+    now = datetime.now()
+    all_log_files = glob.glob(os.path.join(MARKET_LOGS_PATH, "*.json"))
 
-    bot_status = "🟢 Activo" if dias_sin_datos < INACTIVITY_DAYS else f"🔴 Sin datos hace {dias_sin_datos} días"
+    if is_market_closed(now):
+        bot_status = "⚪ Mercado cerrado hoy"
+        alertas_inactividad = False
+    else:
+        # Contar días hábiles sin datos
+        dias_sin_datos = 0
+        for i in range(7):
+            d = now - timedelta(days=i)
+            if is_market_closed(d):
+                continue  # no cuenta como día sin datos
+            d_str = d.strftime("%Y-%m-%d")
+            if any(d_str in f for f in all_log_files):
+                break
+            dias_sin_datos += 1
+
+        if dias_sin_datos == 0:
+            bot_status = "🟢 Activo"
+            alertas_inactividad = False
+        else:
+            bot_status = f"🔴 Sin datos hace {dias_sin_datos} día{'s' if dias_sin_datos > 1 else ''} hábil{'es' if dias_sin_datos > 1 else ''}"
+            alertas_inactividad = dias_sin_datos >= 2
 
     # Alertas
     alertas = []
     if pnl_total < DRAWDOWN_ALERT:
         alertas.append(f"🚨 Drawdown severo: ${pnl_total:,.0f}")
-    if dias_sin_datos >= INACTIVITY_DAYS:
-        alertas.append(f"🚨 Bot posiblemente caído ({dias_sin_datos} días sin datos)")
+    if alertas_inactividad:
+        alertas.append(f"🚨 Bot posiblemente caído ({bot_status})")
 
     # Condición de mercado
     market_info = ""
@@ -194,6 +227,9 @@ def check_midas_alerts() -> str | None:
     Verifica alertas críticas de Midas.
     Retorna mensaje si hay alerta, None si todo está bien.
     """
+    if is_market_closed(datetime.now()):
+        return None  # No hay actividad esperada en fines de semana y feriados NYSE
+
     latest_pnl = _load_latest_json("strategies_pnl")
     if not latest_pnl:
         return "🚨 *MIDAS ALERTA*: No hay datos de market_logs. ¿Está corriendo el bot?"

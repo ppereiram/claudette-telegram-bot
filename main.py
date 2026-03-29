@@ -23,7 +23,7 @@ from config import (
 )
 from brain import process_chat, conversation_history, user_modes, build_system_prompt, generate_morning_summary, generate_weekly_synthesis
 from tools_registry import (
-    user_locations, get_weather, search_news, search_web_google
+    user_locations, get_weather, search_web_google
 )
 from utils_security import restricted, get_youtube_transcript
 from memory_manager import get_all_facts, save_fact, get_fact, setup_database
@@ -120,14 +120,13 @@ async def button_handler(update, context):
             await context.bot.send_message(chat_id, f"⚠️ Error: {e}")
 
     elif query.data == 'btn_news':
-        await query.edit_message_text("ðŸ“° Buscando noticias...")
+        await query.edit_message_text(“📰 Preparando boletín de noticias...”)
         try:
-            news = search_news()
-            if len(news) > 4000:
-                news = news[:4000] + "\n\n[... Truncado.]"
-            await context.bot.send_message(chat_id, news)
+            from brain import generate_news_bulletin
+            bulletin = await generate_news_bulletin()
+            await send_long_message_raw(context, chat_id, bulletin)
         except Exception as e:
-            await context.bot.send_message(chat_id, f"⚠️ Error: {e}")
+            await context.bot.send_message(chat_id, f”⚠️ Error: {e}”)
 
     elif query.data == 'btn_deep':
         user_modes[chat_id] = "profundo"
@@ -468,14 +467,13 @@ async def cmd_buenos_dias(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @restricted
 async def cmd_noticias(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("ðŸ“° Buscando noticias...")
+    await update.message.reply_text(“📰 Preparando boletín de noticias...”)
     try:
-        news = search_news()
-        if len(news) > 4000:
-            news = news[:4000] + "\n\n[... Truncado.]"
-        await update.message.reply_text(news)
+        from brain import generate_news_bulletin
+        bulletin = await generate_news_bulletin()
+        await send_long_message(update, bulletin)
     except Exception as e:
-        await update.message.reply_text(f"⚠️ Error: {e}")
+        await update.message.reply_text(f”⚠️ Error: {e}”)
 
 
 @restricted

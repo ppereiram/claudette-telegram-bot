@@ -437,7 +437,7 @@ async def generate_morning_summary(chat_id):
     """
     import google_calendar
     import google_tasks
-    from tools_registry import get_weather, search_news, user_locations
+    from tools_registry import get_weather, user_locations
     from config import DEFAULT_LOCATION
     try:
         from midas_monitor import generate_midas_report
@@ -482,43 +482,6 @@ async def generate_morning_summary(chat_id):
             raw_data.append(f"\nTAREAS PENDIENTES:\n{tasks}")
     except Exception as e:
         logger.warning(f"Morning tasks error: {e}")
-
-    # Noticias enriquecidas: RSS titulos + contenido real de top articulos + HN
-    try:
-        from tools_registry import fetch_url, fetch_hackernews_top
-        news_raw = search_news()
-        if news_raw and len(news_raw) > 100:
-            # Extraer URLs del output RSS para leer contenido real
-            urls_found = re.findall(r'URL: (https?://[^\s\n]+)', news_raw)
-            articles_content = []
-            for url in urls_found[:3]:  # Leer max 3 articulos para no demorar
-                try:
-                    art = fetch_url(url)
-                    if art and len(art) > 200:
-                        # Truncar a 800 chars por articulo para no explotar tokens
-                        articles_content.append(f"ARTICULO ({url}):\n{art[:800]}\n[...]")
-                except Exception:
-                    continue
-
-            # HN para perspectiva tech
-            hn_data = ""
-            try:
-                hn_data = fetch_hackernews_top(limit=5, min_points=100)
-            except Exception:
-                pass
-
-            news_block = f"TITULARES RSS:\n{news_raw}"
-            if articles_content:
-                news_block += "\n\nCONTENIDO DE ARTICULOS (para que no inventes - usa esto):\n" + "\n\n".join(articles_content)
-            if hn_data:
-                news_block += f"\n\nHACKER NEWS (perspectiva tech/IA):\n{hn_data}"
-
-            raw_data.append(f"\nNOTICIAS ENRIQUECIDAS:\n{news_block}")
-        else:
-            raw_data.append("\nNOTICIAS: No disponibles hoy (servicio temporalmente limitado). No inventes noticias.")
-    except Exception as e:
-        logger.warning(f"Morning news error: {e}")
-        raw_data.append("\nNOTICIAS: No disponibles hoy. No inventes noticias.")
 
     # --- BIBLIOTECA: Libro aleatorio del día ---
     book_data = ""
@@ -587,30 +550,21 @@ Genera un resumen matutino siguiendo EXACTAMENTE esta estructura:
 4. **Midas Monitor** (SOLO si hay datos de MIDAS MONITOR):
    - Estado bot, PnL dia y semana, top 2 ganadoras y perdedoras, alerta si drawdown severo. Maximo 8 lineas.
 
-5. **3-4 noticias curadas** — SOLO geopolitica, economia/finanzas, filosofia, ciencia, tecnologia, IA.
-   EXCLUIR: deportes, farandula, crimenes, accidentes
-   Para cada noticia:
-   - **Titulo** + fuente (URL si la tienes en los datos)
-   - 2-3 oraciones de contexto real usando el CONTENIDO DE ARTICULOS disponible — no inventes
-   - Un angulo no obvio: que no dice la noticia, que implica, o perspectiva de HN/Reddit si hay
-
-
-5. **📖 Rincón de la Biblioteca** — Esta es la sección nueva y más importante. Con el LIBRO DEL DÍA:
+5. **📖 Rincón de la Biblioteca** — Esta es la sección más importante. Con el LIBRO DEL DÍA:
    a) Presentá el libro: título, autor, una línea sobre su tesis central
    b) Extraé UNA frase memorable o una idea poderosa del extracto — citala textual si la encontrás
-   c) Conectá esa idea con algo actual: una noticia del día, una tendencia, un dilema contemporáneo. Que no sea forzado — si la conexión es obvia, mejor. Si no, hacé una conexión inesperada pero inteligente.
+   c) Desarrollá esa idea con profundidad: su implicación, lo que revela, lo que incomoda. Si cruzás con otro autor o libro, hacelo dentro del texto de forma natural — nunca como subsección separada ni con etiqueta propia.
    d) Lanzá UNA pregunta provocadora que obligue a Pablo a pensar. No preguntas retóricas fáciles. Preguntas que incomoden, que cuestionen, que abran una puerta. Ejemplos del nivel que busco:
       - "Si Byung-Chul Han dice que la transparencia es violencia, ¿tu obsesión por documentar todo en Obsidian es un acto de control o de resistencia?"
       - "Taleb diría que tu portafolio de inversiones tiene fragilidad oculta. ¿Dónde está tu antifragilidad personal?"
       - "Jung habla del encuentro con la sombra. ¿Cuál es la parte de vos que deliberadamente no querés ver hoy?"
-   e) Sugerí una conexión con OTRO libro o autor de la biblioteca que cruce con el tema. "Esto conecta con lo que dice X en Y" — así Pablo puede buscar después.
 
 6. **Pensamiento del cierre** — UNA cita filosófica (puede ser del libro del día o de otro autor: Marco Aurelio, Epicteto, Séneca, Kierkegaard, Nietzsche, Heidegger, Han, Weil, Campbell, Jung). Breve, cortante, sin explicación.
 
 REGLAS:
-- CRITICO: Si no hay noticias disponibles, di "Sin noticias disponibles hoy" — NO inventes, NO rellenes con filosofia
 - CRITICO: Usa EXACTAMENTE la fecha que aparece en FECHA: — no la cambies ni la recalcules
 - CRITICO: La seccion Midas Monitor es OBLIGATORIA si hay datos de MIDAS MONITOR en los datos
+- CRITICO: NO uses etiquetas como "Conexión lateral:", "Conexión con...", "Esto conecta con...", "Esto resuena con..." como subsecciones. Las referencias a otros autores o libros van integradas naturalmente en el párrafo, sin encabezado propio.
 - El resumen puede ocupar varios mensajes — no truncues secciones para ahorrar espacio, incluye TODO
 - Tono: directo, filosófico, sin condescendencia
 - No uses "¡Excelente!" ni frases de chatbot
@@ -642,6 +596,90 @@ REGLAS:
         logger.error(f"Morning Claude error: {e}")
         return f"☀️ Buenos días, Pablo.\n{context_block}\n\n— Claudette"
 
+
+# =====================================================
+# BOLETIN DE NOTICIAS (comando /noticias)
+# =====================================================
+
+async def generate_news_bulletin() -> str:
+    """
+    Genera un boletín de noticias curado pasando por Claude.
+    RSS + HN + contenido real de artículos, filtrado y comentado.
+    """
+    from tools_registry import search_news, fetch_url, fetch_hackernews_top
+    import re
+
+    # Recolectar datos
+    news_raw = ""
+    articles_content = []
+    hn_data = ""
+
+    try:
+        news_raw = search_news()
+    except Exception as e:
+        logger.warning(f"News bulletin — RSS error: {e}")
+
+    if news_raw and len(news_raw) > 100:
+        urls_found = re.findall(r'URL: (https?://[^\s\n]+)', news_raw)
+        for url in urls_found[:4]:
+            try:
+                art = fetch_url(url)
+                if art and len(art) > 200:
+                    articles_content.append(f"ARTICULO ({url}):\n{art[:1000]}\n[...]")
+            except Exception:
+                continue
+
+    try:
+        hn_data = fetch_hackernews_top(limit=5, min_points=100)
+    except Exception:
+        pass
+
+    if not news_raw and not hn_data:
+        return "📰 *Noticias no disponibles*\n\nNo pude acceder a los feeds RSS ni a Hacker News en este momento. Intentá de nuevo en unos minutos."
+
+    # Armar bloque de datos
+    data_block = ""
+    if news_raw:
+        data_block += f"TITULARES RSS:\n{news_raw}"
+    if articles_content:
+        data_block += "\n\nCONTENIDO DE ARTÍCULOS:\n" + "\n\n".join(articles_content)
+    if hn_data:
+        data_block += f"\n\nHACKER NEWS:\n{hn_data}"
+
+    prompt = f"""Eres Claudette generando el BOLETÍN DE NOTICIAS de Pablo.
+
+DATOS:
+{data_block}
+
+INSTRUCCIONES:
+Generá un boletín con 4-5 noticias curadas. SOLO geopolítica, economía/finanzas, tecnología, IA, ciencia, filosofía.
+EXCLUIR: deportes, farándula, crímenes, accidentes.
+
+Para cada noticia:
+- **Título** + fuente (URL si la tenés)
+- 2-3 oraciones de contexto real usando el contenido disponible — no inventes
+- Un ángulo no obvio: qué no dice la noticia, qué implica, perspectiva de HN si hay
+
+REGLAS:
+- Si no hay datos suficientes de una noticia, omitila — no rellenes con suposiciones
+- Tono: directo, sin condescendencia, sin frases de chatbot
+- Si los feeds fallaron completamente, decilo honestamente
+"""
+
+    try:
+        response = client.messages.create(
+            model=DEFAULT_MODEL,
+            max_tokens=1500,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        result = ""
+        for block in response.content:
+            if block.type == "text":
+                result += block.text
+        return result if result else "📰 No pude generar el boletín de noticias."
+    except Exception as e:
+        logger.error(f"News bulletin Claude error: {e}")
+        return f"📰 Error generando el boletín: {e}"
 
 
 # =====================================================
