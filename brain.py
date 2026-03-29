@@ -13,7 +13,7 @@ from config import ANTHROPIC_API_KEY, DEFAULT_MODEL, MAX_HISTORY, MAX_TOOL_ROUND
 from tools_registry import TOOLS_SCHEMA, execute_tool, user_locations
 from memory_manager import get_all_facts, get_fact, save_fact
 
-client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
 
 # --- HISTORIAL EN MEMORIA ---
 conversation_history = {}
@@ -326,10 +326,10 @@ async def process_chat(update, context, text, image_data=None):
         max_tokens = MAX_TOKENS_DOCUMENT if needs_document else MAX_TOKENS_NORMAL
 
         # Primera llamada a Claude
-        response = client.messages.create(
+        response = await client.messages.create(
             model=DEFAULT_MODEL,
             max_tokens=max_tokens,
-            system=system_prompt,
+            system=[{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
             tools=TOOLS_SCHEMA,
             messages=messages
         )
@@ -382,10 +382,10 @@ async def process_chat(update, context, text, image_data=None):
                     max_tokens = MAX_TOKENS_DOCUMENT
 
             # Siguiente ronda
-            response = client.messages.create(
+            response = await client.messages.create(
                 model=DEFAULT_MODEL,
                 max_tokens=max_tokens,
-                system=system_prompt,
+                system=[{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
                 tools=TOOLS_SCHEMA,
                 messages=messages
             )
@@ -578,10 +578,10 @@ REGLAS:
     # --- 3. Llamar a Claude ---
     try:
         system = build_system_prompt(chat_id)
-        response = client.messages.create(
+        response = await client.messages.create(
             model=DEFAULT_MODEL,
             max_tokens=2048,
-            system=system,
+            system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
             messages=[{"role": "user", "content": morning_prompt}]
         )
 
@@ -667,7 +667,7 @@ REGLAS:
 """
 
     try:
-        response = client.messages.create(
+        response = await client.messages.create(
             model=DEFAULT_MODEL,
             max_tokens=1500,
             messages=[{"role": "user", "content": prompt}]
@@ -763,10 +763,10 @@ REGLAS: basa todo en los datos, tono reflexivo y directo, si hay pocos datos dil
 
     try:
         system = build_system_prompt(chat_id)
-        response = client.messages.create(
+        response = await client.messages.create(
             model=DEFAULT_MODEL,
             max_tokens=2000,
-            system=system,
+            system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
             messages=[{"role": "user", "content": synthesis_prompt}]
         )
         result = "".join(b.text for b in response.content if b.type == "text")

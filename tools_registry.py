@@ -5,6 +5,7 @@ Portado completo desde bot.py monolítico.
 """
 
 import os
+import asyncio
 import tempfile
 import logging
 import requests
@@ -1502,88 +1503,92 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
 
     try:
         if tool_name == "get_current_weather":
-            return get_weather(tool_input['lat'], tool_input['lon'])
+            return await asyncio.to_thread(get_weather, tool_input['lat'], tool_input['lon'])
 
         elif tool_name == "get_weather_by_city":
-            return get_weather_by_city(tool_input["city_name"])
+            return await asyncio.to_thread(get_weather_by_city, tool_input["city_name"])
 
         elif tool_name == "search_contact_and_call":
             query = tool_input['name_query']
-            results = google_contacts.search_contact(query)
+            results = await asyncio.to_thread(google_contacts.search_contact, query)
             if not results:
-                return f"âŒ No encontré a '{query}'."
+                return f"No encontre a '{query}'."
             contact = results[0]
             await context.bot.send_contact(
                 chat_id=chat_id,
                 phone_number=contact['phone'],
                 first_name=contact['name']
             )
-            return f"✅ Contacto: {contact['name']}."
+            return f"Contacto: {contact['name']}."
 
         elif tool_name == "search_nearby_places":
             loc = user_locations.get(chat_id, DEFAULT_LOCATION)
             lat, lng = loc['lat'], loc['lng']
-            loc_name = loc.get('name', 'San José, Costa Rica')
+            loc_name = loc.get('name', 'San Jose, Costa Rica')
             query = tool_input['query']
 
             try:
-                places_result = google_places.search_nearby_places(query, lat, lng)
-                if not places_result or "⚠️" in str(places_result):
+                places_result = await asyncio.to_thread(google_places.search_nearby_places, query, lat, lng)
+                if not places_result or "warning" in str(places_result).lower():
                     raise Exception(str(places_result))
                 return places_result
             except Exception as e:
-                logger.warning(f"Places API falló: {e}. Fallback a web search.")
+                logger.warning(f"Places API fallo: {e}. Fallback a web search.")
                 fallback_query = f"{query} near {loc_name}"
-                web_result = search_web_google(fallback_query)
-                if web_result and "no devolvió resultados" not in web_result:
-                    return f"ðŸ” (Búsqueda web, Places API no disponible):\n{web_result}"
-                return f"ðŸ” (Búsqueda general):\n{search_web_google(f'{query} Costa Rica')}"
+                web_result = await asyncio.to_thread(search_web_google, fallback_query)
+                if web_result and "no devolvio resultados" not in web_result:
+                    return f"(Busqueda web, Places API no disponible):\n{web_result}"
+                return f"(Busqueda general):\n{await asyncio.to_thread(search_web_google, query + ' Costa Rica')}"
 
         elif tool_name == "read_book_from_drive":
-            return read_book_from_drive(tool_input['query'])
+            return await asyncio.to_thread(read_book_from_drive, tool_input['query'])
 
         elif tool_name == "save_user_fact":
             full_key = f"{tool_input.get('category', 'General')}: {tool_input.get('key', 'Dato')}"
-            save_fact(full_key, tool_input['value'])
-            return f"✅ Guardado: {full_key}"
+            await asyncio.to_thread(save_fact, full_key, tool_input['value'])
+            return f"Guardado: {full_key}"
 
         elif tool_name == "search_web":
-            return search_web_google(tool_input['query'])
+            return await asyncio.to_thread(search_web_google, tool_input['query'])
 
         elif tool_name == "search_news":
             topics = tool_input.get('topics')
-            return search_news(topics)
+            return await asyncio.to_thread(search_news, topics)
 
         elif tool_name == "get_calendar_events":
-            return google_calendar.get_calendar_events(
+            return await asyncio.to_thread(
+                google_calendar.get_calendar_events,
                 clean_date_iso(tool_input['start_date']),
                 clean_date_iso(tool_input['end_date'], True)
             )
 
         elif tool_name == "create_calendar_event":
-            return google_calendar.create_calendar_event(
+            return await asyncio.to_thread(
+                google_calendar.create_calendar_event,
                 tool_input['summary'],
                 clean_date_iso(tool_input['start_time']),
                 clean_date_iso(tool_input['end_time'])
             )
 
         elif tool_name == "create_task":
-            return google_tasks.create_task(
+            return await asyncio.to_thread(
+                google_tasks.create_task,
                 tool_input['title'],
                 tool_input.get('notes')
             )
 
         elif tool_name == "list_tasks":
-            return google_tasks.list_tasks(tool_input.get('show_completed', False))
+            return await asyncio.to_thread(google_tasks.list_tasks, tool_input.get('show_completed', False))
 
         elif tool_name == "search_emails":
-            return gmail_service.search_emails(tool_input['query'])
+            return await asyncio.to_thread(gmail_service.search_emails, tool_input['query'])
 
         elif tool_name == "get_email":
-            return gmail_service.get_email(tool_input['email_id'])
+            return await asyncio.to_thread(gmail_service.get_email, tool_input['email_id'])
 
         elif tool_name == "send_email":
-            return gmail_service.send_email(
+            return await asyncio.to_thread(
+                gmail_service.send_email,
                 to=tool_input['to'],
                 subject=tool_input['subject'],
                 body=tool_input['body'],
@@ -1593,8 +1598,9 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
         elif tool_name == "generate_image":
             if not openai_client:
                 return "OpenAI no configurado."
-            msg = await context.bot.send_message(chat_id, "ðŸŽ¨ Pintando tu idea...")
-            response = openai_client.images.generate(
+            msg = await context.bot.send_message(chat_id, "Pintando tu idea...")
+            response = await asyncio.to_thread(
+                openai_client.images.generate,
                 model="dall-e-3",
                 prompt=tool_input['prompt'],
                 size="1024x1024",
@@ -1604,62 +1610,60 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
             await context.bot.send_photo(
                 chat_id,
                 photo=response.data[0].url,
-                caption=f"ðŸŽ¨ {tool_input['prompt']}"
+                caption=f"Imagen: {tool_input['prompt']}"
             )
             await context.bot.delete_message(chat_id, msg.message_id)
-            return "✅ Imagen generada y enviada."
+            return "Imagen generada y enviada."
 
         elif tool_name == "read_local_file":
-            return read_local_file(tool_input['filename'])
+            return await asyncio.to_thread(read_local_file, tool_input['filename'])
 
         elif tool_name == "fetch_url":
-            return fetch_url(tool_input['url'])
+            return await asyncio.to_thread(fetch_url, tool_input['url'])
 
         elif tool_name == "generate_document":
             doc_format = tool_input.get('format', 'docx')
             title = tool_input['title']
-            content = tool_input['content']
+            content_doc = tool_input['content']
 
-            msg = await context.bot.send_message(chat_id, "ðŸ“ Generando documento...")
+            msg = await context.bot.send_message(chat_id, "Generando documento...")
 
             try:
-                filepath, filename = generate_document(title, content, doc_format)
+                filepath, filename = await asyncio.to_thread(generate_document, title, content_doc, doc_format)
 
-                # Enviar como archivo adjunto en Telegram
                 with open(filepath, 'rb') as f:
                     await context.bot.send_document(
                         chat_id=chat_id,
                         document=f,
                         filename=filename,
-                        caption=f"ðŸ“„ {title}"
+                        caption=f"Documento: {title}"
                     )
 
-                # Limpiar archivo temporal
                 os.unlink(filepath)
                 await context.bot.delete_message(chat_id, msg.message_id)
 
-                return f"✅ Documento '{title}' generado y enviado como {filename}"
+                return f"Documento '{title}' generado y enviado como {filename}"
 
             except Exception as e:
                 logger.error(f"Document generation error: {e}")
                 await context.bot.delete_message(chat_id, msg.message_id)
-                return f"⚠️ Error generando documento: {e}"
+                return f"Error generando documento: {e}"
 
         elif tool_name == "generate_spreadsheet":
             title = tool_input['title']
             sheets_data = tool_input['sheets']
 
-            msg = await context.bot.send_message(chat_id, "ðŸ“Š Generando Excel...")
+            msg = await context.bot.send_message(chat_id, "Generando Excel...")
 
             try:
-                filepath, filename = generate_spreadsheet(title, sheets_data)
+                filepath, filename = await asyncio.to_thread(generate_spreadsheet, title, sheets_data)
 
                 with open(filepath, 'rb') as f:
                     await context.bot.send_document(
                         chat_id=chat_id,
                         document=f,
                         filename=filename,
-                        caption=f"ðŸ“Š {title}"
+                        caption=f"Excel: {title}"
                     )
 
                 os.unlink(filepath)
@@ -1667,30 +1671,31 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
 
                 total_rows = sum(len(s.get('rows', [])) for s in sheets_data)
                 total_sheets = len(sheets_data)
-                return f"✅ Excel '{title}' generado: {total_sheets} hoja(s), {total_rows} filas"
+                return f"Excel '{title}' generado: {total_sheets} hoja(s), {total_rows} filas"
 
             except Exception as e:
                 logger.error(f"Spreadsheet generation error: {e}")
                 await context.bot.delete_message(chat_id, msg.message_id)
-                return f"⚠️ Error generando Excel: {e}"
+                return f"Error generando Excel: {e}"
 
         elif tool_name == "search_library":
-            return search_library(tool_input['query'], tool_input.get('limit', 5))
+            return await asyncio.to_thread(search_library, tool_input['query'], tool_input.get('limit', 5))
 
         elif tool_name == "search_library_by_author":
-            return search_by_author(tool_input['author'])
+            return await asyncio.to_thread(search_by_author, tool_input['author'])
 
         elif tool_name == "search_library_by_tag":
-            return search_by_tag(tool_input['tag'])
+            return await asyncio.to_thread(search_by_tag, tool_input['tag'])
 
         elif tool_name == "get_book_detail":
-            return get_book_content(tool_input['title'])
+            return await asyncio.to_thread(get_book_content, tool_input['title'])
 
         elif tool_name == "library_stats":
-            return get_library_stats()
+            return await asyncio.to_thread(get_library_stats)
 
         elif tool_name == "search_reddit":
-            return search_reddit(
+            return await asyncio.to_thread(
+                search_reddit,
                 tool_input["query"],
                 subreddit=tool_input.get("subreddit"),
                 sort=tool_input.get("sort", "relevance"),
@@ -1699,19 +1704,22 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
             )
 
         elif tool_name == "fetch_hackernews_top":
-            return fetch_hackernews_top(
+            return await asyncio.to_thread(
+                fetch_hackernews_top,
                 limit=tool_input.get("limit", 10),
                 min_points=tool_input.get("min_points", 50)
             )
 
         elif tool_name == "analyze_content_deep":
-            return analyze_content_deep(
+            return await asyncio.to_thread(
+                analyze_content_deep,
                 tool_input["content"],
                 title=tool_input.get("title", "")
             )
 
         elif tool_name == "verify_content":
-            return verify_content(
+            return await asyncio.to_thread(
+                verify_content,
                 tool_input["url_or_text"],
                 claim=tool_input.get("claim")
             )
@@ -1725,6 +1733,7 @@ async def execute_tool(tool_name: str, tool_input: dict, chat_id: int, context):
     except Exception as e:
         logger.error(f"Tool Error {tool_name}: {e}")
         return f"Error en herramienta {tool_name}: {e}"
+
 
 
 
