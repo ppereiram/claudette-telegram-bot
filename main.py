@@ -54,7 +54,7 @@ if ELEVENLABS_API_KEY:
 
 
 # =====================================================
-# MENÃš VISUAL
+# MENÚ VISUAL
 # =====================================================
 
 async def show_menu(update, context):
@@ -120,13 +120,13 @@ async def button_handler(update, context):
             await context.bot.send_message(chat_id, f"⚠️ Error: {e}")
 
     elif query.data == 'btn_news':
-        await query.edit_message_text(“📰 Preparando boletín de noticias...”)
+        await query.edit_message_text("📰 Preparando boletín de noticias...")
         try:
             from brain import generate_news_bulletin
             bulletin = await generate_news_bulletin()
             await send_long_message_raw(context, chat_id, bulletin)
         except Exception as e:
-            await context.bot.send_message(chat_id, f”⚠️ Error: {e}”)
+            await context.bot.send_message(chat_id, f"⚠️ Error: {e}")
 
     elif query.data == 'btn_deep':
         user_modes[chat_id] = "profundo"
@@ -138,22 +138,22 @@ async def button_handler(update, context):
 
     elif query.data == 'btn_clear':
         conversation_history[chat_id] = []
-        await query.edit_message_text("ðŸ§¹ Chat reiniciado. (Memoria persistente intacta)")
+        await query.edit_message_text("🧹 Chat reiniciado. (Memoria persistente intacta)")
 
     elif query.data == 'btn_mem':
         all_facts = get_all_facts() or {}
         lines = [f"â€¢ {k}: {v}" for k, v in all_facts.items() if not k.startswith("System_Location")]
         if lines:
-            memory_text = "ðŸ§  Lo que recuerdo de ti:\n\n" + "\n".join(lines)
+            memory_text = "🧠 Lo que recuerdo de ti:\n\n" + "\n".join(lines)
             if len(memory_text) > 4000:
                 memory_text = memory_text[:4000] + "\n\n[... Truncado]"
         else:
-            memory_text = "ðŸ§  Memoria vacía. Dime cosas y las recordaré."
+            memory_text = "🧠 Memoria vacía. Dime cosas y las recordaré."
         await query.edit_message_text(memory_text)
 
     elif query.data == 'btn_location':
         loc = user_locations.get(chat_id, DEFAULT_LOCATION)
-        await query.edit_message_text(f"ðŸ“ {loc['name']} ({loc['lat']}, {loc['lng']})")
+        await query.edit_message_text(f"📍 {loc['name']} ({loc['lat']}, {loc['lng']})")
 
     elif query.data == 'btn_progreso':
         await query.edit_message_text("Generando panel de progreso...")
@@ -175,7 +175,7 @@ async def button_handler(update, context):
             await context.bot.send_message(chat_id, "Error: " + str(e))
 
     elif query.data == 'btn_img':
-        await query.edit_message_text("ðŸŽ¨ Escríbeme qué imagen quieres que genere.")
+        await query.edit_message_text("🎨 Escríbeme qué imagen quieres que genere.")
 
 
 # =====================================================
@@ -269,7 +269,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ).text
         os.unlink(path)
 
-        await update.message.reply_text(f"ðŸŽ¤ {transcript}")
+        await update.message.reply_text(f"🎤 {transcript}")
         await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
 
         response = await process_chat(update, context, transcript)
@@ -286,7 +286,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 await update.effective_message.reply_voice(voice=b"".join(audio))
             except Exception as e:
-                logger.error(f"âŒ ElevenLabs Error: {e}")
+                logger.error(f"âŒ ElevenLabs Error: {e}")
 
     except Exception as e:
         await update.message.reply_text(f"Error voz: {e}")
@@ -415,7 +415,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             extracted_text = extracted_text[:12000] + "\n\n[... Contenido truncado. Pedí una sección específica.]"
 
         # Construir mensaje para Claude con el contenido del archivo
-        msg_text = f"ðŸ“Ž El usuario envió el archivo '{file_name}'.\n"
+        msg_text = f"🔎 El usuario envió el archivo '{file_name}'.\n"
         if caption:
             msg_text += f"Mensaje: {caption}\n"
         msg_text += f"\n--- CONTENIDO DEL ARCHIVO ---\n{extracted_text}\n--- FIN DEL ARCHIVO ---"
@@ -442,12 +442,12 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         save_fact(f"System_Location_Lat_{chat_id}", str(lat))
         save_fact(f"System_Location_Lng_{chat_id}", str(lng))
-        logger.info(f"ðŸ’¾ Ubicación guardada: {lat}, {lng}")
+        logger.info(f"💾 Ubicación guardada: {lat}, {lng}")
     except Exception as e:
         logger.error(f"Error guardando ubicación: {e}")
 
     if not update.edited_message:
-        await msg.reply_text("ðŸ“ Ubicación actualizada.")
+        await msg.reply_text("📍 Ubicación actualizada.")
 
 
 # =====================================================
@@ -467,13 +467,13 @@ async def cmd_buenos_dias(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @restricted
 async def cmd_noticias(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(“📰 Preparando boletín de noticias...”)
+    await update.message.reply_text("📰 Preparando boletín de noticias...")
     try:
         from brain import generate_news_bulletin
         bulletin = await generate_news_bulletin()
         await send_long_message(update, bulletin)
     except Exception as e:
-        await update.message.reply_text(f”⚠️ Error: {e}”)
+        await update.message.reply_text(f"⚠️ Error: {e}")
 
 
 @restricted
@@ -491,7 +491,7 @@ async def cmd_normal(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @restricted
 async def cmd_clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conversation_history[update.effective_chat.id] = []
-    await update.message.reply_text("ðŸ§¹ Memoria de conversación borrada. (Memoria persistente intacta)")
+    await update.message.reply_text("🧹 Memoria de conversación borrada. (Memoria persistente intacta)")
 
 
 @restricted
@@ -499,11 +499,11 @@ async def cmd_memoria(update: Update, context: ContextTypes.DEFAULT_TYPE):
     all_facts = get_all_facts() or {}
     lines = [f"â€¢ {k}: {v}" for k, v in all_facts.items() if not k.startswith("System_Location")]
     if lines:
-        memory_text = "ðŸ§  Lo que recuerdo de ti:\n\n" + "\n".join(lines)
+        memory_text = "🧠 Lo que recuerdo de ti:\n\n" + "\n".join(lines)
         if len(memory_text) > 4000:
             memory_text = memory_text[:4000] + "\n\n[... Truncado]"
     else:
-        memory_text = "ðŸ§  Memoria vacía. Dime cosas y las recordaré."
+        memory_text = "🧠 Memoria vacía. Dime cosas y las recordaré."
     await update.message.reply_text(memory_text)
 
 
@@ -721,7 +721,7 @@ def main():
                 time=morning_time,
                 name="morning_reminder"
             )
-            logger.info(f"ðŸ”” Recordatorio matutino (6:00 AM CR) activado para chat_id: {OWNER_CHAT_ID}")
+            logger.info(f"🔔 Recordatorio matutino (6:00 AM CR) activado para chat_id: {OWNER_CHAT_ID}")
         else:
             logger.warning("⚠️ Recordatorios desactivados (falta OWNER_CHAT_ID o job-queue).")
     except Exception as e:
