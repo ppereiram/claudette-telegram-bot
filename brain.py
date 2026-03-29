@@ -43,6 +43,7 @@ def load_file_content(filename, default_text=""):
 
 CLAUDETTE_CORE = load_file_content('CLAUDETTE_CORE.md', "Eres Claudette, asistente inteligente de Pablo.")
 USER_PROFILE = load_file_content('user_profile.md', "")
+VIRTUDES_FUNDACIONALES = load_file_content('virtudes_fundacionales.md', "")
 
 
 # =====================================================
@@ -159,6 +160,7 @@ def build_system_prompt(chat_id):
 
     return f"""{CLAUDETTE_CORE}
 {USER_PROFILE}
+{VIRTUDES_FUNDACIONALES}
 {memory_text}
 === BIBLIOTECA Y ESCRITOS DE PABLO ===
 Tienes acceso a los escritos, libros y biblioteca de Pablo en Google Drive.
