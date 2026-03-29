@@ -369,12 +369,12 @@ async def process_chat(update, context, text, image_data=None):
                         "content": str(tool_result)
                     })
 
+            messages.append({"role": "user", "content": tool_results})
+
             # Si analyze_content_deep fue el unico tool, devolver directo
             if deep_analysis_result and len(tool_results) == 1:
                 final_text = deep_analysis_result
                 break
-
-            messages.append({"role": "user", "content": tool_results})
 
             # Si se usó generate_document o generate_spreadsheet, asegurar tokens altos
             for block in response.content:
