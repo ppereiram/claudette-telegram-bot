@@ -74,9 +74,27 @@ Claudette ya respondía bien. Este upgrade le da *carácter*: la diferencia entr
 
 ---
 
-## Roadmap (pendientes)
+## Roadmap hacia V4.0
 
-- [ ] Auto-login Windows + NinjaTrader antes del Camino de Santiago (mayo 2026)
-- [ ] Analizador Reddit/HN integrado al boletín
-- [ ] Memoria episódica: Claudette recuerda conversaciones por tema, no solo hechos
-- [ ] V4.0: Integración con vault Obsidian en tiempo real (no solo sync diaria)
+### Prioridad ALTA — Memoria de vida (el gap del viaje a Bejuco)
+- [ ] Agregar 5° trigger en SELF-LEARNING LOOP: personas, lugares, eventos sociales, experiencias vividas → `category: vida`
+- [ ] Claudette guarda automáticamente eventos sociales con contexto narrativo, no solo hechos planos
+- [ ] Ejemplo: "9-10 feb 2026, Playa Bejuco con grupo venezolano: Michelle, Gerardo, Alfonso, Isa, Néstor, Irene"
+
+### Prioridad ALTA — Camino de Santiago (mayo 2026)
+- [ ] Voz-a-Obsidian: nota de voz → Whisper → transcripción → guardado etiquetado `#CaminoDeSantiago` en Obsidian
+- [ ] Auto-login Windows + NinjaTrader antes de salir (bot sin supervisión)
+- [ ] Modo "Compañero Estoico": prompt especial para el viaje, resignificar fatiga con Amor Fati
+
+### Prioridad MEDIA — Archivista Read-It-Later
+- [ ] Cuando Pablo manda link sin texto → Firecrawl limpia → extrae metadatos/tags → guarda en Obsidian /Inbox + biblioteca PostgreSQL
+- [ ] Reemplaza Instapaper/Pocket
+
+### Prioridad MEDIA — Memoria proactiva
+- [ ] Claudette inicia conversaciones cuando detecta patrones: "Esta semana mencionaste Ultraman dos veces. ¿Estás tomando una decisión?"
+- [ ] Ciclo dominical de consolidación de memoria (con revisión humana antes de escribir)
+
+### Prioridad BAJA — Técnico
+- [ ] Limpiar mojibake restante en main.py (`â€¢` bullet y `âŒ` cross)
+- [ ] Refactoring tools_registry.py (1739 líneas → sub-archivos)
+- [ ] Integración vault Obsidian en tiempo real (no solo sync 10am)
