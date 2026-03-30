@@ -776,3 +776,76 @@ REGLAS: basa todo en los datos, tono reflexivo y directo, si hay pocos datos dil
     except Exception as e:
         logger.error(f"generate_weekly_synthesis error: {e}")
         return f"Error generando sintesis: {e}"
+
+
+# =====================================================
+# MEMORIA PROACTIVA — DETECCIÓN DE PATRONES
+# =====================================================
+
+async def check_patterns_proactive(context) -> None:
+    """
+    Escanea la memoria reciente buscando patrones o temas recurrentes.
+    Si detecta algo relevante, envía un mensaje proactivo a Pablo.
+    Se ejecuta cada 3 días vía job_queue.
+    """
+    from config import OWNER_CHAT_ID
+    if not OWNER_CHAT_ID:
+        return
+
+    try:
+        from memory_manager import get_recent_facts, get_all_facts
+        from knowledge_base import kb_search
+
+        # Recopilar contexto reciente
+        recent_facts = get_recent_facts(days=7)
+        recent_insights = await asyncio.to_thread(
+            kb_search, "decisión proyecto vida aprendizaje", 8
+        )
+
+        if not recent_facts and (not recent_insights or "sin resultados" in recent_insights.lower()):
+            logger.info("Memoria proactiva: sin datos recientes, saltando.")
+            return
+
+        facts_text = "\n".join(
+            f"- {k}: {v['value']} (actualizado: {v['updated_at'][:10]})"
+            for k, v in recent_facts.items()
+        ) if recent_facts else "Sin facts recientes."
+
+        pattern_prompt = f"""Eres Claudette revisando la memoria reciente de Pablo (últimos 7 días).
+
+FACTS RECIENTES:
+{facts_text}
+
+INSIGHTS RECIENTES EN KB:
+{recent_insights[:1500]}
+
+Tu tarea: detectar si hay un patrón, tema recurrente, tensión no resuelta o decisión pendiente que merece un mensaje proactivo breve.
+
+REGLAS:
+- Si detectas algo relevante: escribe SOLO el mensaje que le enviarías a Pablo. Directo, 1-3 líneas máximo, tono de Claudette (sin "Hola Pablo", sin preámbulo). Que abra una reflexión o haga una pregunta incómoda.
+- Si NO hay nada que merezca interrupción: responde exactamente "NO_PATTERN"
+- NO envíes mensajes triviales ni de seguimiento rutinario. Solo si hay algo genuinamente interesante.
+
+Ejemplos de mensajes válidos:
+"Esta semana mencionaste Ultraman dos veces. ¿Estás tomando una decisión que no has verbalizado todavía?"
+"Llevas 10 días sin registrar avances en Midas. ¿Bloqueo real o solo falta de tiempo?"
+"Has guardado tres insights sobre libertad financiera esta semana. ¿Qué está pasando realmente?"
+
+Responde solo con el mensaje o con NO_PATTERN."""
+
+        response = await client.messages.create(
+            model=DEFAULT_MODEL,
+            max_tokens=200,
+            messages=[{"role": "user", "content": pattern_prompt}]
+        )
+        message = "".join(b.text for b in response.content if b.type == "text").strip()
+
+        if message and message != "NO_PATTERN" and not message.startswith("NO_PATTERN"):
+            chat_id = int(OWNER_CHAT_ID)
+            await context.bot.send_message(chat_id=chat_id, text=message)
+            logger.info(f"Memoria proactiva: patrón detectado y mensaje enviado.")
+        else:
+            logger.info("Memoria proactiva: sin patrones relevantes esta vez.")
+
+    except Exception as e:
+        logger.error(f"check_patterns_proactive error: {e}")

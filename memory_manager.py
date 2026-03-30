@@ -222,3 +222,29 @@ def delete_fact(key):
         del data[key]
         _json_save_all(data)
     return True
+
+
+def get_recent_facts(days: int = 7) -> dict:
+    """Devuelve facts actualizados en los últimos N días (solo PostgreSQL)."""
+    if not _use_postgres:
+        return {}
+    try:
+        conn = _pg_connect()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT key, value, updated_at
+            FROM user_memory
+            WHERE updated_at >= NOW() - INTERVAL '%s days'
+              AND key NOT LIKE 'System_Location_%%'
+            ORDER BY updated_at DESC
+            """,
+            (days,)
+        )
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return {row[0]: {"value": row[1], "updated_at": str(row[2])} for row in rows}
+    except Exception as e:
+        logger.error(f"get_recent_facts error: {e}")
+        return {}

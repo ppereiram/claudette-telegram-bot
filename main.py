@@ -750,6 +750,22 @@ def main():
     except Exception as e:
         logger.warning(f"Sintesis semanal no disponible: {e}")
 
+    # Memoria proactiva — cada 3 días a las 7pm Costa Rica (01:00 UTC)
+    try:
+        if OWNER_CHAT_ID and app.job_queue:
+            from datetime import time as dt_time
+            from brain import check_patterns_proactive
+
+            app.job_queue.run_daily(
+                check_patterns_proactive,
+                time=dt_time(hour=1, minute=0, second=0),
+                days=(1, 4),  # martes y viernes 01:00 UTC = lunes/jueves 7pm CR
+                name="proactive_memory"
+            )
+            logger.info("🔍 Memoria proactiva activada (martes y viernes 7pm CR)")
+    except Exception as e:
+        logger.warning(f"Memoria proactiva no disponible: {e}")
+
     # Registrar comandos en Telegram (aparecen al escribir /)
     try:
         commands = [
