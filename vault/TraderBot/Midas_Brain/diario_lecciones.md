@@ -432,6 +432,83 @@ cruzar el régimen macro con el régimen técnico antes de asignar `trade_mode`.
 
 ---
 
+## LECCIÓN 10 — 30/03/2026: El Home Run + El Diagnóstico de BBv5 como Motor Único 🚀
+**P&L del día: +$11,779.30** | Mejor día del período | Semana 5 – Día 1
+
+**Contexto de mercado:**
+- MNQ: 23,508 → 23,057 = **-451 puntos (-1.92%)** — día bajista estructural
+- Apertura gap down, no rebote, caída sostenida toda la sesión
+- VIX elevado (continuación del 27/03 con VIX=31)
+
+**Desglose por estrategia:**
+| Estrategia | P&L | Nota |
+|---|---|---|
+| BBv5 | **+$10,079.50** | Short 10:12 → 15:16, entrada 23355.5, exit 23057 (+298 pts, 20 contratos) |
+| OrderFlowReversal | +$1,406.50 | ⚠️ inflado AllEntries (14 trades, 1 contrato c/u) |
+| PivotTrendBreak | +$497.00 | ⚠️ inflado AllEntries (15 trades en 35 segundos) |
+| SuperTrendWave | +$558.50 | Long tardío capturó rebote +56 pts |
+| DarvasBox | +$773.50 | ⚠️ AllEntries NO fue corregido (20 contratos patrón) |
+| SCALPER | +$219.00 | Short limpio |
+| NYOpenBlast | -$597.50 | Long en apertura bajista |
+| MomentumZ | -$422.30 | Short pero mal ejecutado |
+| StatMeanCross | -$412.50 | ⚠️ inflado AllEntries (20 contratos = qty 5+1+14) |
+| EMATrendRenko | -$183.80 | inflado AllEntries |
+| VWAPFlux | -$85.80 | Long en día bajista |
+| ABCDHarmonic | -$40.80 | |
+| PivotReverse | -$12.00 | Breakeven efectivo |
+
+---
+
+### LECCIÓN 10-A: BBv5 es el Motor Real — El Resto es Ruido 🔍
+
+**Los números al cierre de 4 semanas (02/03 → 30/03):**
+- Portfolio total: **+$23,133.70** (suma de cuentas sim)
+- BBv5 sola: **+$21,238.20**
+- Portfolio sin BBv5: **+$1,895.50** en 20 días hábiles
+
+**El diagnóstico:** Las otras 16 estrategias generaron colectivamente $1,895 en 4 semanas (~$94/día combinadas). BBv5 sola generó $21,238 (~$1,062/día). Sin BBv5, el portafolio apenas sobrevive.
+
+**Esto es un riesgo de concentración.** Si BBv5 entra en drawdown, el portafolio se hunde. El objetivo de 15+ estrategias era diversificación — pero actualmente es BBv5 + 16 estrategias de apoyo moral.
+
+**Las que tienen edge real (según cuentas acumuladas):**
+1. BBv5: +$21,238 ← el motor
+2. DarvasBox: +$16,824 ← segundo motor (inflado por AllEntries aún)
+3. PivotReverse: +$5,038 ← tercero (pero opera muy poco)
+4. LWDonchianBreak: +$666 ← marginal
+
+**Las que están destruyendo capital lentamente:**
+- EMATrendRenko: -$3,697 | SuperTrendWave: -$3,979 | PivotTrendBreak: -$6,287
+- Estas tres suman **-$13,963** en 4 semanas — necesitan tide_score o suspensión
+
+**Regla Midas derivada:**
+> Si una estrategia está en drawdown > -$3,000 después de 20 días de paper trading,
+> suspender y re-backtest antes de continuar. No "esperar que se recupere" sin razón técnica.
+
+---
+
+### LECCIÓN 10-B: DarvasBox — Bug No Corregido ⚠️
+
+El fix de AllEntries del 27/03 **no fue desplegado** en SimDarvasBox_v1. El CSV del 30/03 muestra:
+```
+10:02:31  qty=4 + qty=4 + qty=4 + qty=8 = 20 contratos  ← AllEntries pattern
+11:03:58  qty=1 + qty=5 + qty=1 + qty=13 = 20 contratos ← AllEntries pattern
+12:00:30  qty=3 + qty=3 + qty=1 + qty=3 + qty=10 = 20   ← AllEntries pattern
+```
+El patrón (siempre ~20 contratos totales) confirma que el bug sigue activo.
+DarvasBox ganó +$773.50 hoy a pesar del bug — sin el bug los shorts habrían ganado más.
+
+---
+
+### LECCIÓN 10-C: Pablo hizo take profit manual — y fue correcto ✅
+
+BBv5 cerró en 23,057. El mercado cerró en ~23,060. Exit manual a las 15:16 atrapó prácticamente todo el movimiento. Esta vez NO dejó dinero en la mesa — el cierre fue casi óptimo.
+
+**Diferencia con el 26/03:** El 26/03 intervino creando un Long mientras BBv5 tenía Short activo (-$897). Hoy esperó que el trade corriera y cerró cuando vio el target natural del día.
+
+**Regla confirmada:** Intervención OK para take profit al final del día si el mercado llegó al objetivo diario. Intervención NO OK para contra-tradear o "asegurar" mid-trade.
+
+---
+
 ## LECCIÓN 07 — 25/03/2026: El Día que Todo Encajó ✅
 **P&L del día: +$5,318.10** (mejor día desde el inicio del período actual)
 

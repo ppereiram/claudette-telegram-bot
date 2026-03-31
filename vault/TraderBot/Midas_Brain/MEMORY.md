@@ -3,35 +3,41 @@
 ## Contexto rápido
 - **Plataforma**: NinjaTrader 8 | **Instrumento**: MNQ | **Meta**: Darwin/X 2027
 - **Usuario**: Pablo | **Idioma**: Español siempre | Totalmente automatizado
-- **Fase actual** (03/2026): Paper trading 15+ estrategias + construcción brain Midas
-- **Roadmap activo**: Abril 2026 — construcción del brain semana a semana
+- **Fase actual** (03/2026): Paper trading 4 semanas completadas + construcción brain Midas
+- **Roadmap activo**: Semana 0 Abril 2026 — análisis de marzo antes de construir
 
 ## Archivos de memoria (leer según contexto)
 | Archivo | Contenido |
 |---------|-----------|
-| `strategies_portfolio.md` | Params completos de cada estrategia, rankings, descartadas |
-| `brain_midas_arquitectura.md` | Stack matemático completo de Midas (Markov, Minimax, TfT, MC, RF, RL, GA + capas nuevas) |
-| `diario_lecciones.md` | Diario de trading 02/03-26/03 — 8 lecciones con pérdidas reales documentadas |
-| `manual_buenas_practicas.md` | **7 niveles de reglas operativas** derivadas del paper trading — el escudo para real money |
-| `objetivos_competencias.md` | Darwin/X 2027 + USIC (después de Darwin) — contexto mercado 2026 atípico |
+| `strategies_portfolio.md` | Params backtest + **resultados reales 4 semanas (02/03-30/03)** — divergencia crítica |
+| `brain_midas_arquitectura.md` | Stack matemático + **código Python ya deployado** (meta_brain.py etc.) |
+| `diario_lecciones.md` | 10 lecciones documentadas 02/03-30/03 con pérdidas reales |
+| `manual_buenas_practicas.md` | 7 niveles de reglas operativas — el escudo para real money |
+| `objetivos_competencias.md` | Darwin/X 2027 + USIC — Pablo quiere ser el próximo Larry Williams |
 | `roadmap_abril2026.md` | Plan semana a semana desde 01/04/2026 hasta Darwin/X |
 | `quant_strategies.md` | Kelly, ML Meta-Labeling, Kalman, Hurst, OU process |
 | `libros_extraidos.md` | Conceptos extraídos de cada libro de la biblioteca de Pablo |
-| `feedback_ninza_pipeline.md` | Pipeline ninZa/RenkoKings — extraer ideas sin comprar. Registro de 6 productos analizados |
-| `feedback_session_continuity.md` | Al reanudar sesión interrumpida, retomar hilo activo — no ejecutar pending tasks fuera de contexto |
+| `feedback_ninza_pipeline.md` | Pipeline ninZa/RenkoKings — extraer ideas sin comprar |
+| `feedback_session_continuity.md` | Al reanudar sesión interrumpida: retomar hilo activo, no ejecutar pending tasks |
+| `project_apex_sizing.md` | Position sizing Apex: 1 micro base, Monte Carlo define escalado. Markov self-learning desde 07/04 |
 
-## Top 5 estrategias (por Sortino)
-| Estrategia | PF | Sortino | MaxDD | Profit/mes |
-|------------|-----|---------|-------|------------|
-| StatMeanCross_v1 (Renko 35) | 2.56 | **38.73** | $2,668 | $4,092 |
-| BreadButter_ULTRA (Renko 35) | 2.03 | **18.52** | $6,903 | $9,378 |
-| PivotTrendBreak_v1 (Renko 25) | 1.92 | **8.50** | $2,730 | $2,305 |
-| EMATrendRenko_v1 (Renko 35) | 2.29 | **6.75** | $7,460 | $4,825 |
-| OrderFlowReversal_v1 (Renko 45) | 2.20 | **5.80** | $5,146 | $2,831 |
+## Resultados reales 4 semanas (02/03 – 30/03/2026)
+| Estrategia | P&L Real | vs Backtest |
+|---|---|---|
+| BBv5_Apex | **+$21,238** | ↑↑↑ Backtest decía $873/mes |
+| DarvasBox | **+$16,824** | ↑↑↑ Backtest decía $2,426/mes |
+| PivotReverse | +$5,038 | ↑ |
+| PivotTrendBreak | **-$6,287** | ↓↓↓ Backtest decía +$2,305/mes |
+| SuperTrendWave | -$3,979 | ↓↓ |
+| EMATrendRenko | -$3,697 | ↓↓ (inflado por AllEntries bug) |
+| **Portfolio total** | **+$23,134** | BBv5 = 92% de las ganancias |
+
+> Lección: BBv5 Filtro Accidental (1 trade/día) no aparece en backtest estándar → divergencia masiva.
+> Riesgo de concentración: sin BBv5 el portafolio tiene +$1,896 en 4 semanas.
 
 ## Reglas críticas — NUNCA romper
 1. `Slippage = 1` en TODAS las estrategias
-2. **NUNCA corregir** el Filtro Accidental en ULTRA/SCALPER → ES el edge
+2. **NUNCA corregir** el Filtro Accidental en ULTRA/SCALPER/BBv5 → ES el edge
 3. Longs+Shorts combinados SIEMPRE mejor que separados
 4. Backtests SIEMPRE con comisiones
 5. R² > 0.85 mínimo para el portafolio
@@ -41,45 +47,38 @@
 
 ## Estado del brain Midas
 - **Módulo 1** (Market Monitor): ✅ ACTIVO desde 09/03/2026 — `Bot_Quant_IA/market_monitor_logger.py`
-- **Módulo 1b** (Auto-Crítica Diaria): 🔲 IMPLEMENTAR AHORA — agregar a market_monitor_logger.py. Compara predicción de ayer vs realidad de hoy. Output: `autocritica_YYYY-MM-DD.json` + `midas_accuracy_historico.json`
-- **Módulo 2** (Markov): 🔲 Semana 1 Abril — necesita 30+ días de logs + auto-críticas
-- **Módulo 3** (News Filter): ✅ ACTIVO desde 27/03/2026 — integrado en market_monitor_logger.py. VIX + Fear&Greed + Forex Factory calendar. Output en `macro_context` del JSON diario.
+- **Módulo 1b** (Auto-Crítica Diaria): 🔲 PENDIENTE — agregar a market_monitor_logger.py
+- **Módulo 2** (Markov): 🔲 Semana 1 Abril — necesita 30+ días de logs
+- **Módulo 3** (News Filter): ✅ ACTIVO desde 27/03/2026 — VIX + Fear&Greed + Forex Factory calendar
+- **meta_brain.py**: ✅ CÓDIGO EXISTE — ZMQ port 5556, heurístico→RF unificado por estrategia. Conectar a NT8 en Abril
 - **Módulo 4** (Tit for Tat): 🔲 Semana 2 Abril
 - **Módulo 5** (Von Neumann Regret): 🔲 Semana 3 Abril
 - **Módulo 6** (Monte Carlo): 🔲 Semana 3 Abril
 - **Módulo 7** (Brain v2 RF completo): 🔲 Semana 4 Abril
 
-## Lecciones críticas del diario (ver `diario_lecciones.md` para detalle completo)
-- **17/03 -$8,906**: StatMean+EMATrend+BBv5 Long simultáneos → correlación catastrófica
-- **20/03 patrón**: mismo evento en shorts → correlación estructural (EMA(21))
-- **06/03 -$11,920**: peor día — sin análisis forense, probable noticias + sin Portfolio Stop
-- **13/03 +$7,191**: mejor día — portafolio alineado con mercado, sin correlación adversa
-- **24/03 DIAGNÓSTICO COMPLETO**: Longs=+$7,248 (PF=1.17) / Shorts=-$9,095 (PF=0.80) — los SHORTS destruyen el portafolio. Sin filtro de tendencia diaria = ruina en bull market. MaxDD -$29K viene de shorts.
-- **El edge existe**: +$7K en longs en 23 días es real. Problema = estrategias short sin filtro direccional
-- **Bug infraestructura**: strategies_pnl JSON borrados por auto_push_pnl.bat → CSV de NT8 es la verdad
-
-## Adiciones nuevas pendientes (de sesión 20/03/2026)
-- **market_breadth_score** (Sem 1 Abril): ES=F + YM=F + RTY=F via yfinance → confirmar dirección NQ
-- **multi_osc_score** (Sem 2 Abril): MFI + RSI + Stochastic consenso → feature para brain_v2
-- **Arquitectura Elswee** (Sem 2 Abril): ConvictionScore secuencial Exhaustion→Realignment→Volume
-- **OBOrderFlow_v1.cs** (Mayo): Bo$$ Order Block concept en 1-min chart (no Renko)
-
-## Pendientes críticos — Lunes 30/03/2026
-1. **Bug AllEntries** → corregir `EntryHandling.UniqueEntries` en: `EMATrendRenko_v1.cs`, `OrderFlowReversal_v1.cs`, `PivotTrendBreak_v1.cs` (DarvasBox ya corregido 27/03)
-2. **Módulo 3 fix** → `avoid_shorts` debe cruzar con `tide_score`: si `tide_score <= -2.0`, no aplicar avoid_shorts (la tendencia domina sobre el VIX)
-3. **BBv5 re-entradas** → investigar por qué trades 29-38 del 27/03 aparecen sin nombre de estrategia en CSV post-Filtro-Accidental
-4. **Encoding UTF-8** → carácter → se pierde en Windows en el JSON (`â sin shorts`). Verificar `ensure_ascii=False` en save_log (ya está, revisar el campo `regime_reasons`)
+## Pendientes críticos — Semana 1 Abril (desde 31/03/2026)
+1. **Bug AllEntries** → `EntryHandling.UniqueEntries` en: `EMATrendRenko_v1.cs`, `OrderFlowReversal_v1.cs`, `PivotTrendBreak_v1.cs`, **+ RE-VERIFICAR DarvasBox** (CSV 30/03 muestra patrón 20-contratos aún activo)
+2. **Módulo 3 fix** → `avoid_shorts` cruzar con `tide_score`: si `tide_score <= -2.0`, no aplicar avoid_shorts
+3. **Revisar/suspender** estrategias en MaxDD >$3K: EMATrendRenko, SuperTrendWave, PivotTrendBreak
+4. **BBv5 re-entradas** → trades sin nombre de estrategia post-Filtro-Accidental
+5. **Encoding UTF-8 BOM** → `auto_push_pnl.bat` genera archivos con BOM (`ï»¿` al inicio). El `→` en el archivo está correcto — el problema es el BOM que confunde la lectura en Windows. Fix: agregar `encoding='utf-8'` sin BOM en el script bat o en el Python que escribe el JSON.
 
 ## Insights clave no obvios
-- Filtro Accidental (ULTRA/SCALPER): `dailyPnL += Commission + AverageFillPrice * Quantity` suma nominal → dispara MaxLoss → 1 trade/día. NO tocar.
-- BreadButterBALANCED: combined PF=1.31 — el edge viene de la competición long/short por el slot
-- StatMean+EMATrend comparten EMA(21) → correlación estructural → tratar como 1 slot si coinciden
-- tide_score 1x/día genera ventana ciega de 4-7h intraday → fix: calcular cada 60s
-- EMA Touch es el setup dominante de ULTRA — los otros 3 setups no añaden PF
-- Rollover MNQ cambia datos Renko → re-validar estrategias con nuevo contrato
-- **NUEVO 24/03**: PivotReverse+DarvasBox+SuperTrendWave = 3 estrategias short sin filtro direccional → suspender shorts hasta implementar tide_score_intraday + VWAP SD Bands
-- **NUEVO 27/03**: avoid_shorts NO aplica cuando tide_score <= -2.0 — tendencia estructural domina sobre VIX EXTREME. BBv5 short +$6,103 con VIX=31 y F&G=10 lo confirma
-- **NUEVO 27/03**: Bug AllEntries genera qty inflado en 4 estrategias → pérdidas 10-18x mayores de lo real. Día fue +$5,641 real vs +$3,431 registrado por el bug
+- **Filtro Accidental** (BBv5/ULTRA/SCALPER): `dailyPnL += Commission + AverageFillPrice * Quantity` → dispara MaxLoss → 1 trade/día. NUNCA corregir.
+- **StatMean+EMATrend** comparten EMA(21) → correlación estructural → tratar como 1 slot si coinciden
+- **avoid_shorts + tide_score**: si tide_score ≤ -2.0, la tendencia bajista domina sobre VIX EXTREME — no aplicar avoid_shorts (BBv5 short +$6,103 el 27/03 con VIX=31 lo confirma)
+- **AllEntries bug**: qty inflado en 4 estrategias → pérdidas hasta 18x reales. Fix = UniqueEntries.
+- **Intervención manual EOD** para take profit (cuando mercado llegó a objetivo) es correcta. Intervención mid-trade para "asegurar" es destructiva (costo documentado: -$633 el 26/03)
+- **tide_score 1x/día** → ventana ciega 4-7h intraday. Fix pendiente: calcular cada 60s via ZMQ
+- **BBv5 concentración**: 92% de las ganancias del portafolio en 4 semanas vienen de 1 estrategia
+
+## Lecciones críticas (ver `diario_lecciones.md` para detalle)
+- **06/03 -$11,920**: peor día — sin Portfolio Stop, probable noticias
+- **13/03 +$7,191**: mejor día — portafolio alineado con mercado
+- **17/03 -$8,906**: StatMean+EMATrend+BBv5 Long simultáneos → correlación EMA(21)
+- **24/03 diagnóstico**: Longs +$7,248 / Shorts -$9,095 — shorts sin filtro direccional destruyen el PF
+- **27/03 +$3,431**: Paradoja Módulo 3 — avoid_shorts=True pero tide=-3.0, BBv5 short ganó +$6,103
+- **30/03 +$11,779**: BBv5 home run -451 pts. Portfolio total: +$23,134 en 4 semanas
 
 ## Métricas target Darwin/X 2027
 | Métrica | Mínimo | Ideal | Darwin/X |
