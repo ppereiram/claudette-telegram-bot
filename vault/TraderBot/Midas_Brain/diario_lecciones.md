@@ -1,11 +1,11 @@
 ---
 name: diario_lecciones
-description: Diario de trading con lecciones documentadas para educación del brain Midas — patrones de pérdida, correlaciones, insights de mercado
+description: 10 lecciones documentadas 02/03-30/03/2026 — correlaciones, AllEntries bug, Filtro Accidental, Módulo 3 paradoja, BBv5 concentración
 type: project
 ---
 
 # Diario de Lecciones — Educación del Brain Midas
-> Período: 02/03/2026 – 26/03/2026 | 18 días hábiles | 900+ trades | P&L acumulado: ~+$1,200 (parcial)
+> Período: 02/03/2026 – 30/03/2026 | 20 días hábiles | 993 trades | P&L acumulado: +$23,134 | BBv5 = 92% del total
 > Fuente de verdad: CSV exportado de NinjaTrader 8 (NO los strategies_pnl.json — fueron borrados por bug en auto_push_pnl.bat el 20/03)
 
 ---
@@ -429,6 +429,57 @@ el mercado era full bear. El modo correcto con `tide_score=-3.0` sería `"SHORT_
 
 **Fix para el lunes:** añadir `tide_score` como input a `compute_macro_context()` para
 cruzar el régimen macro con el régimen técnico antes de asignar `trade_mode`.
+
+---
+
+## LECCIÓN 11 — 31/03/2026: Reversal Épico + VAWAPOrderBlock Despierta 🚀
+**P&L del día: +$5,756.50** | Cierre de mes
+
+**Contexto de mercado:**
+- MNQ: 23,200 → 23,909 (+~580 pts intraday) con cierre AH en 23,139 (-770 pts post-RTH)
+- Catalizadores: Irán acepta negociar fin de guerra + JOLTS positivo
+- tide_score amaneció en -2.0 (bear), pero multi_osc del 30/03 era oversold_consensus (RSI=22, Stoch=4.8) → el sistema lo anunció el día anterior
+
+**Desglose:**
+| Estrategia | PnL | Nota |
+|---|---|---|
+| VAWAPOrderBlock | **+$6,173.50** | 3h 23min, exit manual 14:37 |
+| SuperTrendWave | +$1,736.50 | Shorts AM + flip Long = perfecto |
+| DarvasBox | +$1,725.50 | ⚠️ AllEntries (18 contratos) |
+| LWDonchianBreak | +$1,561.20 | 4h hold, exit manual EOD |
+| BBv5 | -$1,476.50 | Long AM -$4,483, re-entrada +$3,007 |
+| OrderFlowReversal | -$714.00 | Short en día alcista |
+| PivotTrendBreak | -$1,072.50 | Short en día alcista |
+
+---
+
+### LECCIÓN 11-A: El Especialista Dormido — VAWAPOrderBlock ⚡
+
+4 semanas casi invisible. Hoy +$6,173. Esto es el toolbox en acción: VAWAP esperaba un bounce de oversold con estructura de order block. Hoy el mercado lo tenía todo.
+
+**Regla Midas:** No eliminar estrategias que "no hacen nada" durante semanas. Pueden ser especialistas esperando su régimen. El MAE/MFE Analyzer (Semana 2 Abril) clasificará a VAWAP y LWDonchian como "trend riders de medio día" — stops amplios, hold time 2-5h, targets ambiciosos.
+
+---
+
+### LECCIÓN 11-B: El Monitor Avisó — Nadie lo Conectó 📡
+
+JSON del 30/03 decía `multi_osc_label: oversold_consensus`. Con Markov activo, eso habría dicho: desactivar shorts, activar VAWAP y LWDonchian. PivotTrendBreak y OrderFlowReversal abrieron shorts hoy y perdieron -$1,786 combinados. Costo exacto del brain sin conectar.
+
+---
+
+### LECCIÓN 11-C: BBv5 en Ventana JOLTS — Bug ZMQ ⚠️
+
+BBv5 re-entró Long a las 13:31 ET, dentro de la ventana JOLTS (13:30-14:30) marcada por Módulo 3. Funcionó hoy (+$3,007) pero violó el protocolo. Cuando ZMQ esté activo, Midas bloquea esa entrada. El resultado positivo no valida la decisión.
+
+---
+
+### LECCIÓN 11-D: After-Hours Liberation Day 🚨
+
+MNQ cerró RTH en ~23,909. A las 21:54 ET el monitor registró 23,139.75 (-770 pts AH). Trump anuncia aranceles "Liberation Day" el 2 de Abril. El lunes puede abrir con gap down severo. El multi_osc_label de hoy EOD probablemente no será oversold — será pánico.
+
+**Implicación para el lunes 7 Abril:** El reporte de empleo de marzo sale el viernes 4 (Good Friday, mercado cerrado). La reacción es el lunes 7. Expectativa Wall Street: +59K empleos. Febrero fue -92K — si el número decepciona, el lunes abre con gap down en contexto de guerra + petróleo >$100. Verificar VIX/F&G antes de arrancar. ADP y ISM Manufacturing esta semana dan pistas previas.
+
+**Contexto macro estructural Q1 2026:** Estrecho de Ormuz cerrado → petróleo >$100. Q1 S&P -4.63%, Nasdaq -7.11%. La Fed atrapada: empleo débil + inflación por commodities. Bear market estructural por guerra, no por política fiscal. El rally del 31/03 fue contra-tendencia — válido pero frágil.
 
 ---
 

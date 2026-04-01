@@ -71,6 +71,9 @@
 - **Intervención manual EOD** para take profit (cuando mercado llegó a objetivo) es correcta. Intervención mid-trade para "asegurar" es destructiva (costo documentado: -$633 el 26/03)
 - **tide_score 1x/día** → ventana ciega 4-7h intraday. Fix pendiente: calcular cada 60s via ZMQ
 - **BBv5 concentración**: 92% de las ganancias del portafolio en 4 semanas vienen de 1 estrategia
+- **VAWAPOrderBlock + LWDonchianBreak**: trend riders de medio día (2-5h hold), no scalpers. Necesitan perfil MAE/MFE distinto. Especialistas en bounces de oversold con estructura.
+- **Macro Q1 2026**: Ormuz cerrado → petróleo >$100. Q1 S&P -4.63%, Nasdaq -7.11%. Bear estructural por guerra Medio Oriente, no aranceles.
+- **Lunes 7 Abril**: Reporte de empleo marzo sale viernes Good Friday (mercado cerrado). Reacción el lunes. Expectativa: +59K empleos. Febrero fue -92K. Si decepciona → gap down. VIX/F&G críticos antes de arrancar.
 
 ## Lecciones críticas (ver `diario_lecciones.md` para detalle)
 - **06/03 -$11,920**: peor día — sin Portfolio Stop, probable noticias
@@ -79,6 +82,7 @@
 - **24/03 diagnóstico**: Longs +$7,248 / Shorts -$9,095 — shorts sin filtro direccional destruyen el PF
 - **27/03 +$3,431**: Paradoja Módulo 3 — avoid_shorts=True pero tide=-3.0, BBv5 short ganó +$6,103
 - **30/03 +$11,779**: BBv5 home run -451 pts. Portfolio total: +$23,134 en 4 semanas
+- **31/03 +$5,756**: Reversal épico. VAWAPOrderBlock héroe (+$6,173). MNQ +580 pts RTH pero -770 pts AH (Liberation Day aranceles 2 Abril). Lunes puede abrir gap down severo.
 
 ## Métricas target Darwin/X 2027
 | Métrica | Mínimo | Ideal | Darwin/X |

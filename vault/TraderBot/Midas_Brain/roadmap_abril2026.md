@@ -470,7 +470,8 @@ if (contracts < 1) return; // umbral mínimo
   - **Caso de uso inmediato**: Días de GAP (26/03) la distribución MAE se infla 3x en momentum strategies → ajuste automático de stops o bloqueo de entry.
   - **Implementación**: `mae_mfe_analyzer.py` — lee los CSV de NT8 (ya disponibles), calcula distribuciones por estrategia, genera `mae_mfe_profile_ESTRATEGIA.json`. NT8 ya exporta MAE/MFE en performance reports — costo = $0.
   - **Output para brain_v2**: Pwin(stop, target) por estrategia = input directo para Kelly criterion mejorado (replace fixed f).
-  - **Semana de implementación**: Post-período de prueba (después de Semana 4 Abril). Necesita mínimo 30 días de trades reales para distribuciones estables.
+  - **Semana de implementación**: ~~Post-período~~ → **Semana 2 Abril** (adelantado 31/03). Ya tenemos 993 trades en CSVs = suficiente para percentiles. Usar solo estrategias sin bug AllEntries (BBv5, PivotReverse, SuperTrendWave, SCALPER, VWAPFlux) en primera pasada. Re-correr post-fix AllEntries con dataset limpio.
+  - **CONFIRMADO por QuantZone (31/03/2026)**: QuantZone ($346 ninza.co) hace exactamente esto. No comprar — implementar directamente desde CSVs existentes.
 
 - **Quantum Vol-Delta → Adaptive MinVolRatio (27/03/2026)**:
   - **El concepto** (inspirado en Quantum Vol-Delta, $296 — NO comprar): reemplazar el `MinVolRatio` fijo en todas las estrategias por un umbral adaptativo basado en el volumen reciente. En lugar de `volDelta > 1.2` fijo, calcular percentil del delta de las últimas N velas.
@@ -485,6 +486,18 @@ if (contracts < 1) return; // umbral mínimo
   - **Signal_State como feature de brain_v2**: exportar Signal_State (-3 a +3) como input del RF. Reemplaza la binaria `volDelta > MinVolRatio`.
   - **Aplicar en**: OrderFlowReversal_v1 primero (más obvio), luego todas las que usan `MinVolRatio`.
   - **Semana de implementación**: Post-período de prueba (después de Semana 4 Abril). Aplicar junto con MAE/MFE analyzer.
+
+- **Shallow/Deep Pullback Depth → Feature de Markov y Selector de Estrategia (31/03/2026)**:
+  - **El concepto** (inspirado en Iron Oak Trading, $696 ninza.co — NO comprar): clasificar si el pullback actual es SHALLOW (precio en zona RMA, alta frecuencia, menor reward) vs DEEP (precio en zona Fibonacci 38-62%, menor frecuencia, mayor reward). Cada tipo activa estrategias especialistas distintas.
+  - **Cálculo libre**:
+    ```python
+    rma = wilder_smooth(close, period=20)  # mismo cálculo que RSI suaviza
+    pullback_depth = (close - rma_fast) / (rma_slow - rma_fast)
+    # 0.0-0.5 → SHALLOW → StatMean, EMATrend (alta win rate)
+    # 0.5-1.0 → DEEP    → DarvasBox, OrderFlowReversal (alto reward)
+    ```
+  - **Integración en Markov**: `pullback_depth_label` como feature adicional del estado diario → Markov puede distinguir "BEAR_EXTREME + SHALLOW_PULLBACK" de "BEAR_EXTREME + DEEP_PULLBACK"
+  - **Semana de implementación**: Semana 2 Abril (junto con MAE/MFE analyzer — ambos son análisis de CSVs históricos)
 
 - **VoluTank Army → Zone Quality Score para S&D (20/03/2026)**:
   - **El concepto**: VoluTank Army (ninza.co) añade el ratio Buy/Sell DENTRO de cada zona de Supply/Demand. Una zona de demanda donde Buy volume > Sell volume = zona fuerte (alta probabilidad de rebote). Una zona de demanda donde Sell > Buy = zona débil (probable breakout a través de ella).

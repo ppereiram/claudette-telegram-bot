@@ -65,21 +65,51 @@ Esa es la solución.
 
 ### **ACTO 1: EL DESCENSO** (Prólogo + 7 capítulos)
 
-**Objetivo:** Establecer a Pedro como genio detestable pero comprensible  
+**Objetivo:** 
+Establecer a Pedro como genio abominable pero comprensible por sus origenes
 **Frame:** Sophie (2035) descubriendo verdad via Aristarco  
 **Estructura:** Pasado de Pedro intercalado con presente de Sophie
 
 **Capítulos:**
-1. **Prólogo "Los Lentes"** — Sophie 2035 encuentra lentes Aristarco
-2. **Cap 1 "El Bastardo"** — Infancia Haro 1969-1987, trauma fundacional
-3. **Cap 2 "La Ecuación del Amor"** — MIT 1988-1994, conoce Caroline, capacidad amar
-4. **Cap 3 "El Fuego Prometeico"** — Ascenso 2002-2015, Karyon-7, 10,247 muertes
-5. **Cap 4 "Capitalismo Testosterónico"** — Relación Zuleika, cumpleaños Sophie
-6. **Cap 5 "La Muerte de Mónica"** — COVID-19 2020, no puede estar con su madre, muere sola, promesa Camino
-7. **Cap 6 "La Graduación"** — Mayo 2026, distancia Sophie
-8. **Cap 7 "El Umbral"** — Grothendieck, ecuación moral, acepta misiones
-
+1PROLOGO - LOS LENTES
+CAPÍTULO 1: EL BASTARDO PRODIGIO
+CAPÍTULO 2: EL KAIROS
+CAPÍTULO 3: EL PALACIO Y EL REY
+CAPÍTULO 4: EL TEMPLO (1988-1994)
+CAPÍTULO 5: LA ECUACIÓN DEL AMOR
+CAPÍTULO 6: EL DEPREDADOR
+CAPÍTULO 7: EL ASCENSO Y LAS LECCIONES OSCURAS (1999-2010)
+CAPÍTULO 8: EL PADRE QUE INTENTÓ SER (2010-2017)
+CAPÍTULO 9: EL DEPREDADOR TOPE
+CAPÍTULO 10: LAPLACE_DAEMON
+CAPÍTULO 11: LA TORMENTA PERFECTA
+CAPÍTULO 12: EL UMBRAL
 **Final Acto 1:** Pedro acepta entrar en fisuras temporales
+
+Escenas a definir 
+PARTE I: EL RECONOCIMIENTO
+Belleza ancestral
+El decimal que nunca cierra
+La espiral
+La quinta fuerza
+
+Escenas Zuleika
+GUERRA Y MARBELLA
+La Cazadora
+La confrotación
+PRIMERA VEZ 
+MARBELLA
+
+Ideas Varias
+Interludios durante las misiones
+Kayron-7
+llamada de caroline
+muerte de monica
+LOS TEMPLOS DE ARISTARCO
+promesa camino a monica
+IDEAS INTERESANTES
+IDEAS INT 2
+
 
 ---
 
@@ -116,7 +146,7 @@ Esa es la solución.
 - **1970-1987:** Niño ilegítimo en Haro, abusado por abuelo, prodigio matemático
 - **1988-1994:** MIT, conoce Caroline, capacidad de amar (única vez)
 - **1995-2008:** Ascenso financiero, pierde alma
-- **2009-2015:** Memorix-7, 10,247 muertes, Karyon-7 pharma
+- **2012-2015:** Aureus apuesta en corto contra Laboratorios Meridian (Karyon-7); 10,247 muertos por desaparición del medicamento
 - **2017-2024:** Relación Zuleika, transformación física (Ironman)
 - **2020:** Madre muere COVID, no contesta mensaje voz
 - **2026:** Camino Santiago, fisuras temporales, aprende amor (tarde)
