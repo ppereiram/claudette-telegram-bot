@@ -1,5 +1,20 @@
 ﻿# DECISIONES NARRATIVAS CLAVE - LA ECUACIÓN FINAL
 
+## REGLA NÚMERO UNO — PRINCIPIO LABATUT/BENÍTEZ
+
+**El 90% de todo lo que aparece en esta novela debe ser verificable.**
+
+El lector que busca en Google mientras lee debe encontrar que sí: esa persona existió, esa fecha es correcta, ese documento existe, esa ecuación es real. El 10% inverificable — las fisuras, los nanobots, los Tetraktis como organización activa, Pedro Valencia — se acepta porque el 90% ya pasó la prueba.
+
+El lector cierra el libro preguntándose: *¿y si esto realmente ocurrió?*
+
+Esto no es un recurso estilístico. Es la arquitectura de credibilidad sobre la que descansa toda la novela. Cada vez que se escribe una escena histórica, la pregunta es: ¿puede el lector verificar esto? Si no puede, hay que reescribir o documentar mejor.
+
+**Nota final canonizada:**
+> *"Los hechos históricos en esta novela son precisos. Los errores son del autor. Los Tetraktis no han respondido a ninguna solicitud de comentario."*
+
+---
+
 ## ESTRUCTURA DEFINITIVA (VERSIÓN HÍBRIDA APROBADA)
 
 ---
@@ -21,6 +36,77 @@
 
 ---
 
+## RED TETRAKTIS — CANON Y LEYENDA FUNDACIONAL
+
+### La naturaleza de la organización
+
+No una sociedad secreta ininterrumpida desde Pitágoras. Una **cadena de transmisión** del mismo descubrimiento — que se pierde, se recupera, cambia de nombre y forma, pero porta siempre la misma intuición central: bajo ciertas condiciones matemáticas y estados de consciencia específicos, el tejido del presente se adelgaza. La porosidad del tiempo.
+
+**Estructura interna (de los pitagóricos reales, aplicada):**
+- **Acusmáticos** — los monjes del claustro. Guardan silencio. Cuidan el jardín. Atienden a Pedro durante las misiones. No saben por qué: solo que hay algo que guardar y que hay que cuidar al hombre en el suelo.
+- **Matemáticos** — la red global. 12 activos en 2026. Cada nodo sabe su pieza. Ninguno sabe el todo excepto Grothendieck.
+- **El juramento:** *"Por quien transmitió a nuestra alma la Tetraktys."* Nunca se nombra a Pitágoras directamente.
+
+### La cadena de transmisión (revelada en fragmentos, misión a misión — nunca en bloque)
+
+**~510 a.C., Crotona** — Persecución y masacre pitagórica. Los Matemáticos se dispersan llevando un descubrimiento que Pitágoras nunca escribió. Los Acusmáticos no saben qué guardan. Solo saben que hay algo.
+
+**~380 a.C., Atenas** — Platón absorbe la transmisión. El Timeo roza el secreto sin nombrarlo. Euclides lo codifica en los Elementos sin entenderlo del todo.
+
+**415 d.C., Alejandría — LA HERIDA FUNDACIONAL: HIPATIA**
+Los Tetraktis la consideran la más grande de todos en 2,500 años. Cuando una turba cristiana la asesina en marzo del 415, los Matemáticos de la orden se reúnen por última vez en abierto. Tienen que elegir: continuar en público y arriesgarse a la extinción, o desaparecer por completo y transmitir en la sombra hasta que la humanidad esté lista.
+
+Eligen desaparecer.
+
+Llevan 1,600 años esperando el momento correcto. Grothendieck a Pedro, antes de la Misión 1:
+> *"Cada generación de Matemáticos creyó que era la generación correcta. Casi siempre se equivocaron."*
+> Pausa.
+> *"Casi."*
+
+**Hipatia NO es una misión** — su asesinato ya ocurrió y no hay portal que rescatar. Lo que produjo — la decisión de volverse invisible — es la razón de que todo esto exista. Es la fundadora póstuma de la orden. No hace falta habitarla: hace falta entender lo que costó.
+
+**Siglos VIII-XII, Al-Ándalus** — La transmisión sobrevive en el mundo islámico. Averroes — sin saberlo, sin ser iniciado jamás — es el miembro más influyente que nunca perteneció formalmente.
+
+**1140, Santiago de Compostela — El Codex Calixtinus**
+Uno de los cuatro escribas que compilan el Codex es un Matemático de la transmisión. En el Libro V codifica las 7 singularidades topológicas como "etapas sagradas del Camino" — basándose en siglos de testimonios de peregrinos que reportaban experiencias inexplicables en esos puntos exactos. El monje no sabía lo que mapeaba.
+
+El **folio 220** — desaparecido en el siglo XV, en poder de los Tetraktis desde entonces — contiene la descripción matemática explícita de las 7 singularidades. El documento más secreto de la orden. Pedro lo intuye. Nunca pregunta por él directamente.
+
+**El Codex como objeto físico en la novela:** Grothendieck entrega a Pedro el Libro V antes de partir. Pedro lo lleva durante todo el Camino. Lo consulta al llegar a cada etapa. No se explica su historia en un bloque — el lector la reconstruye igual que Pedro.
+
+**1935, París — Bourbaki**
+Matemáticos que publican bajo nombre ficticio, con rituales de iniciación, secretismo sobre membresía. Son pitagóricos sin saberlo. Grothendieck entra a los 20 años. Es el primero en 2,500 años con las herramientas (haces algebraicos, teoría de topos) para operacionalizar lo que los pitagóricos solo intuían. Cuando formaliza la prueba de la porosidad del tiempo en *Récoltes et Semailles*, cree que está enloqueciendo. Los Tetraktis lo encuentran — o él los encuentra. La ambigüedad se mantiene siempre.
+
+**2026, Pirineos** — 12 Matemáticos activos. Cientos de Acusmáticos en 47 países. El monasterio existe, bajo distintos nombres, desde el siglo XII.
+
+### Pedro como instrumento — no como elegido
+
+Los Tetraktis no buscan héroes. Buscan el **perfil exacto**:
+- Capacidad matemática de primer nivel (para percibir los fragmentos con precisión)
+- Historia de amor perdido en las tres formas — Eros, Philia, Storge — perdido por sus propias manos, no por circunstancias externas
+- Desesperación suficiente para aceptar condiciones que significan muerte probable
+- Nada que perder
+
+Han esperado 40 años a alguien con este perfil. El candidato más cercano fue Ramanujan — capacidad matemática y contacto con lo inconmensurable, pero murió a los 32 sin la historia de amor y pérdida, y en la era equivocada.
+
+**El gran engaño de Aristarco (profundidad adicional):** Aristarco también sabía lo que necesitaban los Tetraktis. Y facilitó activamente las condiciones — incluyendo Karyon-7, incluyendo la Tormenta Perfecta — para producir el hombre que necesitaban. Pedro no llegó a la desesperación por accidente. Fue llevado ahí.
+
+**Pedro no es Neo.** Es Job: el hombre probado por fuerzas que no comprende para propósitos que nadie le explicó. La diferencia: Job sobrevivió. Pedro no.
+
+### Cómo el lector recibe esta historia (arquitectura narrativa — NUNCA pies de página extensivos)
+
+Historia A (presente): Pedro y las 7 misiones — viaje emocional.
+Historia B (2,500 años): el contexto que da peso a todo.
+
+Historia B informa a Historia A sin convertirse en ella:
+
+1. **Grothendieck en fragmentos, uno por misión** — nunca cuenta la historia completa. Antes de Misión 1: la orden existe desde los pitagóricos. Antes de Misión 3: Bruno tuvo Tetraktis cerca sin saberlo. Antes de Misión 5: la herida fundacional de Hipatia. Antes de Misión 7: el folio 220.
+2. **Logs de Aristarco** — tres líneas frías que contienen siglos: *"Registro 7. Tetraktis en funcionamiento desde ~510 a.C. Iteraciones previas: 23 documentadas, 6 estimadas. Tasa de supervivencia del conocimiento central: 94.3%. Tasa de supervivencia de los miembros individuales: irrelevante para el cálculo."*
+3. **El Codex como objeto físico** — Pedro lo lleva, lo consulta. El lector se orienta sin bloque expositivo.
+4. **Sophie descubriendo en 2035** — la historia emerge como revelación personal de por qué su padre fue elegido, no como lección de historia.
+
+---
+
 ### ACTO II: LAS SIETE MISIONES (estructura cascada)
 
 **Función:** Recuperar los 7 fragmentos de La Ecuación — conocimiento a punto de perderse para siempre en momentos de bifurcación histórica.
@@ -39,6 +125,33 @@ Pedro nunca entra solo. Aristarco y todo el poder computacional de Aureus + red 
 5. Salida traumática — Pedro en el suelo del claustro, sangre, peso registrado
 6. Aristarco analiza el fragmento — siempre incompleto
 7. Interludio (ver sistema de interludios más abajo)
+
+---
+
+### MECÁNICA DE PORTALES — CANON (no cambiar)
+
+**Los nodos del Codex como puntos de activación:**
+Pedro debe estar físicamente presente en la ubicación que el Libro V del Codex Calixtinus marca como singularidad topológica. No es metáfora: el lugar específico es condición necesaria. El Codex es el mapa; los lugares son la llave.
+
+**Qué ocurre en el punto de activación:**
+Pedro llega al nodo, consulta el Codex, y entra en estado de preparación. Los Acusmáticos posicionados en cada ubicación lo trasladan a un refugio seguro cercano (celda monacal, cueva, sacristía vacía) antes de que comience la transferencia de consciencia. Pedro nunca cae inconsciente en el lugar público.
+
+**La transferencia:**
+Sin umbral visible. Sin portal luminoso. Sin cuenta regresiva.
+Estilo Chiang (*Exhalación*, *La historia de tu vida*): antes / después. Un corte. Pedro está en el claustro y luego está en Siracusa, 212 a.C., dentro de otro cuerpo, con la textura del calor de ese Mediterráneo en la piel y el miedo del avatar como suyo propio.
+El cuerpo de Pedro permanece en el refugio — inmóvil, cataléptico, vigilado por Acusmáticos que no comprenden qué custodian, solo que hay que custodiar.
+
+**El Codex como objeto ritual:**
+No es un manual de instrucciones. Es un talismán. Grothendieck lo entrega a Pedro antes de partir — el Libro V físico, con las páginas que nadie ha podido leer con claridad desde el siglo XII. Pedro lo lleva durante todo el Camino. Lo consulta en cada etapa. No lo entiende del todo hasta el final. Aristarco usa las lentes para superponer contexto histórico y matemático sobre las páginas conforme Pedro las necesita — nunca todo de una vez. Información dosificada, oportuna, nunca un bloque de exposición.
+
+**Evidencia física al retorno:**
+- Pérdida de peso documentada por Aristarco (varía por misión: 2.1 kg a 7.3 kg)
+- Hemorragia nasal, microcortes en córnea, temperatura corporal anormal
+- PTSD específico al evento habitado — no al presente
+- Aristarco registra acumulación: neuronas, memoria, capacidad de reconocimiento facial, umbral del dolor
+
+**Lo que el lector nunca ve:**
+El mecanismo físico de la transferencia. Funciona como el monolito de Kubrick: es el hecho más importante de la novela y nunca se explica. Se experimenta.
 
 ---
 

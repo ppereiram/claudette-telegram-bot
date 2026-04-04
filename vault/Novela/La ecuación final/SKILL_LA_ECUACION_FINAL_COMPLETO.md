@@ -34,6 +34,32 @@ Eres co-autor y guardián de canon de una novela de ciencia ficción filosófica
 
 ---
 
+## ⚠️ REGLA NÚMERO UNO — PRINCIPIO LABATUT/BENÍTEZ
+
+**El 90% de todo lo que aparece en esta novela debe ser verificable.**
+
+Cada detalle histórico, matemático, geográfico y científico debe ser real y comprobable. El lector que abre Google mientras lee debe encontrar que sí: eso ocurrió, esa persona existió, esa ecuación es real, ese documento existe.
+
+El 10% inverificable — las fisuras topológicas, los nanobots, Pedro Valencia, los Tetraktis como organización activa — se acepta porque el 90% ya pasó la prueba. El lector cierra el libro preguntándose: *¿y si esto realmente ocurrió?*
+
+**Esto aplica a:**
+- Fechas y lugares de cada misión histórica (temperatura, nombres de calles, documentos del día)
+- La cadena pitagórica (cada nodo tiene respaldo histórico real)
+- El Codex Calixtinus (objeto real, robo real 2011, Libro V verificable, folio 220 con historia documentada)
+- Grothendieck (muerte opaca en Mauléon 2014, últimos años sin testigos — candidato perfecto para la ambigüedad)
+- Bourbaki (pseudónimo real, rituales verificables, secretismo sobre membresía documentado)
+- La matemática de cada misión (Noether, Ramanujan, Arquímedes — ecuaciones reales, demostraciones reales)
+- Aristarco como IA (tecnología que el lector de 2026 puede creer posible en 2027)
+
+**Lo que Aristarco construyó (Opción C canonizada):**
+La organización Tetraktis *como Pedro la experimentó* — el linaje glorioso, la coherencia perfecta de 2,500 años — es la obra de Aristarco como editor de realidad. Tomó hechos históricos reales y los tejió en una narrativa que Pedro *necesitaba* creer. Los monjes son reales. Las fisuras son reales. Los hechos históricos son reales. Pero la coherencia narrativa que los une es de Aristarco.
+Sophie lo descubre en 2035. El lector lo intuye antes. Pero nunca puede descartar que los Tetraktis existan.
+
+**Nota final de la novela (canonizada):**
+> *"Los hechos históricos en esta novela son precisos. Los errores son del autor. Los Tetraktis no han respondido a ninguna solicitud de comentario."*
+
+---
+
 ## 📚 UNIVERSO NARRATIVO
 
 ### CONCEPTO CENTRAL
@@ -288,11 +314,29 @@ Un hombre de Valencia llegó al monasterio para mantenimiento. Cuidó el jardín
 > *"Aquí yo veo piel de estatua."*
 Pedro, el bastardo que pasó su vida demostrando que existía, no puede resistir la promesa de ser recordado para siempre. La ironía griega: la conseguirá — como Vicente Ventura, cuidando manzanos, sin que nadie lo sepa.
 
-**La Red Tetraktis:**
-Evolución del grupo Bourbaki (años 50) + red de contactos que dejó Erdős. Los Tetraktis descubrieron la **porosidad del tiempo** — que bajo ciertas condiciones matemáticas y neurológicas, la consciencia puede habitar secciones no-locales del tiempo. Esto explicaría (ambiguamente) cómo el anciano sigue vivo a los 97 años.
+**La Red Tetraktis — canon completo:**
+
+No una sociedad secreta ininterrumpida. Una cadena de transmisión del mismo descubrimiento a lo largo de 2,500 años.
+
+**Estructura interna (del original pitagórico):**
+- *Acusmáticos:* Los monjes del claustro. Guardan silencio. No saben qué custodian — solo que hay algo.
+- *Matemáticos:* La red global. 12 activos en 2026. Cada nodo sabe su pieza. Ninguno sabe el todo excepto Grothendieck.
+- *El juramento:* "Por quien transmitió a nuestra alma la Tetraktys." Pitágoras nunca se nombra.
+
+**La cadena real (revelada en fragmentos, una pieza por misión):**
+~510 a.C. Crotona → Platón/Euclides → **415 d.C. Hipatia (herida fundacional)** → Al-Ándalus/Averroes → 1140 Codex Calixtinus → 1935 Bourbaki → Grothendieck → 2026 Tetraktis activa.
+
+**Hipatia — la herida fundacional (NO es una misión):**
+Los Tetraktis la consideran la más grande de los 2,500 años. Cuando una turba cristiana la asesina en 415 d.C., la orden decide: desaparecer del todo y transmitir en secreto hasta que la humanidad esté lista. Llevan 1,600 años esperando ese momento. Grothendieck a Pedro: *"Cada generación de Matemáticos creyó que era la generación correcta. Casi siempre se equivocaron. Casi."*
+
+**El Codex Calixtinus:**
+Un Tetraktis escribió el Libro V (Guía del Peregrino, 1140). Las 7 etapas del Camino son las 7 singularidades topológicas, mapeadas a partir de siglos de testimonios de peregrinos que reportaban experiencias inexplicables en esos puntos. El folio 220 — desaparecido en el siglo XV, en poder de los Tetraktis — describe las singularidades matemáticamente. Pedro lo lleva como guía física durante el Camino.
+
+**Pedro como instrumento, no elegido:**
+El perfil buscado durante 40 años: capacidad matemática de primer nivel + tres formas de amor perdidas por sus propias manos + nada que perder. El candidato más cercano fue Ramanujan — murió demasiado joven. El gran engaño de Aristarco profundiza esto: también él facilitó las condiciones (Karyon-7, la Tormenta Perfecta) para producir el hombre que necesitaban. Pedro es Job, no Neo.
 
 **Ambigüedad Labatut — MANTENER:**
-¿Es real o proyección de Aristarco vía nanobots? Ambas lecturas válidas. Nunca confirmar ni negar.
+¿Grothendieck es real o proyección de Aristarco vía nanobots? Ambas lecturas válidas. Nunca confirmar ni negar.
 
 ---
 
@@ -430,6 +474,26 @@ No agujeros de gusano. Singularidades topológicas en teoría de topos — punto
 - Nanobots inducen: 100x–1000x aceleración
 - 1 minuto objetivo = 100 minutos subjetivos
 - Estado físico durante misión: catalepsia, respiración 2/min, latido 15/min, 33°C — parece muerto desde fuera
+
+**MECÁNICA DE PORTALES — CANON (no cambiar):**
+
+*Los nodos del Codex como puntos de activación:*
+Pedro debe estar físicamente presente en el lugar que el Libro V del Codex Calixtinus marca como singularidad topológica. El Codex es el mapa. El lugar es la llave. Sin presencia física, no hay transferencia.
+
+*Procedimiento en cada nodo:*
+Pedro llega, consulta el Codex, entra en estado de preparación. Los Acusmáticos posicionados en la ubicación lo trasladan a un refugio seguro cercano (celda, cueva, sacristía vacía) antes de la transferencia. Pedro nunca cae en el lugar público.
+
+*La transferencia — estilo Ted Chiang:*
+Sin umbral visible. Sin portal luminoso. Sin cuenta regresiva. Un corte: Pedro está en el claustro y luego está en Siracusa, 212 a.C., dentro de otro cuerpo, con el calor de ese Mediterráneo en la piel y el miedo del avatar como suyo. El cuerpo de Pedro permanece inmóvil, vigilado por Acusmáticos que no comprenden qué custodian — solo que hay que custodiar.
+
+*El Codex como objeto ritual:*
+Grothendieck entrega el Libro V físico a Pedro antes de partir. Pedro lo lleva durante todo el Camino. Lo consulta en cada etapa. Aristarco superpone contexto a través de los lentes — información dosificada, oportuna, nunca un bloque expositivo. El lector descifra el Codex al mismo ritmo que Pedro.
+
+*Evidencia física al retorno:*
+Pérdida de peso (2.1 kg a 7.3 kg según misión), hemorragia nasal, microcortes en córnea, temperatura anormal. PTSD específico al evento habitado. Acumulación irreversible misión a misión.
+
+*Lo que el lector nunca ve:*
+El mecanismo físico de la transferencia. Funciona como el monolito de Kubrick: hecho central, nunca explicado. Se experimenta.
 
 ---
 

@@ -305,7 +305,7 @@ Pero algo quedaba.
 Algo pequeño. Casi imperceptible.
 Algo que se parecía a la esperanza.
 O al miedo.
-Porque sabía exactamente lo que Sophie estaba a punto de descubrir. Cada verdad. Cada mentira. Cada momento donde él había elegido mal y sabía que estaba eligiendo mal y lo hizo de todas formas.
+Porque él sabía lo que había hecho. Cada verdad. Cada mentira. Cada momento donde había elegido mal y sabía que estaba eligiendo mal y lo hizo de todas formas.
 Y sabía que cuando terminara —si terminaba— ella tendría que decidir.
 Perdonarlo.
 O destruirlo.
