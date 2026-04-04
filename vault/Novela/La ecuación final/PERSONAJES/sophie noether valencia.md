@@ -1,5 +1,5 @@
 SOPHIE NOETHER — PERFIL COMPLETO
-Nombre completo: Marie Sophie Noether Valencia
+Nombre completo: Marie Sophie Noether Valencia, 14 de febrero de 2003
 Edad al inicio de la novela: 33 años (2035)
 Lugar de nacimiento: Boston, Massachusetts, EE. UU.
 Nacionalidad: Española–estadounidense

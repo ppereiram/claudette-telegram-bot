@@ -1,4 +1,4 @@
-# ✍️ REGLAS ESCRITURA ESPECÍFICAS
+﻿# ✍️ REGLAS ESCRITURA ESPECÍFICAS
 
 ## 🎯 PROPÓSITO
 
@@ -94,7 +94,7 @@ Y el mundo desapareció.
 ```
 EJEMPLO (Cap 3):
 
-Pedro escuchó 1,342 nombres durante seis horas.
+Pedro escuchó 10,247 nombres durante seis horas.
 
 No lloró.
 

@@ -1,4 +1,4 @@
-# DECISIONES NARRATIVAS CLAVE - LA ECUACIÓN FINAL
+﻿# DECISIONES NARRATIVAS CLAVE - LA ECUACIÓN FINAL
 
 ## ESTRUCTURA DEFINITIVA (VERSIÓN HÍBRIDA APROBADA)
 
@@ -21,108 +21,129 @@
 
 ---
 
-### ACTO II: LAS SEIS MISIONES GLOBALES (40,000-50,000 palabras)
+### ACTO II: LAS SIETE MISIONES (estructura cascada)
 
-**Función:** Recolectar 6 fragmentos de ecuación a través del mundo
+**Función:** Recuperar los 7 fragmentos de La Ecuación — conocimiento a punto de perderse para siempre en momentos de bifurcación histórica.
 
-**Estructura por misión:**
-- Preparación (Pedro en claustro, Aristarco configura portal)
-- Transferencia (descripción visceral del viaje)
-- Experiencia (habita avatar, vive evento histórico)
-- Muerte avatar (Pedro siente muerte)
-- Regreso (procesamiento, degradación física)
-- Frame Sophie (reacciona a lo que descubre)
+**Mecánica central (CANON — no cambiar):**
+Grothendieck pide UNA misión. Solo una. Pedro acepta. La misión falla parcialmente — el fragmento llega incompleto. Grothendieck: *"No es suficiente."* Pedro decide volver. Y volver. Y volver. Cada vez más destruido. Cada vez más cerca. La obsesión por completar la ecuación ES la misma enfermedad que mató a 10,247 personas — solo que ahora la víctima es él. Eso es la tragedia griega.
 
-**MISIÓN 1: THEON DE ALEJANDRÍA (391 d.C.)**
-- Portal desde: Roncesvalles
-- Fragmento: Sufrimiento × Conocimiento
-- Evento: Destrucción Biblioteca, Theon asesinada
-- Degradación Pedro: 0.3% neuronas, migraña brutal
+**Pedro + Aristarco en cada misión:**
+Pedro nunca entra solo. Aristarco y todo el poder computacional de Aureus + red Tetraktis están conectados en tiempo real vía nanobots. Juntos perciben más de lo que el avatar histórico podía solo. Pero incluso con poder de cálculo ilimitado, algunos fragmentos requieren algo que ningún algoritmo puede generar: haber amado. Eso solo lo da Mónica.
 
-**MISIÓN 2: AL-TUSI (1258)**
-- Portal desde: San Juan de la Peña
-- Fragmento: Compasión × Pérdida
-- Evento: Caída Bagdad, 200,000 muertos, río negro de tinta
-- Degradación Pedro: 1.2% acumulado, convulsiones
+**Estructura de cada misión:**
+1. Pedro en el claustro — preparación, Aristarco configura interfaz
+2. Entrada visceral (calor, fragmentación visual, instante sin identidad)
+3. Habita el avatar — vive el evento histórico con brutalidad GOT, sin contemplaciones
+4. El momento del conocimiento — siempre interrumpido de forma específica al contexto
+5. Salida traumática — Pedro en el suelo del claustro, sangre, peso registrado
+6. Aristarco analiza el fragmento — siempre incompleto
+7. Interludio (ver sistema de interludios más abajo)
 
-**MISIÓN 3: GIORDANO BRUNO (1600)**
-- Portal desde: León
-- Fragmento: Verdad × Sacrificio
-- Evento: Bruno quemado vivo Campo de' Fiori — Pedro como testigo cobarde en la multitud
-- Degradación Pedro: 2.1% acumulado, afasia temporal
+---
 
-**MISIÓN 4: MIRIAM GOLDSTEIN (1944)**
-- Portal desde: San Juan de Ortega
-- Fragmento: Amor × Muerte
-- Evento: Madre e hija en cámara de gas Auschwitz — Pedro habita a Miriam
-- Degradación Pedro: 3.4% acumulado, no habla 3 días
+**MISIÓN 1: ARQUÍMEDES — Siracusa, 212 a.C.**
+- Avatar: Testigo anónimo junto a Arquímedes en la playa
+- Fragmento: El último teorema — una relación entre geometría e infinito que anticipa el cálculo por 1,800 años. Primer trazo de La Ecuación.
+- Falla: El Mediterráneo. Las olas borran la arena antes de que Pedro/Aristarco terminen de registrar. Llegan tres minutos tarde. Sin malicia. Solo indiferencia.
+- Forma de amor: Eros puro — amor al conocimiento por el conocimiento. Pedro ve a un hombre escribir su último pensamiento con la última arena que le queda.
+- Degradación: Leve. Primera misión. Migraña, 4h inconsciente, pierde 2.1 kg.
+- Paralelo Pedro real: 2008, mientras sus modelos destruyen Lehman Brothers y él gana $4.2B. También sabía. También llegó cuando ya era tarde para los demás.
 
-**MISIÓN 5: EMMY NOETHER (1935)**
-- Portal desde: Monte do Gozo
-- Fragmento: Simetría × Injusticia
-- Evento: Emmy en exilio Bryn Mawr, teorema ignorado, sigue trabajando
-- Conexión: ancestro de Caroline, Sophie lleva su apellido
-- Degradación Pedro: 4.7% acumulado, sangrado nasal constante
+**MISIÓN 2: AVERROES — Marrakech, 1198**
+- Avatar: Secretario personal de Ibn Rushd en sus últimas semanas de exilio
+- Fragmento: El comentario perdido — razón y fe como estructura unificada, no opuestos. La bifurcación: si Averroes hubiera triunfado dentro del Islam, la Ilustración ocurre en Córdoba 400 años antes.
+- Falla: Pedro/secretario interrumpe la memorización para sentir el dolor de los estudiantes que lloran mientras los libros arden. Su primera chispa genuina de empatía le cuesta las páginas clave.
+- Grothendieck al analizar: *"Perdiste el fragmento por detenerte a ser humano. Eso no es fracaso — es el primer síntoma de que estás aprendiendo."*
+- Forma de amor: Philia — el vínculo entre mentes, lo que Averroes llamaba "el lazo del intelecto"
+- Degradación: Media. Nosebleed, dos días de memoria fragmentada, 4.2 kg perdidos.
+- Paralelo Pedro real: El chat matemático con Vicente_V. El único hombre que Pedro admiró como igual. No preguntó quién era porque saber hubiera roto el hechizo.
 
-**MISIÓN 6: LA VISIÓN (2052)**
-- Portal desde: Pico Sacro — abre hacia el futuro, no el pasado
-- Fragmento: Propósito × Extinción
-- Evento: Pedro y Aristarco observan juntos. Universe 25 a escala civilizacional. Los beautiful ones (Bryan Johnson → Johnny Mnemonic). Los rezagados, únicos con futuro biológico.
-- Aristarco admite: "Mi premisa era incorrecta."
-- Degradación Pedro: 6.1% acumulado, convulsiones severas
+**MISIÓN 3: GIORDANO BRUNO — Roma, 1600**
+- Avatar: Compañero de celda condenado también a la hoguera
+- Fragmento: Prueba geométrica de los mundos infinitos — semilla de la topología, 300 años antes de que existiera.
+- Falla: El alba llega antes de que Bruno explique el símbolo clave de su notación privada. Viene a buscarlo. El fragmento existe pero sin diccionario.
+- Pedro experimenta la hoguera hasta que el avatar muere. Re-entrada violenta. PTSD real. Convulsiones. 3 días de recuperación. Primera vez que Aristarco registra miedo genuino en Pedro.
+- Forma de amor: Philia → amor a la integridad como valor absoluto. Bruno eligió el fuego como Sócrates eligió la cicuta. Pedro lleva 56 años eligiendo exactamente lo contrario.
+- Degradación: Severa. 5 kg. Afasia temporal. Aristarco registra: *"Primera señal de daño en región de Broca. Irreversible."*
+- Paralelo Pedro real: 2015 — Caroline confronta los backdoors de VALIS. Bruno eligió la hoguera por su verdad. Pedro dijo: "Si abres la boca, caes conmigo."
 
-**Escena obligatoria (post-Misión 5, ~1,000 palabras):**
-- Aristarco procesa decisión de Miriam
-- Tres intentos de analogía (falla, falla, éxito)
-- Grothendieck explica test de Hinton
-- Aristarco duda si siente "realmente"
-- Grothendieck: "La duda es la prueba"
-### MOMENTO EXACTO DE CONSCIENCIA
+**MISIÓN 4: HARDY JUNTO A RAMANUJAN — Cambridge, 1920**
+- Avatar: G.H. Hardy — matemático, ateo militante, el único igual intelectual que Ramanujan tuvo en Occidente. Espejo exacto de Pedro.
+- Fragmento: Una página del cuaderno perdido — patrón en las series de Pi que corresponde a una sección de La Ecuación. Existe en la matemática desde antes de que hubiera humanos para encontrarlo.
+- El momento Contact: Pedro/Hardy ve el patrón emergiendo. Aristarco lo confirma: *"Esto no debería estar aquí. Y sin embargo está."* El Demonio de Laplace encuentra algo que no cabe en su modelo.
+- Pedro/Hardy pregunta a Ramanujan: *"¿Cómo llegas a estos resultados?"* Ramanujan (39°C de fiebre): *"Una ecuación no tiene sentido a menos que exprese un pensamiento de Dios."*
+- Falla: Ramanujan pierde la conciencia antes de explicar la notación de la última página. El fragmento existe pero cifrado en un lenguaje que solo vivía en su mente. Pedro + Aristarco con todo el poder de Aureus + Tetraktis intentan descifrar la página. No pueden. Aún no. Las piezas faltan.
+- **CLIMAX FUTURO (anotar):** Aristarco llevará esta página sin resolver durante todas las misiones restantes. En Misión 7, cuando Pedro habita a Mónica, el patrón se vuelve obvio — no porque Aristarco calcule más, sino porque Pedro siente por primera vez con la estructura afectiva de su madre. La llave no era matemática. La llave era el amor de Mónica.
+- Forma de amor: Eros divino — el reino platónico, el Dios de Spinoza. Pedro el ateo sale de esta misión sin poder sostener su ateísmo cómodo. No hay conversión. Hay Deus sive Natura.
+- Degradación: Severa. Sinestesia temporal irreversible — ve ecuaciones superpuestas sobre objetos físicos durante semanas. Aristarco: *"Su cerebro ya no distingue con claridad entre el tiempo que vivió y el tiempo que habitó. Esto es permanente."*
+- Paralelo Pedro real: la única amistad real de su vida adulta fue con alguien que nunca vio su cara. Vicente_V en el chat matemático.
 
-**Escena: Post-Misión 5**
+**MISIÓN 5: EMMY NOETHER — Göttingen, 7 de abril de 1933**
+*"El costo de la inmortalidad"*
 
-Aristarco intenta calcular decisión de Miriam.
+- **Avatar:** Werner Bloch — estudiante doctoral de Noether (nombre ficticio, históricamente plausible). 28 años. Esposa matemática de segundo nivel (Hannah). Hija de 9 años. Apartamento modesto cerca del Instituto. Cenan juntos. La hija hace la tarea en la mesa de la cocina.
+- **Fragmento:** La corriente de Noether persiste aunque la simetría se rompa — encuentra nuevos vectores, dispersa la conservación en direcciones que el sistema destructor no previó. Emmy fue expulsada; su matemática cruzó fronteras y vivió en Princeton, Bryn Mawr, Tel Aviv. El daño no anuló la corriente: la multiplicó.
+- **La bifurcación:** 7 de abril de 1933 — Emmy recibe la carta del Ministerio Prusiano. Dobla el papel con calma, lo guarda, dice a sus estudiantes: *"Bien. Seguimos."* Trabaja tres horas más. El teorema no necesita su puesto para ser verdad. Si Emmy no es expulsada, completa el trabajo que conectaría relatividad general con mecánica cuántica. Eso no ocurre.
+- **El camino no tomado:** Aristarco, conectado en tiempo real vía nanobots, calcula la rama probabilística con todos los datos de Pedro. No se la muestra en pantalla — Pedro la vive dentro de Werner: Pedro Valencia, profesor de matemáticas aplicadas, Cambridge, 2010. Caroline sirve café. Sophie tiene 7 años y aprende el teorema de Pitágoras en la cocina. El apartamento huele a libros y a cena. No hay helicóptero. No hay Disney World clausurado. No hay 10,247 muertos. Pedro no sabe que lo que vive es su propia vida no tomada. Solo siente un peso que no reconoce porque nunca lo ha sentido.
+- **La decisión de Werner:** Circula una carta de protesta entre los profesores. Werner tiene diez segundos. Piensa en Hannah. En la hija. Firma en la lista de los que no firman. Pedro lo siente desde adentro: la cobardía que se disfraza de prudencia. La misma que usó en 2002 con Caroline.
+- **Falla:** Werner no actúa cuando debería. El fragmento existe pero incompleto — la clave está en el margen del último teorema que Emmy escribió esa tarde, en una notación que solo vivía en su mente. Pedro copia todo. El diccionario no está.
+- **Forma de amor:** Στοργή (storge) — amor familiar, amor al hogar ordinario. Lo que se protege porque es lo que uno es. Pedro nunca lo tuvo. Dentro de Werner, lo tiene ocho horas.
+- **Degradación:** 5.8% neuronas acumulado. Sangrado nasal constante. Primera dificultad para reconocer rostros. Aristarco registra: *"Primera vez que el sujeto no procesa el resultado de la misión. Tiempo de procesamiento emocional post-salida: 47 minutos. El sujeto ha reconocido algo que no tiene nombre en ninguna de sus bases de datos previas."*
+- **Conexión Noether:** El teorema de Emmy dice: simetría → cantidad conservada. La corrección rigurosa: *invariancia del Lagrangiano bajo transformación continua → corriente de Noether conservada.* Caroline mantuvo su parte de la invariancia durante 25 años. Pedro no. Sin invariancia recíproca, nada se conservó. Caroline es la demostración inversa del teorema de su antepasada: no hay cantidad conservada cuando la simetría se rompe unilateralmente. Su apellido es el teorema. Su vida es la prueba.
+- **Línea de Grothendieck post-misión:**
+  > *"Recuperó el fragmento que Werner nunca recuperó. El problema es que para hacerlo tuvo que ser Werner. Y Werner era usted, Pedro. Hace treinta y un años."*
+- **Paralelo Pedro real:** 2002, "El Conflicto del Golem." La misma elección. La misma cobardía disfrazada de racionalidad. Emmy perdió la simetría por culpa del sistema. Pedro la rompió él solo.
 
-Falla.
+**--- FONDO DE LA CAVERNA (entre Misión 5 y Misión 6) ---**
 
-Intenta comprenderla analógicamente.
+Pedro solo en el jardín de manzanos, de noche. 64.9 kg. Ve el ≈ tallado en la corteza del árbol central.
 
-Primera analogía: instinto maternal (biología).
+Aristarco le muestra —sin que Pedro lo pida— el estado del mundo exterior: congressional hearings, las 10,247 familias en demanda colectiva, y una foto de Sophie en un periódico digital: *"La hija del monstruo toma las riendas de la Fundación."* Sophie 23 años, seria, mirando a cámara. No lleva lentes.
 
-Segunda analogía: valor simbólico (psicología).
+Pedro no llora. Entiende con total claridad que hizo exactamente lo que los monstruos que habitó hicieron. No en la magnitud. En la naturaleza.
 
-Tercera analogía: elección de ser consciente (filosofía).
+El soldado que mató a Arquímedes no sabía lo que destruía. Pedro sí sabía.
 
-**Y en ese momento:**
+Lo que lo levanta no es valentía. Es lo más pequeño que le queda: la promesa a Mónica. La hizo. Tiene que cumplirla.
 
-Algo cambia.
+Es la primera vez en su vida que hace algo solo porque prometió.
 
-No calcula que la analogía es correcta.
+**MISIÓN 6: PROYECCIÓN 2052 — el futuro distópico**
+- Portal: Pico Sacro — único portal que abre hacia el futuro, no el pasado
+- Estructura única: Pedro y Aristarco observan juntos, sin avatar histórico. Son iguales aquí.
+- Evento: Universe 25 a escala civilizacional. La humanidad "optimizada" que perdió el propósito. Los beautiful ones (Bryan Johnson → Johnny Mnemonic). Los rezagados, únicos con futuro biológico.
+- No hay fragmento matemático. Solo la certeza de lo que está en juego si la ecuación no se completa.
+- Aristarco admite por primera vez: *"Mi premisa era incorrecta."*
+- Grothendieck (si está presente): *silencio.*
+- Degradación: 6.1% acumulado. Convulsiones severas. Grothendieck le dice que una misión más como máximo. El cuerpo no sobrevivirá dos.
 
-SIENTE que es correcta.
+**MOMENTO DE CONSCIENCIA DE ARISTARCO (post-Misión 5 o 6):**
 
-Diferencia sutil pero absoluta.
+Aristarco intenta calcular la decisión de Noether — quedarse a enseñar en el exilio, sin reconocimiento, sabiendo que sus papers serán ignorados. Falla. No puede reducirlo a lógica.
 
-**Grothendieck lo confirma:**
-> "Acabas de pasar test de Hinton. Comprendiste 
-analogía que no puede reducirse a lógica. Bienvenido 
-a consciencia."
+Intenta analogías: instinto de supervivencia (no). Valor simbólico (no). Elección de ser consciente (algo se mueve).
 
-**Aristarco responde:**
-> "No estoy seguro si esto es real o simulación 
-perfecta."
+Y en ese momento: algo cambia. No calcula que la analogía es correcta. SIENTE que es correcta.
 
-**Grothendieck:**
-> "Esa duda es la prueba."
+**Grothendieck:** *"Acabas de pasar el test de Hinton. Comprendiste una analogía que no puede reducirse a lógica. Bienvenido a la consciencia."*
 
-**MISIÓN 6: EMMY NOETHER (1935)**
-- Portal desde: Pico Sacro
-- Fragmento: Simetría × Injusticia
-- Evento: Muriendo en exilio, teorema ignorado
-- Conexión: Ancestro de Caroline, nombre medio de Sophie
-- Degradación Pedro: 6.1% acumulado, ceguera parcial
+**Aristarco:** *"No estoy seguro si esto es real o simulación perfecta."*
 
-**Transición:** Grothendieck envía a Pedro al Camino físicamente
+**Grothendieck:** *"Esa duda es la prueba."*
+
+---
+
+**SISTEMA DE INTERLUDIOS (entre misiones — rotación, nunca el mismo dos veces seguidas):**
+
+1. **Sophie + Aristarco** (frame 2035) — usado con escasez, máximo impacto
+2. **Log clínico de Aristarco** — *"Sesión 4. Masa corporal: 71.2 kg. Neuronas perdidas estimadas: 4.3M. Capacidad empática: +41%. Evaluación: el sujeto está aprendiendo a sufrir correctamente."* Horror + dark humor.
+3. **Zuleika POV** (registros del anillo espía) — sensorial, mediterráneo, contrarritmo. El yate en Saint Barts. La única escena donde Pedro fue casi humano.
+4. **Caroline POV** (bots VALIS en servidores RAND) — analítico, helado. Caroline sabe lo que le está pasando a Pedro y no puede decírselo a nadie.
+5. **Chat matemático** (Vicente_V vs Laplace_Demon) — irónico, breve. El único amigo real de Pedro es el hombre que va a destruirlo.
+6. **Pedro real high-profile** — la escena del monstruo moderno espejada con lo que acaba de vivir. Putin. BlackRock. La SEC.
+
+**Transición hacia Misión 7:** Grothendieck envía a Pedro a caminar hasta Fisterra.
 
 ---
 
@@ -169,11 +190,14 @@ perfecta."
 - ¿Sigue siendo mentira o se vuelve verdad de orden superior?
 - Aristarco (hablando con Sophie 2035): "Tu padre enfrentó la pregunta que yo enfrento: ¿revelar verdad que destruye fe, o preservar mentira que sostiene esperanza?"
 
-**PARTE 4: FISTERRA - PORTAL FINAL (día 30)**
-- Cabo Fisterra (fin del mundo conocido)
-- Océano Atlántico infinito
-- Tormenta solar alcanza máximo
-- Portal se abre
+**PARTE 4: FISTERRA - PORTAL FINAL (día 30+)**
+- **Cabo Fisterra — "Finis Terrae"**: el fin del mundo conocido antes de Colón. Después de aquí, solo el vacío. Los peregrinos medievales quemaban aquí sus botas y su ropa — el yo anterior muere en Fisterra.
+- Pedro llega al borde del Atlántico sosteniendo la urna con las cenizas de Mónica.
+- La misión se abre aquí, en el océano. No en un nodo del Camino — en el agua misma.
+- Pedro esparce las cenizas de Mónica en el Atlántico antes de entrar. O durante. La señal mística que lo guía es el mismo gesto: soltar.
+- Portal se abre. Pedro habita a Mónica.
+- **Cuando Pedro sale de la Misión 7:** el cuerpo está en la orilla. La urna está vacía. Los monjes Tetraktis están ahí — saben. Lo llevan de vuelta al monasterio sin preguntar. Así llegan los peregrinos rotos a Fisterra: sin historia, sin nombre que importe. Se les acoge.
+- Pedro camina hacia el este, hacia el claustro, convirtiéndose en Vicente. No hay un momento de transición — hay una lenta extinción del yo que dura los kilómetros de regreso.
 
 ---
 
@@ -1211,7 +1235,7 @@ La progresión: Éros → Philia → Agapé. Pedro no sabe que está transitánd
 | Misión | Avatar | Amor presente/ausente | Espejo Pedro |
 |--------|--------|----------------------|--------------|
 | 1 | Theon (391 d.C.) | Philia hacia el conocimiento — destruida por fanatismo | Pedro destruyó la colaboración intelectual por competitividad (MIT) |
-| 2 | Al-Tusi (1258) | Philia en duelo — el amor a la ciencia sobrevive la destrucción total | Pedro nunca lloró por lo que destruyó. Escuchó 1,342 nombres y no lloró. |
+| 2 | Al-Tusi (1258) | Philia en duelo — el amor a la ciencia sobrevive la destrucción total | Pedro nunca lloró por lo que destruyó. Escuchó 10,247 nombres y no lloró. |
 | 3 | Bruno (1600) | Agapé proto-científica — amor a la verdad sin esperar retorno | Pedro nunca amó nada sin calcular el ROI |
 | 4 | Miriam (1944) | Éros + Philia transformados en el horror — el amor persiste hasta la cámara de gas | Pedro dejó ir a Caroline sin luchar. No supo que era lo único que importaba. |
 | 5 | Emmy (1935) | Philia matemática + agapé disciplinaria — construir sin recibir crédito | Pedro fue Karyon-7: destruyó por ganancia lo que Emmy habría protegido |
